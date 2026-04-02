@@ -1,0 +1,43 @@
+{
+  "name": "rivalscan-backend",
+  "version": "1.0.0",
+  "description": "RivalScan AWS Serverless Backend — CDK + Lambda (TypeScript)",
+  "scripts": {
+    "build": "tsc",
+    "cdk": "cdk",
+    "synth": "cdk synth",
+    "deploy": "cdk deploy --all",
+    "deploy:stack": "cdk deploy",
+    "diff": "cdk diff",
+    "destroy": "cdk destroy --all",
+    "test": "vitest run",
+    "test:watch": "vitest --watch",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@aws-sdk/client-cognito-identity-provider": "^3.1000.0",
+    "@aws-sdk/client-dynamodb": "^3.1000.0",
+    "@aws-sdk/client-s3": "^3.1000.0",
+    "@aws-sdk/client-secrets-manager": "^3.1000.0",
+    "@aws-sdk/client-sesv2": "^3.1000.0",
+    "@aws-sdk/client-sfn": "^3.1000.0",
+    "@aws-sdk/lib-dynamodb": "^3.1000.0",
+    "@paddle/paddle-node-sdk": "^3.6.0",
+    "aws-cdk-lib": "^2.240.0",
+    "constructs": "^10.5.1",
+    "source-map-support": "^0.5.21"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.161",
+    "@types/node": "^25.3.3",
+    "aws-cdk": "^2.1108.0",
+    "esbuild": "^0.27.3",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3",
+    "ulid": "^3.0.2",
+    "vitest": "^4.0.18",
+    "zod": "^4.3.6"
+  },
+  "license": "UNLICENSED",
+  "private": true
+}
