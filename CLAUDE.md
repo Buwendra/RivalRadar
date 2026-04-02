@@ -8,7 +8,7 @@ RivalScan is an AI-powered competitive intelligence monitoring SaaS for SMBs. It
 
 ## Tech Stack
 
-- **Frontend**: Next.js 14 (App Router) + TypeScript + Tailwind CSS + shadcn/ui (Vercel)
+- **Frontend**: Next.js 14 (App Router) + TypeScript + Tailwind CSS + shadcn/ui, deployed to Vercel (standalone output mode)
 - **Backend**: AWS CDK (TypeScript) — fully serverless
   - API Gateway HTTP API v2 + Lambda (Node.js 20)
   - DynamoDB (single-table, on-demand) + S3 (snapshots)
@@ -16,7 +16,7 @@ RivalScan is an AI-powered competitive intelligence monitoring SaaS for SMBs. It
   - EventBridge Scheduler (cron triggers)
   - Cognito (auth) + SES (email) + Secrets Manager
   - CloudFront + WAF + CloudWatch + X-Ray
-- **External Services**: Firecrawl API (scraping), Anthropic Claude API (analysis), Stripe (payments)
+- **External Services**: Firecrawl API (scraping), Anthropic Claude API (analysis), Paddle (payments)
 
 ## Architecture
 
@@ -27,38 +27,99 @@ EventBridge (daily 6am) → Step Functions → [Scrape → Store → Diff → An
 EventBridge (Mon 8am)   → Step Functions → [Aggregate → Sonnet Summary → SES Email]
 ```
 
-## Backend Structure (`Backend/`)
+**7 CDK stacks** wired in `bin/app.ts` with explicit cross-stack dependencies:
+Database → Storage → Auth → Email → Pipeline → API (receives pipeline ARN) → Monitoring.
+Stack naming: `RivalScan-${stage}-${StackType}` (stage from env context: dev/staging/prod).
 
+## Commands
+
+### Backend (`Backend/`)
+
+```bash
+cd Backend
+npm install                          # Install dependencies
+npx tsc --noEmit                     # Type-check
+npx cdk synth                        # Generate CloudFormation
+npx cdk deploy --all                 # Deploy all stacks
+npx cdk diff                         # Preview changes
+npx vitest                           # Run all tests
+npx vitest --watch                   # Tests in watch mode
+npx vitest src/path/to/file.test.ts  # Run a single test file
 ```
-Backend/
-├── bin/app.ts                      # CDK app entry — 7 stacks
-├── lib/stacks/                     # CDK infrastructure
-│   ├── database.stack.ts           # DynamoDB (single table + 3 GSIs)
-│   ├── storage.stack.ts            # S3 bucket (snapshots)
-│   ├── auth.stack.ts               # Cognito User Pool
-│   ├── api.stack.ts                # API Gateway + all Lambda routes
-│   ├── pipeline.stack.ts           # Step Functions + EventBridge crons
-│   ├── email.stack.ts              # SES config
-│   └── monitoring.stack.ts         # CloudWatch dashboards + alarms
-├── src/
-│   ├── functions/
-│   │   ├── api/                    # API Lambda handlers
-│   │   │   ├── auth/               # signup, signin (public)
-│   │   │   ├── users/              # profile, onboard
-│   │   │   ├── competitors/        # CRUD + manual scrape trigger
-│   │   │   ├── changes/            # list (paginated), get, feedback
-│   │   │   ├── subscriptions/      # current, checkout, portal
-│   │   │   └── webhooks/           # Stripe webhook
-│   │   ├── pipeline/               # Step Function Lambdas (daily)
-│   │   └── scheduled/              # Step Function Lambdas (weekly digest)
-│   └── shared/
-│       ├── db/                     # DynamoDB client, key builders, queries
-│       ├── services/               # Firecrawl, Anthropic, Stripe, SES, Secrets
-│       ├── types/                  # TypeScript interfaces
-│       ├── middleware/             # Handler wrapper (CORS, errors, validation)
-│       └── utils/                  # Logger, diff, ID generation
-└── test/
+
+### Frontend (`Frontend/`)
+
+```bash
+cd Frontend
+npm install              # Install dependencies
+npm run dev              # Dev server (localhost:3000)
+npm run build            # Production build
+npm run lint             # ESLint
 ```
+
+## Key Patterns & Conventions
+
+### Backend Handler Pattern
+
+All API Lambda handlers use the `apiHandler()` wrapper from `shared/middleware/`. This provides automatic CORS headers, JSON parsing, OPTIONS handling, request logging, and error catching. Handlers receive either `AuthenticatedEvent` (Cognito JWT) or `PublicEvent`.
+
+```typescript
+// Standard handler skeleton
+export const handler = apiHandler(async (event) => {
+  const email = getUserEmail(event);           // Extract from JWT claims
+  const body = validate(schema, parseBody(event)); // Zod validation
+  // GSI3 lookup: email → userId (every authenticated route does this)
+  const { items } = await queryGSI('GSI3', 'GSI3PK', email, 'USER#');
+  const userId = (items[0].GSI3SK as string).replace('USER#', '');
+  // ... business logic ...
+  return { statusCode: 200, body: { data: result } };
+});
+```
+
+### Backend Path Aliases (tsconfig)
+
+- `@shared/*` → `./src/shared/*`
+- `@functions/*` → `./src/functions/*`
+
+### Frontend Path Alias (tsconfig)
+
+- `@/*` → `./src/*`
+
+### API Response Envelope
+
+All API responses follow: `{ data?, error?: { code, message, details? }, meta?: { cursor?, hasMore } }`
+
+### Pagination
+
+Cursor-based using DynamoDB `LastEvaluatedKey` → base64url-encoded JSON string. Clients pass cursor back as query param. Frontend uses TanStack Query `useInfiniteQuery` with `getNextPageParam` reading `meta.cursor`.
+
+### Frontend Data Flow
+
+API calls: `lib/api/client.ts` (`apiClient<T>` / `apiClientWithMeta<T>`) → domain modules (`lib/api/{resource}.ts`) → TanStack Query hooks (`lib/hooks/use-{resource}.ts`) → components.
+
+Auth tokens stored in localStorage with `rs_` prefix. `apiClient` auto-injects Bearer token when `requireAuth: true` (default). Auto-redirects to `/sign-in` on 401.
+
+### Frontend Global Query Config
+
+`staleTime: 30_000`, `retry: 1`, `refetchOnWindowFocus: false` (set in `lib/providers/app-providers.tsx`).
+
+### Auth Flow
+
+Cognito JWT → tokens in localStorage → `AuthProvider` hydrates on mount, checks token expiry every 60s → `AuthGuard` component wraps protected routes and enforces onboarding completion.
+
+### ID Generation
+
+Uses ULID (`generateId()` in `shared/utils/id.ts`) — time-sortable, conflict-free.
+
+### Secrets
+
+Lazy-loaded singleton with 5-minute TTL cache (`shared/services/secrets.ts`). Pulls from AWS Secrets Manager (`rivalscan/api-keys`): `PADDLE_SECRET_KEY`, `PADDLE_WEBHOOK_SECRET`, `FIRECRAWL_API_KEY`, `ANTHROPIC_API_KEY`.
+
+### AI Models
+
+- **Claude Haiku 4.5**: Real-time change analysis (fast, cost-effective) — called in `analyze-change.ts`
+- **Claude Sonnet 4.5**: Weekly strategic summaries — called in `generate-summary.ts`
+- Uses native Anthropic API via `fetch` (not SDK)
 
 ## DynamoDB Single-Table Design
 
@@ -70,22 +131,25 @@ Backend/
 | Change | `COMP#<id>` | `CHANGE#<timestamp>` |
 | Snapshot | `COMP#<id>` | `SNAP#<pageHash>#<ts>` |
 
-**GSIs**: GSI1 (user's changes feed), GSI2 (active competitors for cron), GSI3 (user by email)
+**GSIs**: GSI1 (user's changes feed by timestamp), GSI2 (all active competitors for daily cron — PK=`ACTIVE`), GSI3 (user by email for auth lookups)
 
 Snapshot markdown content stored in S3, referenced by `s3Key` in DynamoDB.
 
-## Backend Commands
+Key builders in `shared/db/keys.ts`. Query helpers (`getItem`, `putItem`, `queryByPK`, `queryGSI`, `updateItem`) in `shared/db/queries.ts`.
 
-```bash
-cd Backend
-npm install              # Install dependencies
-npx tsc --noEmit         # Type-check
-npx cdk synth            # Generate CloudFormation
-npx cdk deploy --all     # Deploy all stacks
-npx cdk diff             # Preview changes
-npx vitest               # Run tests
-npx vitest --watch       # Tests in watch mode
-```
+## Pipeline Flow (Step Functions)
+
+**Daily pipeline** (`src/functions/pipeline/`):
+1. `get-competitors` — queries GSI2 for all active competitors (handles manual/onboarding triggers too)
+2. `scrape-pages` — Firecrawl scrape per tracked page, graceful failure per page
+3. `store-snapshots` — saves markdown to S3
+4. `detect-diffs` — line-based diff via `shared/utils/diff.ts`, filters to changed pages only
+5. `analyze-change` — Claude Haiku produces structured `AiAnalysis` JSON
+6. `store-change` — writes to DynamoDB (primary table + GSI1 for user feed)
+7. `send-alert` — emails user for high-significance changes (≥ 7)
+
+**Weekly digest** (`src/functions/scheduled/`):
+1. `get-subscribers` → 2. `aggregate-changes` (top 10 by significance, past 7 days via GSI1) → 3. `generate-summary` (Claude Sonnet) → 4. `render-send-email` (SES)
 
 ## Pricing Tiers & Plan Limits
 
@@ -95,78 +159,12 @@ npx vitest --watch       # Tests in watch mode
 | Strategist | $99/mo | 10 | 90 days |
 | Command | $199/mo | 25 | 1 year |
 
-Plan limits enforced in `competitors/create.ts` via `PLAN_LIMITS` from `shared/types/index.ts`.
+Defined in `PLAN_LIMITS` from `shared/types/index.ts`. Enforced in `competitors/create.ts`. Payments handled via Paddle (checkout sessions, customer portal, webhook lifecycle events).
 
-## Key Design Decisions
+## Environment Variables
 
-- **DynamoDB single-table** with 3 GSIs — fully serverless, pay-per-request
-- **Step Functions** orchestrate scraping pipeline — parallel fan-out per competitor, built-in retries
-- **Cognito JWT authorizer** on API Gateway — auth validated before Lambda runs
-- **S3 for snapshot content** — keeps DynamoDB items under 400KB limit
-- **Firecrawl** handles anti-bot/JS rendering, returns clean Markdown for AI analysis
-- **Significance scoring** (1-10) — only ≥ 7 triggers real-time email alerts
-- **Cursor-based pagination** using DynamoDB `LastEvaluatedKey` encoded as opaque base64 token
-- **Consistent API envelope**: `{ data, error, meta: { cursor, hasMore } }`
-- **Zod validation** at Lambda handler level with field-level error details
+**Backend Lambda** (set via CDK): `TABLE_NAME`, `BUCKET_NAME`, `USER_POOL_ID`, `USER_POOL_CLIENT_ID`, `SECRETS_ARN`, `FRONTEND_URL`, `FROM_EMAIL`
 
-## Frontend Structure (`Frontend/`)
+**CDK deploy**: `CDK_DEFAULT_ACCOUNT`, `CDK_DEFAULT_REGION` (defaults to us-east-1), `FRONTEND_URL` (for CORS, defaults to `http://localhost:3000`)
 
-```
-Frontend/
-├── src/
-│   ├── app/
-│   │   ├── layout.tsx              # Root: fonts, AppProviders, metadata
-│   │   ├── not-found.tsx / error.tsx
-│   │   ├── (public)/               # Landing page + pricing (server components)
-│   │   ├── (auth)/                 # Sign-in/sign-up (centered layout)
-│   │   ├── onboarding/             # 3-step wizard
-│   │   └── (dashboard)/            # Protected app (AuthGuard + sidebar shell)
-│   │       └── dashboard/          # Feed, competitors/[id], changes/[id], settings
-│   ├── components/
-│   │   ├── ui/                     # shadcn/ui primitives
-│   │   ├── layout/                 # Navbar, footer, sidebar, header, auth-guard
-│   │   ├── landing/                # Hero, problem, how-it-works, features, pricing, FAQ, CTA
-│   │   ├── dashboard/              # Change feed/card/filters, significance/type badges, stats
-│   │   ├── onboarding/             # 3-step wizard components
-│   │   ├── settings/               # Profile, subscription, plan upgrade
-│   │   └── shared/                 # Logo, spinner, page-header, error-alert, confirm-dialog
-│   └── lib/
-│       ├── api/                    # Fetch wrapper + domain modules (auth, users, competitors, changes, subscriptions)
-│       ├── auth/                   # Context, provider, token storage, useAuth hook
-│       ├── hooks/                  # TanStack Query hooks for all data domains
-│       ├── types/                  # Mirrored from backend types
-│       ├── utils/                  # cn, constants, format-date, significance, plan-limits
-│       └── providers/              # AppProviders (QueryClient + Auth + Toaster)
-```
-
-### Frontend Design System
-
-- **Color palette**: Navy 950 (#0A0F1E) backgrounds, Blue 500 (#3B82F6) primary, Amber 500 (#F59E0B) CTAs
-- **Significance colors**: Emerald (1-3 Low), Yellow (4-6 Medium), Red (7-10 High)
-- **Auth**: Cognito JWT tokens in localStorage, AuthGuard client component
-- **Data fetching**: TanStack Query v5 with cursor-based infinite scroll for changes
-- **Forms**: React Hook Form + Zod validation
-- **Components**: shadcn/ui
-
-### Frontend Commands
-
-```bash
-cd Frontend
-npm install              # Install dependencies
-npm run dev              # Dev server (localhost:3000)
-npm run build            # Production build
-npm run lint             # ESLint
-```
-
-### Frontend Environment Variables
-
-```env
-NEXT_PUBLIC_API_URL=https://xxx.execute-api.us-east-1.amazonaws.com
-```
-
-## Environment Setup
-
-External API keys stored in AWS Secrets Manager under `rivalscan/api-keys`:
-- `FIRECRAWL_API_KEY`, `ANTHROPIC_API_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`
-
-Set `FRONTEND_URL` env var for CORS (defaults to `http://localhost:3000`).
+**Frontend**: `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_APP_NAME`, `NEXT_PUBLIC_APP_URL`
