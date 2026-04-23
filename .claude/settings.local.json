@@ -49,7 +49,8 @@
       "Bash(node -e \"const sdk = require\\(''@paddle/paddle-node-sdk''\\); const e = sdk.EventName; console.log\\(Object.values\\(e\\).filter\\(v => v.toString\\(\\).includes\\(''subscription''\\) || v.toString\\(\\).includes\\(''transaction''\\)\\).join\\(''\\\\n''\\)\\)\")",
       "Bash(node -e \"const sdk = require\\(''@paddle/paddle-node-sdk''\\); const v = new sdk.WebhooksValidator\\(\\); console.log\\(Object.getOwnPropertyNames\\(Object.getPrototypeOf\\(v\\)\\).join\\('', ''\\)\\)\")",
       "Bash(npm run:*)",
-      "Bash(ls -la /c/Work/personal/RivalRadar/Frontend/.eslintrc*)"
+      "Bash(ls -la /c/Work/personal/RivalRadar/Frontend/.eslintrc*)",
+      "Bash(aws amplify *)"
     ]
   }
 }

@@ -42,7 +42,7 @@ export async function apiClient<T>(
   };
 
   if (requireAuth) {
-    const token = localStorage.getItem("rs_access_token");
+    const token = localStorage.getItem("rs_id_token");
     if (!token) {
       window.location.href = "/sign-in";
       throw new ApiClientError("UNAUTHENTICATED", 401, "Not authenticated");
@@ -101,7 +101,7 @@ export async function apiClientWithMeta<T>(
   };
 
   if (requireAuth) {
-    const token = localStorage.getItem("rs_access_token");
+    const token = localStorage.getItem("rs_id_token");
     if (!token) {
       window.location.href = "/sign-in";
       throw new ApiClientError("UNAUTHENTICATED", 401, "Not authenticated");
