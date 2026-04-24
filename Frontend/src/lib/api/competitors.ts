@@ -23,11 +23,6 @@ export const competitorsApi = {
       method: "DELETE",
     }),
 
-  scrape: (id: string) =>
-    apiClient<{ message: string }>(`/competitors/${id}/scrape`, {
-      method: "POST",
-    }),
-
   research: (id: string) =>
     apiClient<{ message: string }>(`/competitors/${id}/research`, {
       method: "POST",

@@ -31,12 +31,6 @@ export function useDeleteCompetitor() {
   });
 }
 
-export function useScrapeCompetitor() {
-  return useMutation({
-    mutationFn: (id: string) => competitorsApi.scrape(id),
-  });
-}
-
 export function useTriggerResearch() {
   const queryClient = useQueryClient();
   return useMutation({

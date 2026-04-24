@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Sparkles } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { SignificanceBadge } from "./significance-badge";
 import { ChangeTypeBadge } from "./change-type-badge";
 import { formatSmartDate } from "@/lib/utils/format-date";
@@ -12,7 +13,18 @@ interface ChangeCardProps {
   change: Change;
 }
 
+function safeHostname(url: string): string | null {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return null;
+  }
+}
+
 export function ChangeCard({ change }: ChangeCardProps) {
+  const isResearchDriven = !!change.researchId;
+  const hostname = safeHostname(change.pageUrl);
+
   return (
     <Link href={`/dashboard/changes/${change.id}`}>
       <Card className="border-brand-700 bg-brand-900 transition-colors hover:border-brand-600 hover:bg-brand-800">
@@ -25,6 +37,12 @@ export function ChangeCard({ change }: ChangeCardProps) {
                 </span>
                 <ChangeTypeBadge type={change.aiAnalysis.changeType} />
                 <SignificanceBadge score={change.significance} />
+                {isResearchDriven && (
+                  <Badge variant="outline" className="gap-1 text-xs">
+                    <Sparkles className="h-3 w-3" />
+                    {change.sourceCategory ?? "research"}
+                  </Badge>
+                )}
               </div>
 
               <p className="text-sm text-muted-foreground line-clamp-2">
@@ -33,10 +51,12 @@ export function ChangeCard({ change }: ChangeCardProps) {
 
               <div className="flex items-center gap-3 text-xs text-muted-foreground">
                 <span>{formatSmartDate(change.detectedAt)}</span>
-                <span className="flex items-center gap-1">
-                  <ExternalLink className="h-3 w-3" />
-                  {new URL(change.pageUrl).hostname}
-                </span>
+                {hostname && (
+                  <span className="flex items-center gap-1">
+                    <ExternalLink className="h-3 w-3" />
+                    {hostname}
+                  </span>
+                )}
               </div>
             </div>
 

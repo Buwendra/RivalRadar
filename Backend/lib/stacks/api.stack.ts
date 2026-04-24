@@ -17,7 +17,6 @@ interface ApiStackProps extends cdk.StackProps {
   snapshotBucket: s3.Bucket;
   userPool: cognito.UserPool;
   userPoolClient: cognito.UserPoolClient;
-  dailyStateMachine: sfn.StateMachine;
   researchStateMachine: sfn.StateMachine;
 }
 
@@ -27,7 +26,7 @@ export class ApiStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: ApiStackProps) {
     super(scope, id, props);
 
-    const { table, snapshotBucket, userPool, userPoolClient, dailyStateMachine, researchStateMachine } = props;
+    const { table, snapshotBucket, userPool, userPoolClient, researchStateMachine } = props;
 
     // Secrets for external APIs
     const apiSecrets = secretsmanager.Secret.fromSecretNameV2(
@@ -117,7 +116,6 @@ export class ApiStack extends cdk.Stack {
     addRoute('AuthSignin', apigatewayv2.HttpMethod.POST, '/auth/signin', 'api/auth/signin.ts', false);
 
     const pipelineEnv = {
-      DAILY_PIPELINE_ARN: dailyStateMachine.stateMachineArn,
       RESEARCH_PIPELINE_ARN: researchStateMachine.stateMachineArn,
     };
 
@@ -125,7 +123,6 @@ export class ApiStack extends cdk.Stack {
     addRoute('UserProfile', apigatewayv2.HttpMethod.GET, '/users/me', 'api/users/profile.ts');
     addRoute('UserUpdate', apigatewayv2.HttpMethod.PUT, '/users/me', 'api/users/profile.ts');
     const onboardFn = addRoute('UserOnboard', apigatewayv2.HttpMethod.POST, '/users/onboard', 'api/users/onboard.ts', true, pipelineEnv);
-    dailyStateMachine.grantStartExecution(onboardFn);
     researchStateMachine.grantStartExecution(onboardFn);
 
     // ─── Competitor Routes ───
@@ -133,8 +130,6 @@ export class ApiStack extends cdk.Stack {
     addRoute('CompetitorCreate', apigatewayv2.HttpMethod.POST, '/competitors', 'api/competitors/create.ts');
     addRoute('CompetitorGet', apigatewayv2.HttpMethod.GET, '/competitors/{id}', 'api/competitors/get.ts');
     addRoute('CompetitorDelete', apigatewayv2.HttpMethod.DELETE, '/competitors/{id}', 'api/competitors/delete.ts');
-    const scrapeFn = addRoute('CompetitorScrape', apigatewayv2.HttpMethod.POST, '/competitors/{id}/scrape', 'api/competitors/scrape.ts', true, pipelineEnv);
-    dailyStateMachine.grantStartExecution(scrapeFn);
     const researchFn = addRoute('CompetitorResearch', apigatewayv2.HttpMethod.POST, '/competitors/{id}/research', 'api/competitors/research.ts', true, pipelineEnv);
     researchStateMachine.grantStartExecution(researchFn);
 

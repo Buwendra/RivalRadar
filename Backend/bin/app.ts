@@ -45,7 +45,6 @@ const apiStack = new ApiStack(app, `${prefix}-Api`, {
   snapshotBucket: storageStack.snapshotBucket,
   userPool: authStack.userPool,
   userPoolClient: authStack.userPoolClient,
-  dailyStateMachine: pipelineStack.dailyStateMachine,
   researchStateMachine: pipelineStack.researchStateMachine,
 });
 

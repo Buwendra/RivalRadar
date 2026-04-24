@@ -1,5 +1,13 @@
 import { getSecret } from './secrets';
-import { AiAnalysis, ResearchFinding, FindingItem, Citation } from '../types';
+import {
+  AiAnalysis,
+  ResearchFinding,
+  FindingItem,
+  Citation,
+  ResearchDelta,
+  ResearchCategory,
+  ResearchChangeType,
+} from '../types';
 import { logger } from '../utils/logger';
 
 const HAIKU_MODEL = 'claude-haiku-4-5-20251001';
@@ -279,4 +287,147 @@ importance: 3 = must-know strategic, 2 = notable, 1 = minor. Omit a category ent
     searchQueries: Array.isArray(parsed.searchQueries) ? parsed.searchQueries.map(String) : [],
     tokensUsed,
   };
+}
+
+/**
+ * Compare two research findings and extract deltas with impact analysis.
+ * One Sonnet call produces both "what's new" and "how significant" for each delta.
+ */
+export async function detectResearchDeltas(input: {
+  competitorName: string;
+  previous: Pick<ResearchFinding, 'summary' | 'categories' | 'generatedAt'>;
+  current: Pick<ResearchFinding, 'summary' | 'categories'>;
+}): Promise<ResearchDelta[]> {
+  const secrets = await getSecret('rivalscan/api-keys');
+
+  const compactFinding = (f: { categories: Record<ResearchCategory, FindingItem[]> }) =>
+    Object.fromEntries(
+      (Object.keys(f.categories) as ResearchCategory[]).map((cat) => [
+        cat,
+        f.categories[cat].map((item) => ({
+          title: item.title,
+          detail: item.detail.slice(0, 400),
+          sourceUrl: item.sourceUrl ?? '',
+        })),
+      ])
+    );
+
+  const prompt = `You are a competitive intelligence analyst. Compare two research snapshots of the same competitor and identify what is genuinely NEW in the CURRENT snapshot compared to the PREVIOUS one.
+
+Competitor: ${input.competitorName}
+Previous snapshot generated: ${input.previous.generatedAt}
+
+PREVIOUS FINDINGS (JSON):
+${JSON.stringify(compactFinding(input.previous), null, 2)}
+
+CURRENT FINDINGS (JSON):
+${JSON.stringify(compactFinding(input.current), null, 2)}
+
+Treat a current item as NEW if the core fact/event it describes is not substantively present in previous (regardless of minor wording differences). Ignore items that are just rephrasings of previously known facts.
+
+For each new item, analyze its impact. Respond with ONLY valid JSON (no prose, no code fences):
+
+{
+  "deltas": [
+    {
+      "title": "short headline from the current item",
+      "detail": "2-sentence explanation of what's new",
+      "sourceUrl": "the sourceUrl from the current item (required)",
+      "category": "news" | "product" | "funding" | "hiring" | "social",
+      "changeType": "pricing" | "feature" | "messaging" | "hiring" | "content",
+      "significanceScore": 1-10,
+      "strategicImplication": "what this change means strategically for competitors",
+      "recommendedAction": "what the user should consider doing in response"
+    }
+  ]
+}
+
+Scoring guide:
+- 1-3: Minor content (routine blog post, small social post)
+- 4-6: Notable (product update, mid-size hire, positive press)
+- 7-10: Strategic (pricing change, major launch, funding round, key exec move, acquisition)
+
+If nothing substantively new: return { "deltas": [] }.`;
+
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': secrets.ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model: SONNET_MODEL,
+      max_tokens: 2048,
+      messages: [{ role: 'user', content: prompt }],
+    }),
+  });
+
+  if (!response.ok) {
+    const errBody = await response.text().catch(() => '');
+    logger.error('Anthropic detectResearchDeltas API error', {
+      status: response.status,
+      body: errBody.slice(0, 500),
+    });
+    throw new Error(`Anthropic API error: ${response.status}`);
+  }
+
+  const data = (await response.json()) as {
+    content: Array<{ type: string; text: string }>;
+  };
+
+  const text = (data.content.find((b) => b.type === 'text')?.text ?? '').trim();
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    logger.warn('detectResearchDeltas: no JSON in response', { text: text.slice(0, 500) });
+    return [];
+  }
+
+  let parsed: { deltas?: Array<Record<string, unknown>> };
+  try {
+    parsed = JSON.parse(jsonMatch[0]);
+  } catch (err) {
+    logger.error('detectResearchDeltas: JSON parse failed', {
+      error: String(err),
+      text: jsonMatch[0].slice(0, 500),
+    });
+    return [];
+  }
+
+  const validCategories: ResearchCategory[] = ['news', 'product', 'funding', 'hiring', 'social'];
+  const validChangeTypes: ResearchChangeType[] = [
+    'pricing',
+    'feature',
+    'messaging',
+    'hiring',
+    'content',
+  ];
+
+  const rawDeltas = Array.isArray(parsed.deltas) ? parsed.deltas : [];
+  const deltas: ResearchDelta[] = [];
+  for (const d of rawDeltas) {
+    const category = validCategories.includes(d.category as ResearchCategory)
+      ? (d.category as ResearchCategory)
+      : 'news';
+    const changeType = validChangeTypes.includes(d.changeType as ResearchChangeType)
+      ? (d.changeType as ResearchChangeType)
+      : 'content';
+    const rawScore = Number(d.significanceScore ?? 1);
+    const significanceScore = Math.min(10, Math.max(1, Number.isFinite(rawScore) ? rawScore : 1));
+    const sourceUrl = String(d.sourceUrl ?? '').trim();
+    if (!sourceUrl) continue;
+
+    deltas.push({
+      title: String(d.title ?? '').slice(0, 200),
+      detail: String(d.detail ?? '').slice(0, 800),
+      sourceUrl,
+      category,
+      changeType,
+      significanceScore,
+      strategicImplication: String(d.strategicImplication ?? '').slice(0, 800),
+      recommendedAction: String(d.recommendedAction ?? '').slice(0, 500),
+    });
+  }
+
+  return deltas;
 }

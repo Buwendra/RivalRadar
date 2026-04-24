@@ -15,6 +15,8 @@ export interface CompetitorDetailChange {
   pageUrl?: string;
   aiAnalysis: AiAnalysis;
   detectedAt: string;
+  researchId?: string;
+  sourceCategory?: ResearchCategory;
 }
 
 export interface CompetitorStats {
@@ -35,4 +37,4 @@ export interface CompetitorDetail extends Competitor {
 }
 
 import type { AiAnalysis, ChangeType } from "./change";
-import type { ResearchFinding } from "./research";
+import type { ResearchFinding, ResearchCategory } from "./research";

@@ -6,7 +6,6 @@ import Link from "next/link";
 import { toast } from "sonner";
 import {
   ExternalLink,
-  Radar,
   Trash2,
   ArrowLeft,
   Activity,
@@ -18,7 +17,7 @@ import { formatDistanceToNow, parseISO } from "date-fns";
 import { useCompetitorDetail } from "@/lib/hooks/use-competitor-detail";
 import {
   useDeleteCompetitor,
-  useScrapeCompetitor,
+  useTriggerResearch,
 } from "@/lib/hooks/use-competitors";
 import { PageHeader } from "@/components/shared/page-header";
 import { ErrorAlert } from "@/components/shared/error-alert";
@@ -67,7 +66,7 @@ export default function CompetitorDetailPage() {
   const { data: competitor, isLoading, isError, error, refetch } =
     useCompetitorDetail(id);
   const deleteCompetitor = useDeleteCompetitor();
-  const scrapeCompetitor = useScrapeCompetitor();
+  const triggerResearch = useTriggerResearch();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState(
     searchParams.get("tab") ?? "overview"
@@ -83,12 +82,14 @@ export default function CompetitorDetailPage() {
     }
   };
 
-  const handleScrape = async () => {
+  const handleResearch = async () => {
     try {
-      await scrapeCompetitor.mutateAsync(id);
-      toast.success("Scan started. Changes will appear shortly.");
+      await triggerResearch.mutateAsync(id);
+      toast.success(
+        "Research started. New findings and changes will appear in ~60-90 seconds."
+      );
     } catch {
-      toast.error("Failed to start scan");
+      toast.error("Failed to start research");
     }
   };
 
@@ -144,17 +145,17 @@ export default function CompetitorDetailPage() {
         <PageHeader title={competitor.name}>
           <div className="flex gap-2">
             <Button
-              variant="outline"
               size="sm"
-              onClick={handleScrape}
-              disabled={scrapeCompetitor.isPending}
+              onClick={handleResearch}
+              disabled={triggerResearch.isPending}
+              className="bg-cta text-brand-950 hover:bg-cta-hover"
             >
-              {scrapeCompetitor.isPending ? (
+              {triggerResearch.isPending ? (
                 <LoadingSpinner size="sm" className="mr-2" />
               ) : (
-                <Radar className="mr-2 h-4 w-4" />
+                <Sparkles className="mr-2 h-4 w-4" />
               )}
-              Scan Now
+              Research Now
             </Button>
           </div>
         </PageHeader>

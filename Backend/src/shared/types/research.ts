@@ -24,3 +24,16 @@ export interface ResearchFinding {
   searchQueries: string[];
   tokensUsed: number;
 }
+
+export type ResearchChangeType = 'pricing' | 'feature' | 'messaging' | 'hiring' | 'content';
+
+export interface ResearchDelta {
+  title: string;
+  detail: string;
+  sourceUrl: string;
+  category: ResearchCategory;
+  changeType: ResearchChangeType;
+  significanceScore: number;
+  strategicImplication: string;
+  recommendedAction: string;
+}

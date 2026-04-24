@@ -61,17 +61,7 @@ export const handler = apiHandler(async (event) => {
     updatedAt: now,
   });
 
-  // Trigger initial scrape via Step Functions (if configured)
-  if (process.env.DAILY_PIPELINE_ARN) {
-    await sfn.send(
-      new StartExecutionCommand({
-        stateMachineArn: process.env.DAILY_PIPELINE_ARN,
-        input: JSON.stringify({ competitorIds, userId, isInitialScrape: true }),
-      })
-    );
-  }
-
-  // Trigger initial deep research in parallel (if configured)
+  // Trigger initial deep research for each new competitor
   if (process.env.RESEARCH_PIPELINE_ARN) {
     const researchInput = body.competitors.map((comp, i) => ({
       competitorId: competitorIds[i],
@@ -92,7 +82,7 @@ export const handler = apiHandler(async (event) => {
     statusCode: 200,
     body: {
       data: {
-        message: 'Onboarding complete. Initial scrape and research started.',
+        message: 'Onboarding complete. Initial research started.',
         competitorIds,
       },
     },

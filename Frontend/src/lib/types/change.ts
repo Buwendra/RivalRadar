@@ -1,3 +1,5 @@
+import type { Citation, ResearchCategory } from "./research";
+
 export type ChangeType = "pricing" | "feature" | "messaging" | "hiring" | "content";
 
 export interface AiAnalysis {
@@ -16,6 +18,9 @@ export interface Change {
   significance: number;
   aiAnalysis: AiAnalysis;
   detectedAt: string;
+  researchId?: string;
+  citations?: Citation[];
+  sourceCategory?: ResearchCategory;
 }
 
 export interface ChangeDetail extends Change {
