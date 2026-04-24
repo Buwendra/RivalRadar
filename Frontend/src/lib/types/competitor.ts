@@ -9,15 +9,30 @@ export interface Competitor {
   createdAt: string;
 }
 
-export interface CompetitorDetail extends Competitor {
-  recentChanges: Array<{
-    id: string;
-    significance: number;
-    aiAnalysis: AiAnalysis;
-    detectedAt: string;
-  }>;
-  recentResearch: ResearchFinding[];
+export interface CompetitorDetailChange {
+  id: string;
+  significance: number;
+  pageUrl?: string;
+  aiAnalysis: AiAnalysis;
+  detectedAt: string;
 }
 
-import type { AiAnalysis } from "./change";
+export interface CompetitorStats {
+  changes7d: number;
+  changes30d: number;
+  highSignificance30d: number;
+  lastChangeAt: string | null;
+  lastResearchAt: string | null;
+  changesByPage: Partial<Record<PageType, number>>;
+  changesByType: Partial<Record<ChangeType, number>>;
+  changesByDay: Array<{ date: string; count: number }>;
+}
+
+export interface CompetitorDetail extends Competitor {
+  recentChanges: CompetitorDetailChange[];
+  recentResearch: ResearchFinding[];
+  stats: CompetitorStats;
+}
+
+import type { AiAnalysis, ChangeType } from "./change";
 import type { ResearchFinding } from "./research";

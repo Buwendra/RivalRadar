@@ -3,7 +3,7 @@ import { AiAnalysis, ResearchFinding, FindingItem, Citation } from '../types';
 import { logger } from '../utils/logger';
 
 const HAIKU_MODEL = 'claude-haiku-4-5-20251001';
-const SONNET_MODEL = 'claude-sonnet-4-5-20241022';
+const SONNET_MODEL = 'claude-sonnet-4-5';
 const WEB_SEARCH_MAX_USES = 8;
 
 /**

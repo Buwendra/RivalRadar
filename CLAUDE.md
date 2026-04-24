@@ -8,27 +8,28 @@ RivalScan is an AI-powered competitive intelligence monitoring SaaS for SMBs. It
 
 ## Tech Stack
 
-- **Frontend**: Next.js 14 (App Router) + TypeScript + Tailwind CSS + shadcn/ui, deployed to Vercel (standalone output mode)
+- **Frontend**: Next.js 14 (App Router) + TypeScript + Tailwind CSS + shadcn/ui, deployed to **AWS Amplify** (standalone output mode). App ID `d1zrq9gf129s9u`; root dir `Frontend/`.
 - **Backend**: AWS CDK (TypeScript) — fully serverless
-  - API Gateway HTTP API v2 + Lambda (Node.js 20)
+  - API Gateway HTTP API v2 + Lambda (Node.js 20, ARM64)
   - DynamoDB (single-table, on-demand) + S3 (snapshots)
-  - Step Functions (daily scraping pipeline + weekly digest)
-  - EventBridge Scheduler (cron triggers)
+  - Step Functions (3 state machines: daily scrape, weekly digest, deep research)
+  - EventBridge Scheduler (cron triggers for daily + weekly)
   - Cognito (auth) + SES (email) + Secrets Manager
   - CloudFront + WAF + CloudWatch + X-Ray
-- **External Services**: Firecrawl API (scraping), Anthropic Claude API (analysis), Paddle (payments)
+- **External Services**: Firecrawl API (scraping), Anthropic Claude API (analysis + web_search agentic research), Paddle (payments)
 
 ## Architecture
 
 ```
-Next.js (Vercel) → CloudFront/WAF → API Gateway v2 → Cognito JWT → Lambda → DynamoDB/S3
+Next.js (Amplify SSR) → API Gateway v2 → Cognito JWT → Lambda → DynamoDB/S3
 
-EventBridge (daily 6am) → Step Functions → [Scrape → Store → Diff → Analyze → Alert]
-EventBridge (Mon 8am)   → Step Functions → [Aggregate → Sonnet Summary → SES Email]
+EventBridge (daily 6am) → DailyPipeline SFN   → [Scrape → Store → Diff → Analyze → Alert]
+EventBridge (Mon 8am)   → WeeklyDigest SFN    → [Aggregate → Sonnet Summary → SES Email]
+Onboard / manual        → ResearchPipeline SFN → [DeepResearch via Claude web_search]
 ```
 
 **7 CDK stacks** wired in `bin/app.ts` with explicit cross-stack dependencies:
-Database → Storage → Auth → Email → Pipeline → API (receives pipeline ARN) → Monitoring.
+Database → Storage → Auth → Email → Pipeline → API (receives daily + research ARNs) → Monitoring.
 Stack naming: `RivalScan-${stage}-${StackType}` (stage from env context: dev/staging/prod).
 
 ## Commands
@@ -99,6 +100,8 @@ API calls: `lib/api/client.ts` (`apiClient<T>` / `apiClientWithMeta<T>`) → dom
 
 Auth tokens stored in localStorage with `rs_` prefix. `apiClient` auto-injects Bearer token when `requireAuth: true` (default). Auto-redirects to `/sign-in` on 401.
 
+**Cognito token gotcha**: `apiClient` must send `rs_id_token` (not `rs_access_token`) because the backend's `getUserEmail()` reads the `email` JWT claim, which only appears in Cognito **ID tokens** — access tokens contain only `sub`/`username`. Changing this reintroduces "Missing email claim" 401s on every authenticated route.
+
 ### Frontend Global Query Config
 
 `staleTime: 30_000`, `retry: 1`, `refetchOnWindowFocus: false` (set in `lib/providers/app-providers.tsx`).
@@ -117,9 +120,16 @@ Lazy-loaded singleton with 5-minute TTL cache (`shared/services/secrets.ts`). Pu
 
 ### AI Models
 
-- **Claude Haiku 4.5**: Real-time change analysis (fast, cost-effective) — called in `analyze-change.ts`
-- **Claude Sonnet 4.5**: Weekly strategic summaries — called in `generate-summary.ts`
-- Uses native Anthropic API via `fetch` (not SDK)
+- **Claude Haiku 4.5** (`claude-haiku-4-5-20251001`): Per-change analysis — `analyze-change.ts`
+- **Claude Sonnet 4.5** (alias `claude-sonnet-4-5`): Weekly digest summaries (`generate-summary.ts`) AND deep research (`deep-research.ts`)
+- Uses native Anthropic API via `fetch` (not SDK). Model IDs are constants at the top of `shared/services/anthropic.ts`.
+- **Do not pin Sonnet to a dated snapshot without confirming it exists** — historically a bad snapshot ID (`claude-sonnet-4-5-20241022`, which is actually a 3.5 Sonnet date) shipped to prod and caused silent 404s in weekly digest + deep research. Use the alias unless you've verified the dated snapshot.
+
+### AI Deep Research (web_search tool)
+
+`deepResearch()` in `shared/services/anthropic.ts` uses Anthropic's native `web_search_20250305` **server tool** (max 8 uses per run) — Claude manages the search loop internally, no client-side tool-use loop is needed. Single `fetch` call returns `content[]` with a mix of `text`, `server_tool_use`, and `web_search_tool_result` blocks; citations are extracted from the latter, JSON findings from the final text block.
+
+Triggered automatically on onboarding (in `users/onboard.ts`) to populate new accounts with day-1 data, and manually via `POST /competitors/{id}/research`. Each run writes one `ResearchFinding` to DynamoDB. Cost: ~$0.15-0.30/run.
 
 ## DynamoDB Single-Table Design
 
@@ -130,8 +140,9 @@ Lazy-loaded singleton with 5-minute TTL cache (`shared/services/secrets.ts`). Pu
 | Competitor | `USER#<id>` | `COMP#<id>` |
 | Change | `COMP#<id>` | `CHANGE#<timestamp>` |
 | Snapshot | `COMP#<id>` | `SNAP#<pageHash>#<ts>` |
+| ResearchFinding | `COMP#<id>` | `RESEARCH#<timestamp>` |
 
-**GSIs**: GSI1 (user's changes feed by timestamp), GSI2 (all active competitors for daily cron — PK=`ACTIVE`), GSI3 (user by email for auth lookups)
+**GSIs**: GSI1 (user's feed — stores both `CHANGE#<ts>` and `RESEARCH#<ts>` SK prefixes; filter with `begins_with`), GSI2 (all active competitors for daily cron — PK=`ACTIVE`), GSI3 (user by email for auth lookups)
 
 Snapshot markdown content stored in S3, referenced by `s3Key` in DynamoDB.
 
@@ -151,6 +162,11 @@ Key builders in `shared/db/keys.ts`. Query helpers (`getItem`, `putItem`, `query
 **Weekly digest** (`src/functions/scheduled/`):
 1. `get-subscribers` → 2. `aggregate-changes` (top 10 by significance, past 7 days via GSI1) → 3. `generate-summary` (Claude Sonnet) → 4. `render-send-email` (SES)
 
+**Research pipeline** (`src/functions/pipeline/deep-research.ts` — single Lambda, mapped over competitors with concurrency 5):
+1. `onboard.ts` or `competitors/research.ts` starts the ResearchPipeline SFN with `{ competitors: [{ competitorId, userId, name, url, industry? }] }`
+2. SFN Map invokes `deep-research` per competitor — calls Claude Sonnet + web_search, writes a `ResearchFinding` to DynamoDB
+3. Failures are caught per-item (does not fail the whole execution). Lambda timeout 5 min, memory 1024 MB (web_search responses can be large)
+
 ## Pricing Tiers & Plan Limits
 
 | Tier | Price | Max Competitors | History |
@@ -163,8 +179,14 @@ Defined in `PLAN_LIMITS` from `shared/types/index.ts`. Enforced in `competitors/
 
 ## Environment Variables
 
-**Backend Lambda** (set via CDK): `TABLE_NAME`, `BUCKET_NAME`, `USER_POOL_ID`, `USER_POOL_CLIENT_ID`, `SECRETS_ARN`, `FRONTEND_URL`, `FROM_EMAIL`
+**Backend Lambda** (set via CDK): `TABLE_NAME`, `BUCKET_NAME`, `USER_POOL_ID`, `USER_POOL_CLIENT_ID`, `SECRETS_ARN`, `FRONTEND_URL`, `FROM_EMAIL`. Lambdas that trigger state machines also get `DAILY_PIPELINE_ARN` (onboard, scrape) and/or `RESEARCH_PIPELINE_ARN` (onboard, research). Subscription checkout gets `PADDLE_PRICE_SCOUT`/`_STRATEGIST`/`_COMMAND`.
 
-**CDK deploy**: `CDK_DEFAULT_ACCOUNT`, `CDK_DEFAULT_REGION` (defaults to us-east-1), `FRONTEND_URL` (for CORS, defaults to `http://localhost:3000`)
+**CDK deploy** (required for `cdk deploy`): `CDK_DEFAULT_ACCOUNT`, `CDK_DEFAULT_REGION` (defaults to us-east-1), `FRONTEND_URL` (for API CORS — **must match the Amplify URL exactly**, e.g. `https://main.d1zrq9gf129s9u.amplifyapp.com`, or CORS blocks the browser), `FROM_EMAIL`, `PADDLE_PRICE_*`. `bin/app.ts` validates `CDK_DEFAULT_ACCOUNT` and `FRONTEND_URL` at synth time. A populated `Backend/.env` can be sourced with `set -a && source .env && set +a`.
 
-**Frontend**: `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_APP_NAME`, `NEXT_PUBLIC_APP_URL`
+**Frontend** (Amplify app-level env vars): `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_APP_NAME`, `NEXT_PUBLIC_APP_URL`. **These are inlined at build time**, not read at runtime — after changing them in Amplify console you MUST trigger a rebuild (`aws amplify start-job --app-id d1zrq9gf129s9u --branch-name main --job-type RELEASE`), otherwise the old localhost-fallback bundle keeps serving.
+
+## Deploy Notes
+
+- **Backend** deploys via `cdk deploy --all` from `Backend/` after sourcing `.env`. Individual stacks: `cdk deploy RivalScan-dev-Pipeline RivalScan-dev-Api`.
+- **Frontend** deploys automatically on push to `main` (Amplify tracks the GitHub repo). Manual: `aws amplify start-job --app-id d1zrq9gf129s9u --branch-name main --job-type RELEASE`.
+- AWS region is **us-east-1**. Paths with leading `/` (CloudWatch log group names, IAM ARNs) passed to `aws` CLI from Git Bash on Windows get mangled — prefix with `MSYS_NO_PATHCONV=1`.
