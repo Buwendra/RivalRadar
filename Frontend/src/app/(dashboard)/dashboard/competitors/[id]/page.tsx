@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SignificanceBadge } from "@/components/dashboard/significance-badge";
 import { ChangeTypeBadge } from "@/components/dashboard/change-type-badge";
+import { ResearchSection } from "@/components/dashboard/research-section";
 import { formatSmartDate } from "@/lib/utils/format-date";
 import Link from "next/link";
 
@@ -135,6 +136,11 @@ export default function CompetitorDetailPage() {
           </p>
         </CardContent>
       </Card>
+
+      <ResearchSection
+        competitorId={id}
+        research={competitor.recentResearch ?? []}
+      />
 
       <div>
         <h2 className="mb-4 text-lg font-semibold">Recent Changes</h2>

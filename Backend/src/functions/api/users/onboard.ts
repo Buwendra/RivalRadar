@@ -71,11 +71,28 @@ export const handler = apiHandler(async (event) => {
     );
   }
 
+  // Trigger initial deep research in parallel (if configured)
+  if (process.env.RESEARCH_PIPELINE_ARN) {
+    const researchInput = body.competitors.map((comp, i) => ({
+      competitorId: competitorIds[i],
+      userId,
+      name: comp.name,
+      url: comp.url,
+      industry: body.industry,
+    }));
+    await sfn.send(
+      new StartExecutionCommand({
+        stateMachineArn: process.env.RESEARCH_PIPELINE_ARN,
+        input: JSON.stringify({ competitors: researchInput }),
+      })
+    );
+  }
+
   return {
     statusCode: 200,
     body: {
       data: {
-        message: 'Onboarding complete. Initial scrape started.',
+        message: 'Onboarding complete. Initial scrape and research started.',
         competitorIds,
       },
     },

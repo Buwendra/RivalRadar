@@ -17,7 +17,10 @@ export const handler = apiHandler(async (event) => {
     throw new HttpError(404, 'NOT_FOUND', 'Competitor not found');
   }
 
-  const { items: changes } = await queryByPK(`COMP#${compId}`, 'CHANGE#', { limit: 10 });
+  const [{ items: changes }, { items: research }] = await Promise.all([
+    queryByPK(`COMP#${compId}`, 'CHANGE#', { limit: 10 }),
+    queryByPK(`COMP#${compId}`, 'RESEARCH#', { limit: 5 }),
+  ]);
 
   return {
     statusCode: 200,
@@ -34,6 +37,17 @@ export const handler = apiHandler(async (event) => {
           significance: c.significance,
           aiAnalysis: c.aiAnalysis,
           detectedAt: c.detectedAt,
+        })),
+        recentResearch: research.map((r) => ({
+          id: r.id,
+          competitorId: r.competitorId,
+          userId: r.userId,
+          generatedAt: r.generatedAt,
+          summary: r.summary,
+          categories: r.categories,
+          citations: r.citations,
+          searchQueries: r.searchQueries,
+          tokensUsed: r.tokensUsed,
         })),
       },
     },

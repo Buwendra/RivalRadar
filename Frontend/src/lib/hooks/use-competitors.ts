@@ -36,3 +36,16 @@ export function useScrapeCompetitor() {
     mutationFn: (id: string) => competitorsApi.scrape(id),
   });
 }
+
+export function useTriggerResearch() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => competitorsApi.research(id),
+    onSuccess: (_data, id) => {
+      // Invalidate after a delay so the freshly-written finding is visible on refetch
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["competitors", id] });
+      }, 90_000);
+    },
+  });
+}

@@ -2,6 +2,7 @@ export * from './user';
 export * from './competitor';
 export * from './change';
 export * from './subscription';
+export * from './research';
 
 /** Standard API response envelope */
 export interface ApiResponse<T> {

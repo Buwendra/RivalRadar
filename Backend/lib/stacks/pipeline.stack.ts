@@ -19,6 +19,7 @@ interface PipelineStackProps extends cdk.StackProps {
 export class PipelineStack extends cdk.Stack {
   public readonly dailyStateMachine: sfn.StateMachine;
   public readonly weeklyStateMachine: sfn.StateMachine;
+  public readonly researchStateMachine: sfn.StateMachine;
 
   constructor(scope: Construct, id: string, props: PipelineStackProps) {
     super(scope, id, props);
@@ -73,6 +74,18 @@ export class PipelineStack extends cdk.Stack {
     const analyzeChangeFn = createPipelineFn('AnalyzeChange', 'pipeline/analyze-change.ts', cdk.Duration.minutes(5));
     const storeChangeFn = createPipelineFn('StoreChange', 'pipeline/store-change.ts');
     const sendAlertFn = createPipelineFn('SendAlert', 'pipeline/send-alert.ts');
+
+    // ─── Deep Research Lambda ───
+    // Larger memory & longer timeout — Claude web_search + synthesis can take 60-90s.
+    const deepResearchFn = new nodejs.NodejsFunction(this, 'DeepResearch', {
+      ...lambdaDefaults,
+      entry: fnPath('pipeline/deep-research.ts'),
+      functionName: `${this.stackName}-DeepResearch`,
+      timeout: cdk.Duration.minutes(5),
+      memorySize: 1024,
+    });
+    table.grantReadWriteData(deepResearchFn);
+    apiSecrets.grantRead(deepResearchFn);
 
     // ─── Weekly Digest Lambdas ───
     const getSubscribersFn = createPipelineFn('GetSubscribers', 'scheduled/get-subscribers.ts');
@@ -195,6 +208,31 @@ export class PipelineStack extends cdk.Stack {
       tracingEnabled: true,
     });
 
+    // ─── Research Pipeline State Machine ───
+    // Input: { competitors: [{ competitorId, userId, name, url, industry? }] }
+    // Maps over competitors with parallel concurrency, invoking DeepResearch per item.
+    const deepResearchTask = new tasks.LambdaInvoke(this, 'DeepResearchTask', {
+      lambdaFunction: deepResearchFn,
+      outputPath: '$.Payload',
+    });
+
+    const mapResearch = new sfn.Map(this, 'MapResearch', {
+      itemsPath: '$.competitors',
+      maxConcurrency: 5,
+      resultPath: '$.results',
+    });
+    mapResearch.itemProcessor(deepResearchTask);
+    mapResearch.addCatch(new sfn.Pass(this, 'CatchResearchMapError'), {
+      resultPath: '$.mapError',
+    });
+
+    this.researchStateMachine = new sfn.StateMachine(this, 'ResearchPipeline', {
+      stateMachineName: `${this.stackName}-ResearchPipeline`,
+      definitionBody: sfn.DefinitionBody.fromChainable(mapResearch),
+      timeout: cdk.Duration.hours(1),
+      tracingEnabled: true,
+    });
+
     // ─── EventBridge Schedules ───
 
     // Daily at 6:00 AM UTC
@@ -214,5 +252,6 @@ export class PipelineStack extends cdk.Stack {
     // ─── Outputs ───
     new cdk.CfnOutput(this, 'DailyPipelineArn', { value: this.dailyStateMachine.stateMachineArn });
     new cdk.CfnOutput(this, 'WeeklyDigestArn', { value: this.weeklyStateMachine.stateMachineArn });
+    new cdk.CfnOutput(this, 'ResearchPipelineArn', { value: this.researchStateMachine.stateMachineArn });
   }
 }

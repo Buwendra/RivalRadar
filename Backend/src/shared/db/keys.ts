@@ -18,12 +18,21 @@ export const snapshotPK = (competitorId: string) => `COMP#${competitorId}`;
 export const snapshotSK = (pageUrl: string, timestamp: string) =>
   `SNAP#${hashPage(pageUrl)}#${timestamp}`;
 
+export const researchPK = (competitorId: string) => `COMP#${competitorId}`;
+export const researchSK = (timestamp: string) => `RESEARCH#${timestamp}`;
+
 // ─── GSI Key Builders ───
 
 // GSI1: User's changes feed (dashboard)
 export const gsi1ChangeKeys = (userId: string, timestamp: string) => ({
   GSI1PK: userId,
   GSI1SK: `CHANGE#${timestamp}`,
+});
+
+// GSI1: User's research findings feed
+export const gsi1ResearchKeys = (userId: string, timestamp: string) => ({
+  GSI1PK: userId,
+  GSI1SK: `RESEARCH#${timestamp}`,
 });
 
 // GSI2: Active competitors (for daily cron)

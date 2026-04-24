@@ -16,6 +16,8 @@ export interface CompetitorDetail extends Competitor {
     aiAnalysis: AiAnalysis;
     detectedAt: string;
   }>;
+  recentResearch: ResearchFinding[];
 }
 
 import type { AiAnalysis } from "./change";
+import type { ResearchFinding } from "./research";

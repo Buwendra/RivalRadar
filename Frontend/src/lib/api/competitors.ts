@@ -27,4 +27,9 @@ export const competitorsApi = {
     apiClient<{ message: string }>(`/competitors/${id}/scrape`, {
       method: "POST",
     }),
+
+  research: (id: string) =>
+    apiClient<{ message: string }>(`/competitors/${id}/research`, {
+      method: "POST",
+    }),
 };

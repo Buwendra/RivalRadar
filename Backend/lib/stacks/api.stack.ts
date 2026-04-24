@@ -18,6 +18,7 @@ interface ApiStackProps extends cdk.StackProps {
   userPool: cognito.UserPool;
   userPoolClient: cognito.UserPoolClient;
   dailyStateMachine: sfn.StateMachine;
+  researchStateMachine: sfn.StateMachine;
 }
 
 export class ApiStack extends cdk.Stack {
@@ -26,7 +27,7 @@ export class ApiStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: ApiStackProps) {
     super(scope, id, props);
 
-    const { table, snapshotBucket, userPool, userPoolClient, dailyStateMachine } = props;
+    const { table, snapshotBucket, userPool, userPoolClient, dailyStateMachine, researchStateMachine } = props;
 
     // Secrets for external APIs
     const apiSecrets = secretsmanager.Secret.fromSecretNameV2(
@@ -117,6 +118,7 @@ export class ApiStack extends cdk.Stack {
 
     const pipelineEnv = {
       DAILY_PIPELINE_ARN: dailyStateMachine.stateMachineArn,
+      RESEARCH_PIPELINE_ARN: researchStateMachine.stateMachineArn,
     };
 
     // ─── User Routes ───
@@ -124,6 +126,7 @@ export class ApiStack extends cdk.Stack {
     addRoute('UserUpdate', apigatewayv2.HttpMethod.PUT, '/users/me', 'api/users/profile.ts');
     const onboardFn = addRoute('UserOnboard', apigatewayv2.HttpMethod.POST, '/users/onboard', 'api/users/onboard.ts', true, pipelineEnv);
     dailyStateMachine.grantStartExecution(onboardFn);
+    researchStateMachine.grantStartExecution(onboardFn);
 
     // ─── Competitor Routes ───
     addRoute('CompetitorList', apigatewayv2.HttpMethod.GET, '/competitors', 'api/competitors/list.ts');
@@ -132,6 +135,8 @@ export class ApiStack extends cdk.Stack {
     addRoute('CompetitorDelete', apigatewayv2.HttpMethod.DELETE, '/competitors/{id}', 'api/competitors/delete.ts');
     const scrapeFn = addRoute('CompetitorScrape', apigatewayv2.HttpMethod.POST, '/competitors/{id}/scrape', 'api/competitors/scrape.ts', true, pipelineEnv);
     dailyStateMachine.grantStartExecution(scrapeFn);
+    const researchFn = addRoute('CompetitorResearch', apigatewayv2.HttpMethod.POST, '/competitors/{id}/research', 'api/competitors/research.ts', true, pipelineEnv);
+    researchStateMachine.grantStartExecution(researchFn);
 
     // ─── Changes Routes ───
     addRoute('ChangesList', apigatewayv2.HttpMethod.GET, '/changes', 'api/changes/list.ts');

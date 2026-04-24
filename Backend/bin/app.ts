@@ -46,6 +46,7 @@ const apiStack = new ApiStack(app, `${prefix}-Api`, {
   userPool: authStack.userPool,
   userPoolClient: authStack.userPoolClient,
   dailyStateMachine: pipelineStack.dailyStateMachine,
+  researchStateMachine: pipelineStack.researchStateMachine,
 });
 
 new MonitoringStack(app, `${prefix}-Monitoring`, {
