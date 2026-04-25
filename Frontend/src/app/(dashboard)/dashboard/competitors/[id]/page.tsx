@@ -47,6 +47,7 @@ import { ResearchCard } from "@/components/dashboard/research-card";
 import { MetricCard } from "@/components/dashboard/metric-card";
 import { ActivitySparkline } from "@/components/dashboard/activity-sparkline";
 import { PageActivityList } from "@/components/dashboard/page-activity-list";
+import { MomentumChip } from "@/components/dashboard/momentum-chip";
 import { formatSmartDate } from "@/lib/utils/format-date";
 import type { CompetitorDetailChange, PageType } from "@/lib/types";
 
@@ -213,9 +214,15 @@ export default function CompetitorDetailPage() {
 
           <Card className="border-brand-700 bg-brand-900">
             <CardContent className="space-y-3 p-5">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Activity (last 30 days)
-              </h3>
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                  Activity (last 30 days)
+                </h3>
+                <MomentumChip
+                  momentum={competitor.momentum}
+                  momentumChangePercent={competitor.momentumChangePercent}
+                />
+              </div>
               <ActivitySparkline data={stats.changesByDay} />
             </CardContent>
           </Card>

@@ -15,6 +15,110 @@ const SONNET_MODEL = 'claude-sonnet-4-5';
 const WEB_SEARCH_MAX_USES = 8;
 
 /**
+ * Parse a `{ "deltas": [ {...}, {...}, ... ] }` JSON blob, tolerating
+ * truncation: if the full JSON doesn't parse, extract as many complete
+ * top-level `{ ... }` objects from the array as possible and parse the
+ * rest as valid partial output.
+ */
+function parseDeltasJson(text: string): { deltas: Array<Record<string, unknown>> } {
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) throw new Error('no JSON object in response');
+
+  // Happy path: complete JSON parses cleanly
+  try {
+    return JSON.parse(jsonMatch[0]) as { deltas: Array<Record<string, unknown>> };
+  } catch {
+    // Fall through to partial recovery
+  }
+
+  // Partial recovery: walk the "deltas" array and collect complete objects
+  const arrayStart = text.indexOf('"deltas"');
+  if (arrayStart < 0) throw new Error('no "deltas" array found');
+  const bracketStart = text.indexOf('[', arrayStart);
+  if (bracketStart < 0) throw new Error('no "deltas" array bracket found');
+
+  const recovered: Array<Record<string, unknown>> = [];
+  let depth = 0;
+  let objStart = -1;
+  let inString = false;
+  let escape = false;
+
+  for (let i = bracketStart + 1; i < text.length; i++) {
+    const c = text[i];
+
+    if (escape) {
+      escape = false;
+      continue;
+    }
+    if (c === '\\') {
+      escape = true;
+      continue;
+    }
+    if (c === '"') {
+      inString = !inString;
+      continue;
+    }
+    if (inString) continue;
+
+    if (c === '{') {
+      if (depth === 0) objStart = i;
+      depth++;
+    } else if (c === '}') {
+      depth--;
+      if (depth === 0 && objStart >= 0) {
+        const chunk = text.slice(objStart, i + 1);
+        try {
+          recovered.push(JSON.parse(chunk) as Record<string, unknown>);
+        } catch {
+          // Skip malformed object silently — continue scanning
+        }
+        objStart = -1;
+      }
+    } else if (c === ']' && depth === 0) {
+      // End of array
+      break;
+    }
+  }
+
+  if (recovered.length === 0) {
+    throw new Error('partial recovery found no complete delta objects');
+  }
+  return { deltas: recovered };
+}
+
+/**
+ * Call the Anthropic messages API, retrying on 429 rate-limit responses.
+ * Honors the `retry-after` response header (seconds) when present.
+ */
+async function callAnthropic(
+  apiKey: string,
+  body: unknown,
+  opName: string,
+  maxRetries = 2
+): Promise<Response> {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (response.status !== 429 || attempt === maxRetries) return response;
+
+    const retryAfter = Number(response.headers.get('retry-after') ?? '');
+    const waitSec = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : 65;
+    logger.warn(`${opName}: 429 rate-limited, waiting ${waitSec}s before retry ${attempt + 1}/${maxRetries}`);
+    await new Promise((r) => setTimeout(r, waitSec * 1000));
+  }
+  // Unreachable; TypeScript needs a return
+  throw new Error('callAnthropic: exhausted retries');
+}
+
+/**
  * Analyze a detected change using Claude Haiku.
  * Returns structured JSON with change type, significance, and recommendations.
  */
@@ -49,19 +153,15 @@ Scoring guide:
 - 4-6: Notable but not urgent changes (new blog post, small feature update)
 - 7-10: Strategic changes requiring attention (pricing change, major feature launch, key hire)`;
 
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': secrets.ANTHROPIC_API_KEY,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
+  const response = await callAnthropic(
+    secrets.ANTHROPIC_API_KEY,
+    {
       model: HAIKU_MODEL,
       max_tokens: 500,
       messages: [{ role: 'user', content: prompt }],
-    }),
-  });
+    },
+    'analyzeChange'
+  );
 
   if (!response.ok) {
     logger.error('Anthropic API error', { status: response.status });
@@ -120,19 +220,15 @@ Write a 3-4 paragraph strategic briefing that:
 
 Keep it actionable and concise. Write for a busy founder or marketing leader.`;
 
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': secrets.ANTHROPIC_API_KEY,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
+  const response = await callAnthropic(
+    secrets.ANTHROPIC_API_KEY,
+    {
       model: SONNET_MODEL,
       max_tokens: 1000,
       messages: [{ role: 'user', content: prompt }],
-    }),
-  });
+    },
+    'generateWeeklySummary'
+  );
 
   if (!response.ok) {
     logger.error('Anthropic API error for weekly summary', { status: response.status });
@@ -188,14 +284,9 @@ After your searches, respond with ONLY valid JSON in this exact shape — no pro
 
 importance: 3 = must-know strategic, 2 = notable, 1 = minor. Omit a category entirely (empty array) if nothing relevant found. Every finding MUST include a sourceUrl from your searches.`;
 
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': secrets.ANTHROPIC_API_KEY,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
+  const response = await callAnthropic(
+    secrets.ANTHROPIC_API_KEY,
+    {
       model: SONNET_MODEL,
       max_tokens: 4096,
       tools: [
@@ -206,8 +297,9 @@ importance: 3 = must-know strategic, 2 = notable, 1 = minor. Omit a category ent
         },
       ],
       messages: [{ role: 'user', content: prompt }],
-    }),
-  });
+    },
+    'deepResearch'
+  );
 
   if (!response.ok) {
     const errBody = await response.text().catch(() => '');
@@ -306,7 +398,7 @@ export async function detectResearchDeltas(input: {
         cat,
         f.categories[cat].map((item) => ({
           title: item.title,
-          detail: item.detail.slice(0, 400),
+          detail: item.detail.slice(0, 150),
           sourceUrl: item.sourceUrl ?? '',
         })),
       ])
@@ -349,19 +441,15 @@ Scoring guide:
 
 If nothing substantively new: return { "deltas": [] }.`;
 
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': secrets.ANTHROPIC_API_KEY,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
+  const response = await callAnthropic(
+    secrets.ANTHROPIC_API_KEY,
+    {
       model: SONNET_MODEL,
-      max_tokens: 2048,
+      max_tokens: 16384,
       messages: [{ role: 'user', content: prompt }],
-    }),
-  });
+    },
+    'detectResearchDeltas'
+  );
 
   if (!response.ok) {
     const errBody = await response.text().catch(() => '');
@@ -374,24 +462,32 @@ If nothing substantively new: return { "deltas": [] }.`;
 
   const data = (await response.json()) as {
     content: Array<{ type: string; text: string }>;
+    stop_reason?: string;
+    usage?: { input_tokens?: number; output_tokens?: number };
   };
 
   const text = (data.content.find((b) => b.type === 'text')?.text ?? '').trim();
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    logger.warn('detectResearchDeltas: no JSON in response', { text: text.slice(0, 500) });
-    return [];
+  const wasTruncated = data.stop_reason === 'max_tokens';
+  if (wasTruncated) {
+    logger.warn('detectResearchDeltas: response hit max_tokens limit; will try partial recovery', {
+      outputTokens: data.usage?.output_tokens,
+      textLength: text.length,
+    });
   }
 
   let parsed: { deltas?: Array<Record<string, unknown>> };
   try {
-    parsed = JSON.parse(jsonMatch[0]);
+    parsed = parseDeltasJson(text);
   } catch (err) {
-    logger.error('detectResearchDeltas: JSON parse failed', {
+    logger.error('detectResearchDeltas: JSON parse failed even after partial recovery', {
       error: String(err),
-      text: jsonMatch[0].slice(0, 500),
+      stopReason: data.stop_reason,
+      textLength: text.length,
+      textTail: text.slice(-200),
     });
-    return [];
+    throw new Error(
+      `detectResearchDeltas: could not parse Claude response (stop_reason=${data.stop_reason ?? 'unknown'}, length=${text.length})`
+    );
   }
 
   const validCategories: ResearchCategory[] = ['news', 'product', 'funding', 'hiring', 'social'];

@@ -1,6 +1,7 @@
 import { apiHandler, getUserEmail, HttpError } from '../../../shared/middleware/handler';
 import { queryByPK, queryGSI, getItem } from '../../../shared/db/queries';
 import { competitorPK, competitorSK } from '../../../shared/db/keys';
+import { computeMomentum } from '../../../shared/utils/competitor-metrics';
 
 interface StatsInput {
   detectedAt: string;
@@ -141,6 +142,10 @@ export const handler = apiHandler(async (event) => {
     new Date()
   );
 
+  const { momentum, momentumChangePercent } = computeMomentum({
+    changesByDay: stats.changesByDay,
+  });
+
   return {
     statusCode: 200,
     body: {
@@ -151,6 +156,9 @@ export const handler = apiHandler(async (event) => {
         pagesToTrack: competitor.pagesToTrack,
         status: competitor.status,
         createdAt: competitor.createdAt,
+        momentum,
+        momentumChangePercent,
+        momentumAsOf: new Date().toISOString(),
         recentChanges: changes.map((c) => ({
           id: c.id,
           significance: c.significance,

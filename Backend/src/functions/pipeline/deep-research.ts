@@ -1,15 +1,18 @@
 import { deepResearch, detectResearchDeltas } from '../../shared/services/anthropic';
-import { putItem, queryByPK } from '../../shared/db/queries';
+import { putItem, queryByPK, updateItem } from '../../shared/db/queries';
 import {
   researchPK,
   researchSK,
   changePK,
   changeSK,
+  competitorPK,
+  competitorSK,
   gsi1ResearchKeys,
   gsi1ChangeKeys,
 } from '../../shared/db/keys';
 import { generateId } from '../../shared/utils/id';
 import { logger } from '../../shared/utils/logger';
+import { buildChangesByDay, computeMomentum } from '../../shared/utils/competitor-metrics';
 import type { ResearchFinding } from '../../shared/types';
 
 interface Event {
@@ -73,10 +76,6 @@ export const handler = async (event: Event): Promise<Output> => {
       industry: event.industry,
     });
 
-    // 3. Persist the new ResearchFinding
-    const researchId = generateId();
-    const generatedAt = new Date().toISOString();
-
     const findingsCount =
       current.categories.news.length +
       current.categories.product.length +
@@ -84,22 +83,8 @@ export const handler = async (event: Event): Promise<Output> => {
       current.categories.hiring.length +
       current.categories.social.length;
 
-    await putItem({
-      PK: researchPK(event.competitorId),
-      SK: researchSK(generatedAt),
-      id: researchId,
-      competitorId: event.competitorId,
-      userId: event.userId,
-      generatedAt,
-      summary: current.summary,
-      categories: current.categories,
-      citations: current.citations,
-      searchQueries: current.searchQueries,
-      tokensUsed: current.tokensUsed,
-      ...gsi1ResearchKeys(event.userId, generatedAt),
-    });
-
-    // 4. Detect deltas against prior finding, if any
+    // 3. Detect deltas against prior finding BEFORE storing the new one.
+    //    If this fails, we leave the prior finding in place for a clean retry.
     let deltas: Awaited<ReturnType<typeof detectResearchDeltas>> = [];
     if (previous) {
       deltas = await detectResearchDeltas({
@@ -115,6 +100,25 @@ export const handler = async (event: Event): Promise<Output> => {
         },
       });
     }
+
+    // 4. Persist the new ResearchFinding (only after delta detection succeeded)
+    const researchId = generateId();
+    const generatedAt = new Date().toISOString();
+
+    await putItem({
+      PK: researchPK(event.competitorId),
+      SK: researchSK(generatedAt),
+      id: researchId,
+      competitorId: event.competitorId,
+      userId: event.userId,
+      generatedAt,
+      summary: current.summary,
+      categories: current.categories,
+      citations: current.citations,
+      searchQueries: current.searchQueries,
+      tokensUsed: current.tokensUsed,
+      ...gsi1ResearchKeys(event.userId, generatedAt),
+    });
 
     // 5. Persist each delta as a Change record
     const storedChanges: StoredChange[] = [];
@@ -151,6 +155,44 @@ export const handler = async (event: Event): Promise<Output> => {
         significance: delta.significanceScore,
         pageUrl: delta.sourceUrl,
         summary: delta.title,
+      });
+    }
+
+    // 6. Compute & persist momentum on the Competitor record so list views can
+    //    sort/filter without recomputing per request. Queries the last 30 days
+    //    of Change detectedAt timestamps.
+    try {
+      const { items: recentChangeItems } = await queryByPK(
+        `COMP#${event.competitorId}`,
+        'CHANGE#',
+        { limit: 100 }
+      );
+      const momentumNow = new Date();
+      const timestamps = recentChangeItems
+        .map((c) => c.detectedAt as string | undefined)
+        .filter((ts): ts is string => typeof ts === 'string');
+      const changesByDay = buildChangesByDay(timestamps, momentumNow);
+      const { momentum, momentumChangePercent } = computeMomentum({ changesByDay });
+
+      await updateItem(
+        competitorPK(event.userId),
+        competitorSK(event.competitorId),
+        {
+          momentum,
+          momentumChangePercent,
+          momentumAsOf: momentumNow.toISOString(),
+          updatedAt: momentumNow.toISOString(),
+        }
+      );
+      logger.info('Momentum persisted', {
+        competitorId: event.competitorId,
+        momentum,
+        momentumChangePercent,
+      });
+    } catch (err) {
+      logger.warn('Failed to persist momentum — continuing', {
+        competitorId: event.competitorId,
+        error: String(err),
       });
     }
 

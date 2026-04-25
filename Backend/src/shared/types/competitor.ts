@@ -1,5 +1,7 @@
 export type PageType = 'pricing' | 'features' | 'homepage' | 'blog' | 'careers';
 
+export type Momentum = 'rising' | 'stable' | 'slowing' | 'declining' | 'insufficient-data';
+
 export interface Competitor {
   id: string;
   userId: string;
@@ -9,4 +11,7 @@ export interface Competitor {
   status: 'active' | 'paused';
   createdAt: string;
   updatedAt: string;
+  momentum?: Momentum;
+  momentumChangePercent?: number;
+  momentumAsOf?: string;
 }

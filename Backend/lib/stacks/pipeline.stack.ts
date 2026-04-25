@@ -138,9 +138,12 @@ export class PipelineStack extends cdk.Stack {
 
     const perCompetitorResearchChain = deepResearchTask.next(sendAlertTask);
 
+    // Concurrency 1: serialize competitor research runs to avoid exhausting
+    // Anthropic's per-minute input-token rate limit (30k), which is org-wide.
+    // Each research run burns ~10-20k input tokens across two Sonnet calls.
     const mapResearch = new sfn.Map(this, 'MapResearch', {
       itemsPath: '$.competitors',
-      maxConcurrency: 3,
+      maxConcurrency: 1,
       resultPath: '$.results',
     });
     mapResearch.itemProcessor(perCompetitorResearchChain);

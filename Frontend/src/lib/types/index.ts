@@ -5,6 +5,7 @@ export type {
   CompetitorDetail,
   CompetitorDetailChange,
   CompetitorStats,
+  Momentum,
   PageType,
 } from "./competitor";
 export type { Change, ChangeDetail, ChangeType, AiAnalysis, ChangeFilters } from "./change";

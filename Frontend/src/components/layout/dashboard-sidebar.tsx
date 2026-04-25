@@ -11,15 +11,33 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useCompetitors } from "@/lib/hooks/use-competitors";
 import { useAuth } from "@/lib/auth/use-auth";
 import { cn } from "@/lib/utils";
+import type { Momentum } from "@/lib/types";
 
 interface DashboardSidebarProps {
   onAddCompetitor?: () => void;
 }
 
+// Ranked order: rising > stable > slowing > declining > insufficient-data.
+// Competitors with higher priority sort first in the sidebar.
+const MOMENTUM_RANK: Record<Momentum, number> = {
+  rising: 0,
+  stable: 1,
+  slowing: 2,
+  declining: 3,
+  "insufficient-data": 4,
+};
+
 export function DashboardSidebar({ onAddCompetitor }: DashboardSidebarProps) {
   const pathname = usePathname();
   const { user } = useAuth();
   const { data: competitors, isLoading } = useCompetitors();
+
+  const sortedCompetitors = [...(competitors ?? [])].sort((a, b) => {
+    const ra = MOMENTUM_RANK[a.momentum ?? "insufficient-data"];
+    const rb = MOMENTUM_RANK[b.momentum ?? "insufficient-data"];
+    if (ra !== rb) return ra - rb;
+    return a.name.localeCompare(b.name);
+  });
 
   const navItems = [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -79,9 +97,9 @@ export function DashboardSidebar({ onAddCompetitor }: DashboardSidebarProps) {
               <Skeleton key={i} className="h-10 w-full bg-brand-800" />
             ))}
           </div>
-        ) : competitors && competitors.length > 0 ? (
+        ) : sortedCompetitors.length > 0 ? (
           <div className="space-y-1">
-            {competitors.map((competitor) => (
+            {sortedCompetitors.map((competitor) => (
               <Link
                 key={competitor.id}
                 href={`/dashboard/competitors/${competitor.id}`}
@@ -98,7 +116,13 @@ export function DashboardSidebar({ onAddCompetitor }: DashboardSidebarProps) {
                     competitor.status === "active" ? "bg-significance-low" : "bg-muted-foreground"
                   )}
                 />
-                <span className="truncate">{competitor.name}</span>
+                <span className="flex-1 truncate">{competitor.name}</span>
+                {competitor.momentum === "rising" && (
+                  <span aria-label="rising" className="text-xs">🚀</span>
+                )}
+                {competitor.momentum === "declining" && (
+                  <span aria-label="declining" className="text-xs">📉</span>
+                )}
               </Link>
             ))}
           </div>

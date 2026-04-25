@@ -18,6 +18,9 @@ export const handler = apiHandler(async (event) => {
     pagesToTrack: item.pagesToTrack,
     status: item.status,
     createdAt: item.createdAt,
+    momentum: item.momentum,
+    momentumChangePercent: item.momentumChangePercent,
+    momentumAsOf: item.momentumAsOf,
   }));
 
   return {
