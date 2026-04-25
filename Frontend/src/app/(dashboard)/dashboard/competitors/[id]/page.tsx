@@ -10,7 +10,6 @@ import {
   ArrowLeft,
   Activity,
   AlertTriangle,
-  Clock,
   Sparkles,
 } from "lucide-react";
 import { formatDistanceToNow, parseISO } from "date-fns";
@@ -48,6 +47,7 @@ import { MetricCard } from "@/components/dashboard/metric-card";
 import { ActivitySparkline } from "@/components/dashboard/activity-sparkline";
 import { PageActivityList } from "@/components/dashboard/page-activity-list";
 import { MomentumChip } from "@/components/dashboard/momentum-chip";
+import { ThreatCard } from "@/components/dashboard/threat-card";
 import { formatSmartDate } from "@/lib/utils/format-date";
 import type { CompetitorDetailChange, PageType } from "@/lib/types";
 
@@ -187,6 +187,10 @@ export default function CompetitorDetailPage() {
         {/* ─── OVERVIEW ─── */}
         <TabsContent value="overview" className="space-y-6">
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            <ThreatCard
+              threatLevel={competitor.threatLevel}
+              reasoning={competitor.threatReasoning}
+            />
             <MetricCard
               label="Changes (30d)"
               value={stats.changes30d}
@@ -199,11 +203,6 @@ export default function CompetitorDetailPage() {
               sublabel="Significance ≥ 7"
               icon={AlertTriangle}
               tone={stats.highSignificance30d > 0 ? "destructive" : "default"}
-            />
-            <MetricCard
-              label="Last Scan"
-              value={formatRelative(stats.lastChangeAt)}
-              icon={Clock}
             />
             <MetricCard
               label="Last Research"

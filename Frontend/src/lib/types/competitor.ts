@@ -7,6 +7,8 @@ export type Momentum =
   | "declining"
   | "insufficient-data";
 
+export type ThreatLevel = "critical" | "high" | "medium" | "low" | "monitor";
+
 export interface Competitor {
   id: string;
   name: string;
@@ -17,6 +19,9 @@ export interface Competitor {
   momentum?: Momentum;
   momentumChangePercent?: number;
   momentumAsOf?: string;
+  threatLevel?: ThreatLevel;
+  threatReasoning?: string;
+  threatAsOf?: string;
 }
 
 export interface CompetitorDetailChange {

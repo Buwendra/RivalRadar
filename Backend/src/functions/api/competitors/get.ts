@@ -159,6 +159,9 @@ export const handler = apiHandler(async (event) => {
         momentum,
         momentumChangePercent,
         momentumAsOf: new Date().toISOString(),
+        threatLevel: competitor.threatLevel,
+        threatReasoning: competitor.threatReasoning,
+        threatAsOf: competitor.threatAsOf,
         recentChanges: changes.map((c) => ({
           id: c.id,
           significance: c.significance,

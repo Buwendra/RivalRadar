@@ -7,6 +7,17 @@ import {
   ResearchDelta,
   ResearchCategory,
   ResearchChangeType,
+  FindingSentiment,
+  FindingTimeSensitivity,
+  DerivedState,
+  DerivedStage,
+  DerivedFundingState,
+  DerivedHiringState,
+  DerivedStrategicDirection,
+  DerivedTechPositioning,
+  DerivedPacing,
+  Momentum,
+  ThreatLevel,
 } from '../types';
 import { logger } from '../utils/logger';
 
@@ -273,16 +284,37 @@ After your searches, respond with ONLY valid JSON in this exact shape — no pro
 {
   "summary": "3-4 sentence executive summary of what you learned",
   "categories": {
-    "news": [{"title": "...", "detail": "1-2 sentences", "sourceUrl": "https://...", "importance": 1|2|3}],
+    "news": [{
+      "title": "...",
+      "detail": "1-2 sentences",
+      "sourceUrl": "https://...",
+      "importance": 1|2|3,
+      "sentiment": "positive" | "neutral" | "negative",
+      "timeSensitivity": "breaking" | "recent" | "historical"
+    }],
     "product": [...],
     "funding": [...],
     "hiring": [...],
     "social": [...]
   },
-  "searchQueries": ["the queries you actually ran"]
+  "searchQueries": ["the queries you actually ran"],
+  "derivedState": {
+    "stage": "early" | "growth" | "late" | "public" | "declining" | "unknown",
+    "fundingState": "bootstrapped" | "recently-raised" | "actively-raising" | "runway-concerns" | "public" | "unknown",
+    "hiringState": "aggressive" | "steady" | "slowing" | "frozen" | "layoffs" | "unknown",
+    "strategicDirection": "going-upmarket" | "going-downmarket" | "expanding-geo" | "expanding-vertical" | "specializing" | "diversifying" | "steady" | "unknown",
+    "techPositioning": "ai-native" | "ai-adjacent" | "legacy" | "open-source" | "mixed" | "unknown",
+    "pacing": "shipping-fast" | "steady" | "slow" | "frozen",
+    "evidenceNotes": "2-3 sentence justification citing which findings informed these labels"
+  }
 }
 
-importance: 3 = must-know strategic, 2 = notable, 1 = minor. Omit a category entirely (empty array) if nothing relevant found. Every finding MUST include a sourceUrl from your searches.`;
+Field guidance:
+- importance: 3 = must-know strategic, 2 = notable, 1 = minor.
+- sentiment: from the COMPETITOR's POV (positive = good for them, negative = bad for them).
+- timeSensitivity: breaking = published within last 7 days, recent = last 30 days, historical = older.
+- derivedState: use "unknown" liberally when evidence is thin. Do NOT guess. Every label must be supported by a finding.
+- Omit a category entirely (empty array) if nothing relevant found. Every finding MUST include a sourceUrl from your searches.`;
 
   const response = await callAnthropic(
     secrets.ANTHROPIC_API_KEY,
@@ -345,6 +377,7 @@ importance: 3 = must-know strategic, 2 = notable, 1 = minor. Omit a category ent
     summary: string;
     categories?: Partial<Record<string, FindingItem[]>>;
     searchQueries?: string[];
+    derivedState?: Partial<DerivedState>;
   };
   try {
     parsed = JSON.parse(jsonMatch[0]);
@@ -353,16 +386,51 @@ importance: 3 = must-know strategic, 2 = notable, 1 = minor. Omit a category ent
     throw new Error('deepResearch: Claude returned invalid JSON');
   }
 
+  const validSentiments: FindingSentiment[] = ['positive', 'neutral', 'negative'];
+  const validTimeSensitivities: FindingTimeSensitivity[] = ['breaking', 'recent', 'historical'];
+
   const sanitizeCategory = (items?: FindingItem[]): FindingItem[] =>
-    (items ?? []).map((item) => ({
-      title: String(item.title ?? ''),
-      detail: String(item.detail ?? ''),
-      sourceUrl: item.sourceUrl ? String(item.sourceUrl) : undefined,
-      importance: ([1, 2, 3].includes(item.importance) ? item.importance : 1) as 1 | 2 | 3,
-    }));
+    (items ?? []).map((item) => {
+      const sentiment = validSentiments.includes(item.sentiment as FindingSentiment)
+        ? (item.sentiment as FindingSentiment)
+        : undefined;
+      const timeSensitivity = validTimeSensitivities.includes(item.timeSensitivity as FindingTimeSensitivity)
+        ? (item.timeSensitivity as FindingTimeSensitivity)
+        : undefined;
+      return {
+        title: String(item.title ?? ''),
+        detail: String(item.detail ?? ''),
+        sourceUrl: item.sourceUrl ? String(item.sourceUrl) : undefined,
+        importance: ([1, 2, 3].includes(item.importance) ? item.importance : 1) as 1 | 2 | 3,
+        ...(sentiment ? { sentiment } : {}),
+        ...(timeSensitivity ? { timeSensitivity } : {}),
+      };
+    });
+
+  const sanitizeDerivedState = (raw?: Partial<DerivedState>): DerivedState | undefined => {
+    if (!raw || typeof raw !== 'object') return undefined;
+    const stages: DerivedStage[] = ['early', 'growth', 'late', 'public', 'declining', 'unknown'];
+    const fundings: DerivedFundingState[] = ['bootstrapped', 'recently-raised', 'actively-raising', 'runway-concerns', 'public', 'unknown'];
+    const hirings: DerivedHiringState[] = ['aggressive', 'steady', 'slowing', 'frozen', 'layoffs', 'unknown'];
+    const strategies: DerivedStrategicDirection[] = ['going-upmarket', 'going-downmarket', 'expanding-geo', 'expanding-vertical', 'specializing', 'diversifying', 'steady', 'unknown'];
+    const techs: DerivedTechPositioning[] = ['ai-native', 'ai-adjacent', 'legacy', 'open-source', 'mixed', 'unknown'];
+    const paces: DerivedPacing[] = ['shipping-fast', 'steady', 'slow', 'frozen'];
+    const pickEnum = <T extends string>(value: unknown, valid: T[], fallback: T): T =>
+      valid.includes(value as T) ? (value as T) : fallback;
+    return {
+      stage: pickEnum(raw.stage, stages, 'unknown'),
+      fundingState: pickEnum(raw.fundingState, fundings, 'unknown'),
+      hiringState: pickEnum(raw.hiringState, hirings, 'unknown'),
+      strategicDirection: pickEnum(raw.strategicDirection, strategies, 'unknown'),
+      techPositioning: pickEnum(raw.techPositioning, techs, 'unknown'),
+      pacing: pickEnum(raw.pacing, paces, 'steady'),
+      evidenceNotes: String(raw.evidenceNotes ?? '').slice(0, 600),
+    };
+  };
 
   const tokensUsed =
     (data.usage?.input_tokens ?? 0) + (data.usage?.output_tokens ?? 0);
+  const derivedState = sanitizeDerivedState(parsed.derivedState);
 
   return {
     competitorId: input.competitorId,
@@ -377,6 +445,7 @@ importance: 3 = must-know strategic, 2 = notable, 1 = minor. Omit a category ent
     },
     citations,
     searchQueries: Array.isArray(parsed.searchQueries) ? parsed.searchQueries.map(String) : [],
+    ...(derivedState ? { derivedState } : {}),
     tokensUsed,
   };
 }
@@ -526,4 +595,118 @@ If nothing substantively new: return { "deltas": [] }.`;
   }
 
   return deltas;
+}
+
+/**
+ * Score the competitive threat a competitor poses to the user, given the user's
+ * own company context, the competitor's latest research finding, recent changes,
+ * and momentum trend.
+ *
+ * Uses Haiku — single short call (~$0.002) producing structured threat level + reasoning.
+ */
+export async function scoreCompetitorThreat(input: {
+  competitorName: string;
+  userCompanyName?: string;
+  userIndustry?: string;
+  latestFinding: Pick<ResearchFinding, 'summary' | 'categories' | 'derivedState'>;
+  recentChanges: Array<{ summary: string; significance: number; detectedAt: string }>;
+  momentum: Momentum;
+}): Promise<{ threatLevel: ThreatLevel; reasoning: string }> {
+  const secrets = await getSecret('rivalscan/api-keys');
+
+  // Compact the categories — only need top items by importance to score threat
+  const compactCategories = (Object.keys(input.latestFinding.categories) as ResearchCategory[])
+    .map((cat) => {
+      const top = input.latestFinding.categories[cat]
+        .filter((item) => item.importance >= 2)
+        .slice(0, 3)
+        .map((item) => `${cat}: ${item.title}`);
+      return top;
+    })
+    .flat();
+
+  const compactChanges = input.recentChanges
+    .filter((c) => c.significance >= 5)
+    .slice(0, 8)
+    .map((c) => `[${c.significance}/10] ${c.summary}`);
+
+  const userContext =
+    input.userCompanyName || input.userIndustry
+      ? `User's company: ${input.userCompanyName ?? 'unknown'} (industry: ${input.userIndustry ?? 'unknown'}).`
+      : `User context: not provided. Score the competitor's threat in absolute terms based on its momentum and recent strategic moves.`;
+
+  const prompt = `You are a competitive intelligence analyst. Rate the threat level that competitor "${input.competitorName}" poses, then justify in 1-2 sentences citing specific evidence.
+
+${userContext}
+
+Scoring rubric:
+- "critical" — direct competitor in same segment, currently rising momentum, recent major strategic move (pricing change, product launch, large funding round, key acquisition)
+- "high" — direct competitor OR major strategic move in last 30 days
+- "medium" — adjacent threat with notable activity
+- "low" — adjacent / tangential, low activity
+- "monitor" — tangential — for awareness only
+
+Latest research summary:
+${input.latestFinding.summary}
+
+Derived state: ${
+    input.latestFinding.derivedState
+      ? JSON.stringify(input.latestFinding.derivedState)
+      : '(not available)'
+  }
+
+Top findings (importance >= 2):
+${compactCategories.length > 0 ? compactCategories.map((s) => `- ${s}`).join('\n') : '(none)'}
+
+Recent significant changes (last 30 days, significance >= 5):
+${compactChanges.length > 0 ? compactChanges.map((s) => `- ${s}`).join('\n') : '(none)'}
+
+Momentum: ${input.momentum}
+
+Respond with ONLY valid JSON — no prose, no code fences:
+{
+  "threatLevel": "critical" | "high" | "medium" | "low" | "monitor",
+  "reasoning": "1-2 sentence rationale citing the specific evidence (e.g. 'Rising momentum + recent Series B + pricing changes detected')."
+}`;
+
+  const response = await callAnthropic(
+    secrets.ANTHROPIC_API_KEY,
+    {
+      model: HAIKU_MODEL,
+      max_tokens: 400,
+      messages: [{ role: 'user', content: prompt }],
+    },
+    'scoreCompetitorThreat'
+  );
+
+  if (!response.ok) {
+    const errBody = await response.text().catch(() => '');
+    logger.error('Anthropic scoreCompetitorThreat API error', {
+      status: response.status,
+      body: errBody.slice(0, 500),
+    });
+    throw new Error(`Anthropic API error: ${response.status}`);
+  }
+
+  const data = (await response.json()) as {
+    content: Array<{ type: string; text: string }>;
+  };
+  const text = (data.content.find((b) => b.type === 'text')?.text ?? '').trim();
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    logger.error('scoreCompetitorThreat: no JSON in response', { text: text.slice(0, 500) });
+    throw new Error('scoreCompetitorThreat: no JSON in Claude response');
+  }
+  const parsed = JSON.parse(jsonMatch[0]) as {
+    threatLevel?: string;
+    reasoning?: string;
+  };
+
+  const validLevels: ThreatLevel[] = ['critical', 'high', 'medium', 'low', 'monitor'];
+  const threatLevel = validLevels.includes(parsed.threatLevel as ThreatLevel)
+    ? (parsed.threatLevel as ThreatLevel)
+    : 'monitor';
+  const reasoning = String(parsed.reasoning ?? '').slice(0, 400);
+
+  return { threatLevel, reasoning };
 }

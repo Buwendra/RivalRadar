@@ -21,6 +21,9 @@ export const handler = apiHandler(async (event) => {
     momentum: item.momentum,
     momentumChangePercent: item.momentumChangePercent,
     momentumAsOf: item.momentumAsOf,
+    threatLevel: item.threatLevel,
+    threatReasoning: item.threatReasoning,
+    threatAsOf: item.threatAsOf,
   }));
 
   return {

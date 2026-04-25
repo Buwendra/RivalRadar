@@ -11,14 +11,23 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useCompetitors } from "@/lib/hooks/use-competitors";
 import { useAuth } from "@/lib/auth/use-auth";
 import { cn } from "@/lib/utils";
-import type { Momentum } from "@/lib/types";
+import type { Momentum, ThreatLevel } from "@/lib/types";
 
 interface DashboardSidebarProps {
   onAddCompetitor?: () => void;
 }
 
-// Ranked order: rising > stable > slowing > declining > insufficient-data.
-// Competitors with higher priority sort first in the sidebar.
+// Sort order: threat desc, then momentum desc, then name. Competitors with
+// no threat scored yet (e.g. no research run) sort below scored ones.
+const THREAT_RANK: Record<ThreatLevel, number> = {
+  critical: 0,
+  high: 1,
+  medium: 2,
+  low: 3,
+  monitor: 4,
+};
+const THREAT_UNSCORED = 5;
+
 const MOMENTUM_RANK: Record<Momentum, number> = {
   rising: 0,
   stable: 1,
@@ -33,9 +42,12 @@ export function DashboardSidebar({ onAddCompetitor }: DashboardSidebarProps) {
   const { data: competitors, isLoading } = useCompetitors();
 
   const sortedCompetitors = [...(competitors ?? [])].sort((a, b) => {
-    const ra = MOMENTUM_RANK[a.momentum ?? "insufficient-data"];
-    const rb = MOMENTUM_RANK[b.momentum ?? "insufficient-data"];
-    if (ra !== rb) return ra - rb;
+    const ta = a.threatLevel ? THREAT_RANK[a.threatLevel] : THREAT_UNSCORED;
+    const tb = b.threatLevel ? THREAT_RANK[b.threatLevel] : THREAT_UNSCORED;
+    if (ta !== tb) return ta - tb;
+    const ma = MOMENTUM_RANK[a.momentum ?? "insufficient-data"];
+    const mb = MOMENTUM_RANK[b.momentum ?? "insufficient-data"];
+    if (ma !== mb) return ma - mb;
     return a.name.localeCompare(b.name);
   });
 
@@ -113,7 +125,15 @@ export function DashboardSidebar({ onAddCompetitor }: DashboardSidebarProps) {
                 <div
                   className={cn(
                     "h-2 w-2 rounded-full",
-                    competitor.status === "active" ? "bg-significance-low" : "bg-muted-foreground"
+                    competitor.threatLevel === "critical"
+                      ? "bg-red-500"
+                      : competitor.threatLevel === "high"
+                      ? "bg-orange-500"
+                      : competitor.threatLevel === "medium"
+                      ? "bg-amber-500"
+                      : competitor.status === "active"
+                      ? "bg-significance-low"
+                      : "bg-muted-foreground"
                   )}
                 />
                 <span className="flex-1 truncate">{competitor.name}</span>

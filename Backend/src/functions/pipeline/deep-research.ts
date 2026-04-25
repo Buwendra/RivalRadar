@@ -1,5 +1,9 @@
-import { deepResearch, detectResearchDeltas } from '../../shared/services/anthropic';
-import { putItem, queryByPK, updateItem } from '../../shared/db/queries';
+import {
+  deepResearch,
+  detectResearchDeltas,
+  scoreCompetitorThreat,
+} from '../../shared/services/anthropic';
+import { putItem, queryByPK, updateItem, getItem } from '../../shared/db/queries';
 import {
   researchPK,
   researchSK,
@@ -7,6 +11,8 @@ import {
   changeSK,
   competitorPK,
   competitorSK,
+  userPK,
+  userSK,
   gsi1ResearchKeys,
   gsi1ChangeKeys,
 } from '../../shared/db/keys';
@@ -158,39 +164,93 @@ export const handler = async (event: Event): Promise<Output> => {
       });
     }
 
-    // 6. Compute & persist momentum on the Competitor record so list views can
-    //    sort/filter without recomputing per request. Queries the last 30 days
-    //    of Change detectedAt timestamps.
+    // 6. Post-research enrichment: momentum (rule-based) + threat level (Haiku call).
+    //    Both are persisted on the Competitor record so list views render without
+    //    recomputing per request. Failures here are logged but do not fail the run —
+    //    the user still gets the finding and any deltas.
     try {
+      const enrichmentNow = new Date();
+
+      // Query last 30 days of changes (used for momentum + threat scoring inputs)
       const { items: recentChangeItems } = await queryByPK(
         `COMP#${event.competitorId}`,
         'CHANGE#',
         { limit: 100 }
       );
-      const momentumNow = new Date();
+
+      // Momentum (rule-based, no AI cost)
       const timestamps = recentChangeItems
         .map((c) => c.detectedAt as string | undefined)
         .filter((ts): ts is string => typeof ts === 'string');
-      const changesByDay = buildChangesByDay(timestamps, momentumNow);
+      const changesByDay = buildChangesByDay(timestamps, enrichmentNow);
       const { momentum, momentumChangePercent } = computeMomentum({ changesByDay });
+
+      // Threat level (Haiku call). Best-effort — wrapped so failures don't break momentum write.
+      let threatLevel: string | undefined;
+      let threatReasoning: string | undefined;
+      try {
+        const user = await getItem<Record<string, unknown>>(
+          userPK(event.userId),
+          userSK()
+        );
+        const userCompanyName = (user?.companyName as string | undefined) ?? undefined;
+        const userIndustry = (user?.industry as string | undefined) ?? undefined;
+
+        const recentChangeSummaries = recentChangeItems
+          .map((c) => ({
+            summary: ((c.aiAnalysis as { summary?: string } | undefined)?.summary ?? '') as string,
+            significance: (c.significance as number) ?? 0,
+            detectedAt: (c.detectedAt as string) ?? '',
+          }))
+          .filter((c) => c.summary && c.detectedAt);
+
+        const threat = await scoreCompetitorThreat({
+          competitorName: event.name,
+          userCompanyName,
+          userIndustry,
+          latestFinding: {
+            summary: current.summary,
+            categories: current.categories,
+            derivedState: current.derivedState,
+          },
+          recentChanges: recentChangeSummaries,
+          momentum,
+        });
+        threatLevel = threat.threatLevel;
+        threatReasoning = threat.reasoning;
+      } catch (err) {
+        logger.warn('Threat scoring failed — continuing without threat update', {
+          competitorId: event.competitorId,
+          error: String(err),
+        });
+      }
+
+      // Single update with all enrichment fields set atomically
+      const updates: Record<string, unknown> = {
+        momentum,
+        momentumChangePercent,
+        momentumAsOf: enrichmentNow.toISOString(),
+        updatedAt: enrichmentNow.toISOString(),
+      };
+      if (threatLevel) {
+        updates.threatLevel = threatLevel;
+        updates.threatReasoning = threatReasoning ?? '';
+        updates.threatAsOf = enrichmentNow.toISOString();
+      }
 
       await updateItem(
         competitorPK(event.userId),
         competitorSK(event.competitorId),
-        {
-          momentum,
-          momentumChangePercent,
-          momentumAsOf: momentumNow.toISOString(),
-          updatedAt: momentumNow.toISOString(),
-        }
+        updates
       );
-      logger.info('Momentum persisted', {
+      logger.info('Enrichment persisted', {
         competitorId: event.competitorId,
         momentum,
         momentumChangePercent,
+        threatLevel,
       });
     } catch (err) {
-      logger.warn('Failed to persist momentum — continuing', {
+      logger.warn('Post-research enrichment failed — continuing', {
         competitorId: event.competitorId,
         error: String(err),
       });
