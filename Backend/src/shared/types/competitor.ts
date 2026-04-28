@@ -19,4 +19,6 @@ export interface Competitor {
   threatLevel?: ThreatLevel;
   threatReasoning?: string;
   threatAsOf?: string;
+  derivedTags?: string[];
+  derivedTagsAsOf?: string;
 }

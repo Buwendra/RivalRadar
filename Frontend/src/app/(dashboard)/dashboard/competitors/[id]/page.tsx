@@ -48,6 +48,7 @@ import { ActivitySparkline } from "@/components/dashboard/activity-sparkline";
 import { PageActivityList } from "@/components/dashboard/page-activity-list";
 import { MomentumChip } from "@/components/dashboard/momentum-chip";
 import { ThreatCard } from "@/components/dashboard/threat-card";
+import { CompetitorTagChips } from "@/components/dashboard/competitor-tag-chips";
 import { formatSmartDate } from "@/lib/utils/format-date";
 import type { CompetitorDetailChange, PageType } from "@/lib/types";
 
@@ -139,27 +140,30 @@ export default function CompetitorDetailPage() {
   return (
     <div className="space-y-6">
       {/* Header bar: always visible */}
-      <div className="flex items-center gap-2">
-        <Button variant="ghost" size="icon" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <PageHeader title={competitor.name}>
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              onClick={handleResearch}
-              disabled={triggerResearch.isPending}
-              className="bg-cta text-brand-950 hover:bg-cta-hover"
-            >
-              {triggerResearch.isPending ? (
-                <LoadingSpinner size="sm" className="mr-2" />
-              ) : (
-                <Sparkles className="mr-2 h-4 w-4" />
-              )}
-              Research Now
-            </Button>
-          </div>
-        </PageHeader>
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="icon" onClick={() => router.back()}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <PageHeader title={competitor.name}>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                onClick={handleResearch}
+                disabled={triggerResearch.isPending}
+                className="bg-cta text-brand-950 hover:bg-cta-hover"
+              >
+                {triggerResearch.isPending ? (
+                  <LoadingSpinner size="sm" className="mr-2" />
+                ) : (
+                  <Sparkles className="mr-2 h-4 w-4" />
+                )}
+                Research Now
+              </Button>
+            </div>
+          </PageHeader>
+        </div>
+        <CompetitorTagChips tags={competitor.derivedTags} />
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>

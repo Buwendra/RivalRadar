@@ -162,6 +162,8 @@ export const handler = apiHandler(async (event) => {
         threatLevel: competitor.threatLevel,
         threatReasoning: competitor.threatReasoning,
         threatAsOf: competitor.threatAsOf,
+        derivedTags: competitor.derivedTags,
+        derivedTagsAsOf: competitor.derivedTagsAsOf,
         recentChanges: changes.map((c) => ({
           id: c.id,
           significance: c.significance,

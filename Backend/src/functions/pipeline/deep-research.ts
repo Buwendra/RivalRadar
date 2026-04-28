@@ -18,7 +18,11 @@ import {
 } from '../../shared/db/keys';
 import { generateId } from '../../shared/utils/id';
 import { logger } from '../../shared/utils/logger';
-import { buildChangesByDay, computeMomentum } from '../../shared/utils/competitor-metrics';
+import {
+  buildChangesByDay,
+  computeMomentum,
+  deriveTagsFromState,
+} from '../../shared/utils/competitor-metrics';
 import type { ResearchFinding } from '../../shared/types';
 
 interface Event {
@@ -225,11 +229,32 @@ export const handler = async (event: Event): Promise<Output> => {
         });
       }
 
+      // Derive tag chips from structured state + recent changes + momentum/threat.
+      // Pure rules — runs synchronously over data already in memory.
+      const recentChangesForTags = recentChangeItems.map((c) => ({
+        sourceCategory: c.sourceCategory as string | undefined,
+        detectedAt: (c.detectedAt as string) ?? '',
+      }));
+      const derivedTags = deriveTagsFromState({
+        derivedState: current.derivedState,
+        recentChanges: recentChangesForTags,
+        momentum,
+        threatLevel: threatLevel as
+          | 'critical'
+          | 'high'
+          | 'medium'
+          | 'low'
+          | 'monitor'
+          | undefined,
+      });
+
       // Single update with all enrichment fields set atomically
       const updates: Record<string, unknown> = {
         momentum,
         momentumChangePercent,
         momentumAsOf: enrichmentNow.toISOString(),
+        derivedTags,
+        derivedTagsAsOf: enrichmentNow.toISOString(),
         updatedAt: enrichmentNow.toISOString(),
       };
       if (threatLevel) {
@@ -248,6 +273,8 @@ export const handler = async (event: Event): Promise<Output> => {
         momentum,
         momentumChangePercent,
         threatLevel,
+        derivedTagsCount: derivedTags.length,
+        derivedTags,
       });
     } catch (err) {
       logger.warn('Post-research enrichment failed — continuing', {

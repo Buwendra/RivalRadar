@@ -24,6 +24,8 @@ export const handler = apiHandler(async (event) => {
     threatLevel: item.threatLevel,
     threatReasoning: item.threatReasoning,
     threatAsOf: item.threatAsOf,
+    derivedTags: item.derivedTags,
+    derivedTagsAsOf: item.derivedTagsAsOf,
   }));
 
   return {
