@@ -11,26 +11,26 @@ RivalScan is an AI-powered competitive intelligence monitoring SaaS for SMBs. It
 - **Frontend**: Next.js 14 (App Router) + TypeScript + Tailwind CSS + shadcn/ui, deployed to **AWS Amplify** (standalone output mode). App ID `d1zrq9gf129s9u`; root dir `Frontend/`.
 - **Backend**: AWS CDK (TypeScript) — fully serverless
   - API Gateway HTTP API v2 + Lambda (Node.js 20, ARM64)
-  - DynamoDB (single-table, on-demand) + S3 (snapshots)
-  - Step Functions (3 state machines: daily scrape, weekly digest, deep research)
-  - EventBridge Scheduler (cron triggers for daily + weekly)
-  - Cognito (auth) + SES (email) + Secrets Manager
-  - CloudFront + WAF + CloudWatch + X-Ray
-- **External Services**: Firecrawl API (scraping), Anthropic Claude API (analysis + web_search agentic research), Paddle (payments)
+  - DynamoDB (single-table, on-demand). The S3 snapshot bucket from `StorageStack` is still provisioned but unused — kept around to avoid deleting historical data.
+  - Step Functions (2 state machines: weekly digest, research pipeline)
+  - EventBridge Scheduler (Monday 8am UTC for the weekly digest only — there is **no** daily cron)
+  - Cognito (auth) + SES (email) + Secrets Manager + CloudWatch + X-Ray
+- **External Services**: Anthropic Claude API (deep research with native `web_search` tool, delta detection, threat scoring, weekly summaries) + Paddle (payments). Firecrawl was removed when deep research became the core change-detection engine.
 
 ## Architecture
 
 ```
-Next.js (Amplify SSR) → API Gateway v2 → Cognito JWT → Lambda → DynamoDB/S3
+Next.js (Amplify SSR) → API Gateway v2 → Cognito JWT → Lambda → DynamoDB
 
-EventBridge (daily 6am) → DailyPipeline SFN   → [Scrape → Store → Diff → Analyze → Alert]
-EventBridge (Mon 8am)   → WeeklyDigest SFN    → [Aggregate → Sonnet Summary → SES Email]
-Onboard / manual        → ResearchPipeline SFN → [DeepResearch via Claude web_search]
+EventBridge (Mon 8am UTC) → WeeklyDigest SFN    → [Aggregate → Sonnet Summary → SES Email]
+Onboard / manual click    → ResearchPipeline SFN → [DeepResearch (web_search) → SendAlert]
 ```
 
 **7 CDK stacks** wired in `bin/app.ts` with explicit cross-stack dependencies:
-Database → Storage → Auth → Email → Pipeline → API (receives daily + research ARNs) → Monitoring.
+Database → Storage → Auth → Email → Pipeline → API (receives `researchStateMachine` ARN) → Monitoring.
 Stack naming: `RivalScan-${stage}-${StackType}` (stage from env context: dev/staging/prod).
+
+The current product roadmap and design rationale lives in [ROADMAP.md](ROADMAP.md) and [PREDICTIONS_AND_TAGS.md](PREDICTIONS_AND_TAGS.md) at the project root. Treat those as the source of truth for what's shipped vs. what's planned.
 
 ## Commands
 
@@ -118,18 +118,39 @@ Uses ULID (`generateId()` in `shared/utils/id.ts`) — time-sortable, conflict-f
 
 Lazy-loaded singleton with 5-minute TTL cache (`shared/services/secrets.ts`). Pulls from AWS Secrets Manager (`rivalscan/api-keys`): `PADDLE_SECRET_KEY`, `PADDLE_WEBHOOK_SECRET`, `FIRECRAWL_API_KEY`, `ANTHROPIC_API_KEY`.
 
-### AI Models
+### AI Models & Anthropic call patterns
 
-- **Claude Haiku 4.5** (`claude-haiku-4-5-20251001`): Per-change analysis — `analyze-change.ts`
-- **Claude Sonnet 4.5** (alias `claude-sonnet-4-5`): Weekly digest summaries (`generate-summary.ts`) AND deep research (`deep-research.ts`)
-- Uses native Anthropic API via `fetch` (not SDK). Model IDs are constants at the top of `shared/services/anthropic.ts`.
-- **Do not pin Sonnet to a dated snapshot without confirming it exists** — historically a bad snapshot ID (`claude-sonnet-4-5-20241022`, which is actually a 3.5 Sonnet date) shipped to prod and caused silent 404s in weekly digest + deep research. Use the alias unless you've verified the dated snapshot.
+All Anthropic calls go through `callAnthropic()` in `shared/services/anthropic.ts` — a thin `fetch` wrapper that retries on 429 with backoff (honors `retry-after` header, default 65s, max 2 retries). Use it for any new Claude call you add; do not call `fetch('.../v1/messages')` directly.
+
+- **Claude Sonnet 4.5** (alias `claude-sonnet-4-5`):
+  - `deepResearch()` — research with native `web_search_20250305` tool, max 8 uses/run, max_tokens 4096
+  - `detectResearchDeltas()` — compares prior vs current `ResearchFinding`, max_tokens **16384** (large because it generates detailed deltas + impact analysis). Has a `parseDeltasJson()` helper that does **partial JSON recovery** if Claude truncates mid-array — salvages every complete delta object before the cut-off rather than discarding the whole response.
+  - `generateWeeklySummary()` — strategic briefing prose for the digest email
+- **Claude Haiku 4.5** (`claude-haiku-4-5-20251001`):
+  - `scoreCompetitorThreat()` — 1-2 sentence threat rationale + level (~$0.002/call)
+  - `analyzeChange()` (legacy, unused after the deep-research refactor — kept for reference)
+
+**Do not pin Sonnet to a dated snapshot without confirming it exists.** A bad snapshot ID (`claude-sonnet-4-5-20241022`, which is actually a 3.5 Sonnet date) shipped once and caused silent 404s. The alias `claude-sonnet-4-5` is the safe default.
 
 ### AI Deep Research (web_search tool)
 
-`deepResearch()` in `shared/services/anthropic.ts` uses Anthropic's native `web_search_20250305` **server tool** (max 8 uses per run) — Claude manages the search loop internally, no client-side tool-use loop is needed. Single `fetch` call returns `content[]` with a mix of `text`, `server_tool_use`, and `web_search_tool_result` blocks; citations are extracted from the latter, JSON findings from the final text block.
+`deepResearch()` uses Anthropic's `web_search_20250305` **server tool** — Claude manages the search loop internally, no client-side tool-use loop is needed. Single `fetch` call returns `content[]` with a mix of `text`, `server_tool_use`, and `web_search_tool_result` blocks; citations come from `web_search_tool_result`, the structured JSON answer from the final text block. The prompt asks for findings in 5 categories (`news`/`product`/`funding`/`hiring`/`social`) plus a `derivedState` summary block (`stage`, `fundingState`, `hiringState`, `strategicDirection`, `techPositioning`, `pacing`, `evidenceNotes`) and per-finding `sentiment` + `timeSensitivity` metadata.
 
-Triggered automatically on onboarding (in `users/onboard.ts`) to populate new accounts with day-1 data, and manually via `POST /competitors/{id}/research`. Each run writes one `ResearchFinding` to DynamoDB. Cost: ~$0.15-0.30/run.
+Triggered automatically on onboarding (in `users/onboard.ts`) to populate day-1 data, and manually via `POST /competitors/{id}/research`. Each run writes one `ResearchFinding` to DynamoDB plus a `Change` record per detected delta. Cost: ~$0.30/run end-to-end.
+
+### Per-competitor enrichment (momentum / threat / tags)
+
+After every research run, `deep-research.ts` runs a post-research enrichment block that writes computed signals back to the **Competitor** record in a single `updateItem` call:
+
+- **`momentum`** (rule-based, free) — `'rising' | 'stable' | 'slowing' | 'declining' | 'insufficient-data'` + `momentumChangePercent`. Computed by `computeMomentum()` in `shared/utils/competitor-metrics.ts` from a 30-day Change-count series; bucket thresholds at +25% / -15% / -40%; `insufficient-data` if total changes in 14d < 3.
+- **`threatLevel`** (Haiku) — `'critical' | 'high' | 'medium' | 'low' | 'monitor'` + `threatReasoning` (1-2 sentence rationale). Computed by `scoreCompetitorThreat()`; reads user company context, latest finding's `derivedState`, recent significant changes, and momentum.
+- **`derivedTags`** (rule-based, free) — array of up to 6 slug-style tags (e.g. `growth-stage`, `just-raised`, `hiring-aggressively`, `ai-native`, `going-upmarket`). Computed by `deriveTagsFromState()` with priority-ordered rules (concerns > funding events > stage > hiring > strategy > tech > pacing > deprioritize). Frontend `CompetitorTagChips` maps slugs to display labels + tones via a `TAG_CONFIG` dictionary.
+
+The enrichment block is wrapped in try/catch — Haiku failures don't break momentum/tags writes. Sidebar list sort order is **threat desc → momentum desc → name asc** (see `Frontend/src/components/layout/dashboard-sidebar.tsx`).
+
+### Step Functions concurrency
+
+`MapResearch` in `pipeline.stack.ts` uses **`maxConcurrency: 1`** to serialize per-minute Anthropic token usage and avoid rate-limit pile-ups during multi-competitor onboarding. Each research run can burn 10-20k input tokens across 2-3 Sonnet calls; running 3 in parallel reliably trips the 30k input-tokens-per-minute org limit. If you change this back to >1, re-test multi-competitor onboarding.
 
 ## DynamoDB Single-Table Design
 
@@ -139,33 +160,48 @@ Triggered automatically on onboarding (in `users/onboard.ts`) to populate new ac
 | Subscription | `USER#<id>` | `SUB` |
 | Competitor | `USER#<id>` | `COMP#<id>` |
 | Change | `COMP#<id>` | `CHANGE#<timestamp>` |
-| Snapshot | `COMP#<id>` | `SNAP#<pageHash>#<ts>` |
 | ResearchFinding | `COMP#<id>` | `RESEARCH#<timestamp>` |
 
-**GSIs**: GSI1 (user's feed — stores both `CHANGE#<ts>` and `RESEARCH#<ts>` SK prefixes; filter with `begins_with`), GSI2 (all active competitors for daily cron — PK=`ACTIVE`), GSI3 (user by email for auth lookups)
+The `Snapshot` entity from the original Firecrawl pipeline is no longer written. Old snapshot rows from before the deep-research refactor still exist (and the SK prefix `SNAP#` is reserved) but no code path reads them today.
 
-Snapshot markdown content stored in S3, referenced by `s3Key` in DynamoDB.
+**GSIs**:
+- **GSI1** — user's combined feed; stores both `CHANGE#<ts>` and `RESEARCH#<ts>` SK prefixes (filter with `begins_with`)
+- **GSI2** — all active competitors (PK=`ACTIVE`); originally for the daily cron, still used by Step Function input collectors
+- **GSI3** — user by email (PK=email lowercased) — used by every authenticated route to translate `email` claim → `userId`
 
-Key builders in `shared/db/keys.ts`. Query helpers (`getItem`, `putItem`, `queryByPK`, `queryGSI`, `updateItem`) in `shared/db/queries.ts`.
+The **Competitor** record carries derived intelligence written by the enrichment block: `momentum`, `momentumChangePercent`, `momentumAsOf`, `threatLevel`, `threatReasoning`, `threatAsOf`, `derivedTags`, `derivedTagsAsOf`. These are read directly by the list endpoint without recomputation.
+
+Key builders in `shared/db/keys.ts`. Query helpers (`getItem`, `putItem`, `queryByPK`, `queryGSI`, `updateItem`) in `shared/db/queries.ts`. Pure-function metrics (`computeMomentum`, `buildChangesByDay`, `deriveTagsFromState`) live in `shared/utils/competitor-metrics.ts`.
 
 ## Pipeline Flow (Step Functions)
 
-**Daily pipeline** (`src/functions/pipeline/`):
-1. `get-competitors` — queries GSI2 for all active competitors (handles manual/onboarding triggers too)
-2. `scrape-pages` — Firecrawl scrape per tracked page, graceful failure per page
-3. `store-snapshots` — saves markdown to S3
-4. `detect-diffs` — line-based diff via `shared/utils/diff.ts`, filters to changed pages only
-5. `analyze-change` — Claude Haiku produces structured `AiAnalysis` JSON
-6. `store-change` — writes to DynamoDB (primary table + GSI1 for user feed)
-7. `send-alert` — emails user for high-significance changes (≥ 7)
+**Research pipeline** (`Backend/src/functions/pipeline/deep-research.ts` — single Lambda, mapped over competitors with `maxConcurrency: 1`, then chained to `send-alert`):
 
-**Weekly digest** (`src/functions/scheduled/`):
+The `deep-research` Lambda owns the full per-competitor flow internally — there are no smaller chained Lambdas like the old daily pipeline had. Order matters:
+
+1. **Load prior `ResearchFinding`** from DynamoDB (newest first via descending SK scan, may be null on first run)
+2. **`deepResearch()`** — Sonnet + web_search → current findings, citations, derivedState
+3. **`detectResearchDeltas()`** — Sonnet compares prior vs current, returns array of new items with impact analysis. **Runs BEFORE persisting the new finding** so a Claude failure leaves the prior baseline intact for clean retry.
+4. **Persist new `ResearchFinding`** with full `derivedState`
+5. **Persist each delta as a `Change` record** (with `researchId`, `citations`, `sourceCategory` fields)
+6. **Enrichment block** (best-effort, won't fail the run):
+   - Query last 30d of changes once → use for both momentum + threat input
+   - Compute momentum (rule-based)
+   - Load user profile for company name + industry
+   - Score threat level via Haiku
+   - Derive tag chips
+   - Single `updateItem` writes momentum/threat/tags + their `*AsOf` timestamps to the Competitor record atomically
+7. **Return** `{ storedChanges[] }` for the chained `SendAlertTask` (emails user if any delta has significance ≥ 7)
+
+Lambda timeout 5 min, memory 1024 MB (web_search responses can be large).
+
+**Weekly digest** (`Backend/src/functions/scheduled/`):
 1. `get-subscribers` → 2. `aggregate-changes` (top 10 by significance, past 7 days via GSI1) → 3. `generate-summary` (Claude Sonnet) → 4. `render-send-email` (SES)
 
-**Research pipeline** (`src/functions/pipeline/deep-research.ts` — single Lambda, mapped over competitors with concurrency 5):
-1. `onboard.ts` or `competitors/research.ts` starts the ResearchPipeline SFN with `{ competitors: [{ competitorId, userId, name, url, industry? }] }`
-2. SFN Map invokes `deep-research` per competitor — calls Claude Sonnet + web_search, writes a `ResearchFinding` to DynamoDB
-3. Failures are caught per-item (does not fail the whole execution). Lambda timeout 5 min, memory 1024 MB (web_search responses can be large)
+**Trigger entry points**:
+- Onboarding completion (`api/users/onboard.ts`) starts the ResearchPipeline with all newly-created competitors
+- Manual "Research Now" button (`api/competitors/research.ts`, route `POST /competitors/{id}/research`) starts it for a single competitor
+- No EventBridge schedule for research — it's strictly on-demand
 
 ## Pricing Tiers & Plan Limits
 
@@ -179,7 +215,7 @@ Defined in `PLAN_LIMITS` from `shared/types/index.ts`. Enforced in `competitors/
 
 ## Environment Variables
 
-**Backend Lambda** (set via CDK): `TABLE_NAME`, `BUCKET_NAME`, `USER_POOL_ID`, `USER_POOL_CLIENT_ID`, `SECRETS_ARN`, `FRONTEND_URL`, `FROM_EMAIL`. Lambdas that trigger state machines also get `DAILY_PIPELINE_ARN` (onboard, scrape) and/or `RESEARCH_PIPELINE_ARN` (onboard, research). Subscription checkout gets `PADDLE_PRICE_SCOUT`/`_STRATEGIST`/`_COMMAND`.
+**Backend Lambda** (set via CDK): `TABLE_NAME`, `BUCKET_NAME`, `USER_POOL_ID`, `USER_POOL_CLIENT_ID`, `SECRETS_ARN`, `FRONTEND_URL`, `FROM_EMAIL`. Lambdas that trigger the research state machine (`api/users/onboard.ts`, `api/competitors/research.ts`) get `RESEARCH_PIPELINE_ARN`. Subscription checkout gets `PADDLE_PRICE_SCOUT`/`_STRATEGIST`/`_COMMAND`. (`DAILY_PIPELINE_ARN` is gone with the daily scrape pipeline.)
 
 **CDK deploy** (required for `cdk deploy`): `CDK_DEFAULT_ACCOUNT`, `CDK_DEFAULT_REGION` (defaults to us-east-1), `FRONTEND_URL` (for API CORS — **must match the Amplify URL exactly**, e.g. `https://main.d1zrq9gf129s9u.amplifyapp.com`, or CORS blocks the browser), `FROM_EMAIL`, `PADDLE_PRICE_*`. `bin/app.ts` validates `CDK_DEFAULT_ACCOUNT` and `FRONTEND_URL` at synth time. A populated `Backend/.env` can be sourced with `set -a && source .env && set +a`.
 
