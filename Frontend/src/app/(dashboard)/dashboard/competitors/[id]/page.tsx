@@ -274,7 +274,10 @@ export default function CompetitorDetailPage() {
             </Card>
           </div>
 
-          <PredictedMovesCard moves={competitor.predictedMoves} />
+          <PredictedMovesCard
+            moves={competitor.predictedMoves}
+            history={competitor.predictionHistory}
+          />
 
           {recentChanges.length > 0 && (
             <div>

@@ -21,6 +21,8 @@ import {
   PredictedMove,
   PredictedMoveCategory,
   PredictedMoveTimeHorizon,
+  EvaluatedPrediction,
+  PredictionStatus,
 } from '../types';
 import { logger } from '../utils/logger';
 
@@ -930,3 +932,191 @@ If no strong signal: return { "predictions": [] }.`;
 
   return out;
 }
+
+/**
+ * Evaluate a batch of prior predictions against fresh research evidence.
+ * For each prediction, mark its status:
+ *   - realized — the predicted event clearly happened
+ *   - partially-realized — adjacent / weak signal that the predicted event happened
+ *   - expired — the time horizon has passed without evidence
+ *   - pending — within horizon, no clear evidence yet
+ *
+ * Best-effort: failures return all predictions as 'pending' so the caller can
+ * still persist a track record entry (just without status info).
+ */
+export async function evaluatePriorPredictions(input: {
+  competitorName: string;
+  priorPredictions: Array<{
+    move: string;
+    reasoning: string;
+    timeHorizon: PredictedMoveTimeHorizon;
+    category: PredictedMoveCategory;
+    predictedAt: string;
+  }>;
+  latestFinding: Pick<ResearchFinding, 'summary' | 'categories' | 'derivedState'>;
+  recentChanges: Array<{ summary: string; sourceCategory?: string; detectedAt: string }>;
+  now: Date;
+}): Promise<Array<{ status: PredictionStatus; evidence?: string; evidenceUrl?: string }>> {
+  if (input.priorPredictions.length === 0) return [];
+
+  // Time-based pre-pass: any prediction whose horizon has passed AND is not in
+  // the new evidence likely-but Claude makes the final call. We still ask Claude
+  // about all of them so it can mark "expired but realized" (technically odd but
+  // possible — the predicted event happened after horizon).
+  const horizonDays: Record<PredictedMoveTimeHorizon, number> = {
+    '30d': 30,
+    '60d': 60,
+    '90d': 90,
+  };
+  const horizonExpired = (predictedAt: string, h: PredictedMoveTimeHorizon): boolean => {
+    const ts = Date.parse(predictedAt);
+    if (isNaN(ts)) return false;
+    const elapsedDays = (input.now.getTime() - ts) / (24 * 60 * 60 * 1000);
+    return elapsedDays > horizonDays[h];
+  };
+
+  const secrets = await getSecret('rivalscan/api-keys');
+
+  const compactCategories = (Object.keys(input.latestFinding.categories) as ResearchCategory[])
+    .map((cat) => {
+      const items = input.latestFinding.categories[cat]
+        .filter((i) => (i.importance ?? 1) >= 2)
+        .slice(0, 3)
+        .map((i) => `${cat}: ${i.title}${i.sourceUrl ? ` <${i.sourceUrl}>` : ''}`);
+      return items;
+    })
+    .flat();
+
+  const compactChanges = input.recentChanges
+    .slice(0, 8)
+    .map(
+      (c) =>
+        `[${c.sourceCategory ?? 'change'}] ${String(c.summary).slice(0, 120)} (${c.detectedAt.slice(0, 10)})`
+    );
+
+  const numbered = input.priorPredictions
+    .map(
+      (p, i) =>
+        `${i}. [${p.category}, ${p.timeHorizon}, predicted ${p.predictedAt.slice(0, 10)}] ${p.move} — ${p.reasoning.slice(0, 200)}`
+    )
+    .join('\n');
+
+  const prompt = `You are evaluating prior predictions about competitor "${input.competitorName}" against new evidence.
+
+Today: ${input.now.toISOString().slice(0, 10)}
+
+PRIOR PREDICTIONS (each with index, category, time horizon, original prediction date):
+${numbered}
+
+NEW EVIDENCE (latest research):
+Summary: ${input.latestFinding.summary.slice(0, 600)}
+Derived state: ${
+    input.latestFinding.derivedState ? JSON.stringify(input.latestFinding.derivedState) : '(none)'
+  }
+Top findings:
+${compactCategories.length > 0 ? compactCategories.map((s) => `- ${s}`).join('\n') : '(none)'}
+
+Recent changes since the prediction was made:
+${compactChanges.length > 0 ? compactChanges.map((s) => `- ${s}`).join('\n') : '(none)'}
+
+For each prior prediction (by its index), evaluate the status:
+- "realized" — the predicted event has clearly happened. Evidence MUST cite a specific finding/change above.
+- "partially-realized" — an adjacent or weakened version of the prediction happened (e.g. predicted "launch X product" and they teased X without launching).
+- "expired" — the time horizon has passed AND no evidence supports realization.
+- "pending" — within the time horizon, no evidence yet.
+
+Be conservative. Only mark "realized" if you can cite specific evidence. Pending is the right answer for predictions still in their window with no signal yet.
+
+Respond with ONLY valid JSON — no prose, no code fences:
+{
+  "evaluations": [
+    {
+      "index": 0,
+      "status": "realized" | "partially-realized" | "expired" | "pending",
+      "evidence": "1 sentence citing the specific finding or change (omit when status is pending)",
+      "evidenceUrl": "URL from a finding/change (omit when status is pending or unknown)"
+    }
+  ]
+}
+
+Include an entry for every index in the prior predictions list.`;
+
+  let response: Response;
+  try {
+    response = await callAnthropic(
+      secrets.ANTHROPIC_API_KEY,
+      {
+        model: SONNET_MODEL,
+        max_tokens: 2048,
+        messages: [{ role: 'user', content: prompt }],
+      },
+      'evaluatePriorPredictions'
+    );
+  } catch (err) {
+    logger.warn('evaluatePriorPredictions: call failed', { error: String(err) });
+    return input.priorPredictions.map((p) => ({
+      status: horizonExpired(p.predictedAt, p.timeHorizon) ? 'expired' : 'pending',
+    }));
+  }
+
+  if (!response.ok) {
+    const errBody = await response.text().catch(() => '');
+    logger.warn('Anthropic evaluatePriorPredictions API error', {
+      status: response.status,
+      body: errBody.slice(0, 500),
+    });
+    return input.priorPredictions.map((p) => ({
+      status: horizonExpired(p.predictedAt, p.timeHorizon) ? 'expired' : 'pending',
+    }));
+  }
+
+  const data = (await response.json()) as { content: Array<{ type: string; text: string }> };
+  const text = (data.content.find((b) => b.type === 'text')?.text ?? '').trim();
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    return input.priorPredictions.map((p) => ({
+      status: horizonExpired(p.predictedAt, p.timeHorizon) ? 'expired' : 'pending',
+    }));
+  }
+
+  let parsed: { evaluations?: Array<Record<string, unknown>> };
+  try {
+    parsed = JSON.parse(jsonMatch[0]);
+  } catch (err) {
+    logger.warn('evaluatePriorPredictions: JSON parse failed', { error: String(err) });
+    return input.priorPredictions.map((p) => ({
+      status: horizonExpired(p.predictedAt, p.timeHorizon) ? 'expired' : 'pending',
+    }));
+  }
+
+  const validStatuses: PredictionStatus[] = ['pending', 'realized', 'partially-realized', 'expired'];
+  const byIndex = new Map<number, { status: PredictionStatus; evidence?: string; evidenceUrl?: string }>();
+  for (const ev of parsed.evaluations ?? []) {
+    const idx = Number(ev.index);
+    if (!Number.isInteger(idx) || idx < 0 || idx >= input.priorPredictions.length) continue;
+    const status = validStatuses.includes(ev.status as PredictionStatus)
+      ? (ev.status as PredictionStatus)
+      : 'pending';
+    const evidence =
+      typeof ev.evidence === 'string' && ev.evidence.trim().length > 0
+        ? ev.evidence.slice(0, 400)
+        : undefined;
+    const evidenceUrl =
+      typeof ev.evidenceUrl === 'string' && ev.evidenceUrl.trim().length > 0
+        ? ev.evidenceUrl.trim()
+        : undefined;
+    byIndex.set(idx, { status, evidence, evidenceUrl });
+  }
+
+  return input.priorPredictions.map((p, i) => {
+    const entry = byIndex.get(i);
+    if (entry) return entry;
+    // Fall back to time-based heuristic if Claude didn't return for this index
+    return {
+      status: horizonExpired(p.predictedAt, p.timeHorizon) ? 'expired' : 'pending',
+    };
+  });
+}
+
+// Re-export EvaluatedPrediction so the Lambda can reference it cleanly via the types barrel
+export type { EvaluatedPrediction };

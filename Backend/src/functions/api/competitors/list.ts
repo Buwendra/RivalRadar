@@ -28,6 +28,8 @@ export const handler = apiHandler(async (event) => {
     derivedTagsAsOf: item.derivedTagsAsOf,
     predictedMoves: item.predictedMoves,
     predictedMovesAsOf: item.predictedMovesAsOf,
+    predictionHistory: item.predictionHistory,
+    predictionHistoryAsOf: item.predictionHistoryAsOf,
   }));
 
   return {

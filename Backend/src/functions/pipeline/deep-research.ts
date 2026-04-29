@@ -3,6 +3,7 @@ import {
   detectResearchDeltas,
   scoreCompetitorThreat,
   predictNextMoves,
+  evaluatePriorPredictions,
 } from '../../shared/services/anthropic';
 import { putItem, queryByPK, updateItem, getItem } from '../../shared/db/queries';
 import {
@@ -24,7 +25,11 @@ import {
   computeMomentum,
   deriveTagsFromState,
 } from '../../shared/utils/competitor-metrics';
-import type { ResearchFinding, PredictedMove } from '../../shared/types';
+import type {
+  ResearchFinding,
+  PredictedMove,
+  EvaluatedPrediction,
+} from '../../shared/types';
 
 interface Event {
   competitorId: string;
@@ -171,19 +176,25 @@ export const handler = async (event: Event): Promise<Output> => {
       });
     }
 
-    // 6. Post-research enrichment: momentum (rule-based) + threat level (Haiku call).
-    //    Both are persisted on the Competitor record so list views render without
-    //    recomputing per request. Failures here are logged but do not fail the run —
-    //    the user still gets the finding and any deltas.
+    // 6. Post-research enrichment: momentum (rules) + threat (Haiku) + tags (rules)
+    //    + predictions (Sonnet) + prediction evaluation (Sonnet).
+    //    Persisted on the Competitor record in a single atomic update so list
+    //    views render without recomputing. Failures here are logged but do not
+    //    fail the run — the user still gets the finding and any deltas.
     try {
       const enrichmentNow = new Date();
 
-      // Query last 30 days of changes (used for momentum + threat scoring inputs)
-      const { items: recentChangeItems } = await queryByPK(
-        `COMP#${event.competitorId}`,
-        'CHANGE#',
-        { limit: 100 }
-      );
+      // Query last 30 days of changes + the existing competitor record. The
+      // changes feed momentum/threat/tags/predictions; the competitor record
+      // gives us the prior predictedMoves to evaluate against fresh evidence.
+      const [changesResult, competitorRecord] = await Promise.all([
+        queryByPK(`COMP#${event.competitorId}`, 'CHANGE#', { limit: 100 }),
+        getItem<Record<string, unknown>>(
+          competitorPK(event.userId),
+          competitorSK(event.competitorId)
+        ),
+      ]);
+      const { items: recentChangeItems } = changesResult;
 
       // Momentum (rule-based, no AI cost)
       const timestamps = recentChangeItems
@@ -251,6 +262,71 @@ export const handler = async (event: Event): Promise<Output> => {
           | undefined,
       });
 
+      // Reusable shape used by both the evaluator and the predictor.
+      const recentChangesForAi = recentChangeItems
+        .slice(0, 8)
+        .map((c) => ({
+          summary:
+            ((c.aiAnalysis as { summary?: string } | undefined)?.summary ?? '') as string,
+          sourceCategory: c.sourceCategory as string | undefined,
+          detectedAt: (c.detectedAt as string) ?? '',
+        }))
+        .filter((c) => c.summary && c.detectedAt);
+
+      // Evaluate prior predictions against fresh evidence BEFORE generating new
+      // ones. The current predictedMoves on the competitor record (if any)
+      // become candidates for status assignment — realized / partially-realized
+      // / expired / pending — and are then appended to predictionHistory.
+      const newHistoryEntries: EvaluatedPrediction[] = [];
+      const priorPredictedMoves =
+        (competitorRecord?.predictedMoves as PredictedMove[] | undefined) ?? [];
+      const priorPredictedAt =
+        (competitorRecord?.predictedMovesAsOf as string | undefined) ?? undefined;
+      if (priorPredictedMoves.length > 0 && priorPredictedAt) {
+        try {
+          const evalInput = priorPredictedMoves.map((p) => ({
+            move: p.move,
+            reasoning: p.reasoning,
+            timeHorizon: p.timeHorizon,
+            category: p.category,
+            predictedAt: priorPredictedAt,
+          }));
+          const evaluations = await evaluatePriorPredictions({
+            competitorName: event.name,
+            priorPredictions: evalInput,
+            latestFinding: {
+              summary: current.summary,
+              categories: current.categories,
+              derivedState: current.derivedState,
+            },
+            recentChanges: recentChangesForAi,
+            now: enrichmentNow,
+          });
+
+          for (let i = 0; i < priorPredictedMoves.length; i++) {
+            const p = priorPredictedMoves[i];
+            const ev = evaluations[i] ?? { status: 'pending' as const };
+            newHistoryEntries.push({
+              move: p.move,
+              reasoning: p.reasoning,
+              probability: p.probability,
+              timeHorizon: p.timeHorizon,
+              category: p.category,
+              predictedAt: priorPredictedAt,
+              evaluatedAt: enrichmentNow.toISOString(),
+              status: ev.status,
+              ...(ev.evidence ? { evidence: ev.evidence } : {}),
+              ...(ev.evidenceUrl ? { evidenceUrl: ev.evidenceUrl } : {}),
+            });
+          }
+        } catch (err) {
+          logger.warn('Prediction evaluation failed — skipping history append', {
+            competitorId: event.competitorId,
+            error: String(err),
+          });
+        }
+      }
+
       // Predicted next moves — Sonnet call, only when ≥ 1 prior finding exists.
       // Best-effort: a failure here should not block momentum/threat/tags writes.
       let predictedMoves: PredictedMove[] = [];
@@ -265,16 +341,6 @@ export const handler = async (event: Event): Promise<Output> => {
               derivedState: p.derivedState,
               generatedAt: p.generatedAt,
             }));
-          const recentChangesForPrediction = recentChangeItems
-            .slice(0, 8)
-            .map((c) => ({
-              summary:
-                ((c.aiAnalysis as { summary?: string } | undefined)?.summary ??
-                  '') as string,
-              sourceCategory: c.sourceCategory as string | undefined,
-              detectedAt: (c.detectedAt as string) ?? '',
-            }))
-            .filter((c) => c.summary && c.detectedAt);
 
           predictedMoves = await predictNextMoves({
             competitorName: event.name,
@@ -285,7 +351,7 @@ export const handler = async (event: Event): Promise<Output> => {
               generatedAt,
             },
             priorFindings: priorsCompact,
-            recentChanges: recentChangesForPrediction,
+            recentChanges: recentChangesForAi,
           });
         } catch (err) {
           logger.warn('Prediction failed — continuing without prediction update', {
@@ -313,6 +379,15 @@ export const handler = async (event: Event): Promise<Output> => {
         updates.predictedMoves = predictedMoves;
         updates.predictedMovesAsOf = enrichmentNow.toISOString();
       }
+      // Append newly evaluated predictions to predictionHistory (cap at 50 to
+      // bound DynamoDB item size). Newest entries kept; oldest dropped.
+      if (newHistoryEntries.length > 0) {
+        const existingHistory =
+          (competitorRecord?.predictionHistory as EvaluatedPrediction[] | undefined) ?? [];
+        const merged = [...newHistoryEntries, ...existingHistory].slice(0, 50);
+        updates.predictionHistory = merged;
+        updates.predictionHistoryAsOf = enrichmentNow.toISOString();
+      }
 
       await updateItem(
         competitorPK(event.userId),
@@ -327,6 +402,8 @@ export const handler = async (event: Event): Promise<Output> => {
         derivedTagsCount: derivedTags.length,
         derivedTags,
         predictionsCount: predictedMoves.length,
+        evaluatedCount: newHistoryEntries.length,
+        evaluatedStatuses: newHistoryEntries.map((e) => e.status),
       });
     } catch (err) {
       logger.warn('Post-research enrichment failed — continuing', {

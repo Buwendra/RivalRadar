@@ -166,6 +166,8 @@ export const handler = apiHandler(async (event) => {
         derivedTagsAsOf: competitor.derivedTagsAsOf,
         predictedMoves: competitor.predictedMoves,
         predictedMovesAsOf: competitor.predictedMovesAsOf,
+        predictionHistory: competitor.predictionHistory,
+        predictionHistoryAsOf: competitor.predictionHistoryAsOf,
         recentChanges: changes.map((c) => ({
           id: c.id,
           significance: c.significance,

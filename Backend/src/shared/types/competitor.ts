@@ -22,6 +22,29 @@ export interface PredictedMove {
   category: PredictedMoveCategory;
 }
 
+export type PredictionStatus =
+  | 'pending'
+  | 'realized'
+  | 'partially-realized'
+  | 'expired';
+
+/**
+ * A prediction that has been (or is awaiting) evaluation against subsequent
+ * research. Stored in `Competitor.predictionHistory` for track-record display.
+ */
+export interface EvaluatedPrediction {
+  move: string;
+  reasoning: string;
+  probability: number;
+  timeHorizon: PredictedMoveTimeHorizon;
+  category: PredictedMoveCategory;
+  predictedAt: string;          // ISO — when originally predicted
+  evaluatedAt: string;          // ISO — when this evaluation ran
+  status: PredictionStatus;
+  evidence?: string;             // 1-2 sentences explaining realization (or null when pending)
+  evidenceUrl?: string;          // citation source URL
+}
+
 export interface Competitor {
   id: string;
   userId: string;
@@ -41,4 +64,6 @@ export interface Competitor {
   derivedTagsAsOf?: string;
   predictedMoves?: PredictedMove[];
   predictedMovesAsOf?: string;
+  predictionHistory?: EvaluatedPrediction[];
+  predictionHistoryAsOf?: string;
 }

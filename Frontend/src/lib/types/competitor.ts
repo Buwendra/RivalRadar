@@ -27,6 +27,25 @@ export interface PredictedMove {
   category: PredictedMoveCategory;
 }
 
+export type PredictionStatus =
+  | "pending"
+  | "realized"
+  | "partially-realized"
+  | "expired";
+
+export interface EvaluatedPrediction {
+  move: string;
+  reasoning: string;
+  probability: number;
+  timeHorizon: PredictedMoveTimeHorizon;
+  category: PredictedMoveCategory;
+  predictedAt: string;
+  evaluatedAt: string;
+  status: PredictionStatus;
+  evidence?: string;
+  evidenceUrl?: string;
+}
+
 export interface Competitor {
   id: string;
   name: string;
@@ -44,6 +63,8 @@ export interface Competitor {
   derivedTagsAsOf?: string;
   predictedMoves?: PredictedMove[];
   predictedMovesAsOf?: string;
+  predictionHistory?: EvaluatedPrediction[];
+  predictionHistoryAsOf?: string;
 }
 
 export interface CompetitorDetailChange {
