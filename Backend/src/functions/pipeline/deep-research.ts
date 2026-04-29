@@ -75,23 +75,38 @@ export const handler = async (event: Event): Promise<Output> => {
   });
 
   try {
-    // 1. Load up to 3 prior research findings (newest first via descending SK scan).
-    //    Index 0 is used for delta detection; the full list (up to 3) feeds
-    //    predictNextMoves with richer historical context.
-    const { items: priorItems } = await queryByPK(
-      `COMP#${event.competitorId}`,
-      'RESEARCH#',
-      { limit: 3 }
-    );
+    // 1. Load up to 3 prior research findings + the user record in parallel.
+    //    Index 0 of priorItems is used for delta detection; the full list
+    //    feeds predictNextMoves with richer historical context. The user
+    //    record gives us companyName + industry that's threaded into every
+    //    AI call for user-relevant framing.
+    const [priorResult, userRecord] = await Promise.all([
+      queryByPK(`COMP#${event.competitorId}`, 'RESEARCH#', { limit: 3 }),
+      getItem<Record<string, unknown>>(userPK(event.userId), userSK()),
+    ]);
+    const priorItems = priorResult.items;
     const previous = (priorItems[0] as unknown as ResearchFinding | undefined) ?? null;
+    const userCompanyName = (userRecord?.companyName as string | undefined) ?? undefined;
+    const userIndustry = (userRecord?.industry as string | undefined) ?? undefined;
 
-    // 2. Run web_search-backed research
+    // 2. Run web_search-backed research. Pass the most recent prior snapshot
+    //    (if any) so Claude can bias its 8 web searches toward what's new
+    //    since then — without dropping known facts from the output.
     const current = await deepResearch({
       competitorId: event.competitorId,
       userId: event.userId,
       name: event.name,
       url: event.url,
       industry: event.industry,
+      userCompanyName,
+      userIndustry,
+      priorContext: previous
+        ? {
+            summary: previous.summary,
+            derivedState: previous.derivedState,
+            generatedAt: previous.generatedAt,
+          }
+        : undefined,
     });
 
     const findingsCount =
@@ -111,10 +126,12 @@ export const handler = async (event: Event): Promise<Output> => {
           summary: previous.summary,
           categories: previous.categories,
           generatedAt: previous.generatedAt,
+          derivedState: previous.derivedState,
         },
         current: {
           summary: current.summary,
           categories: current.categories,
+          derivedState: current.derivedState,
         },
       });
     }
@@ -204,16 +221,10 @@ export const handler = async (event: Event): Promise<Output> => {
       const { momentum, momentumChangePercent } = computeMomentum({ changesByDay });
 
       // Threat level (Haiku call). Best-effort — wrapped so failures don't break momentum write.
+      // userCompanyName + userIndustry come from the top-of-handler user load.
       let threatLevel: string | undefined;
       let threatReasoning: string | undefined;
       try {
-        const user = await getItem<Record<string, unknown>>(
-          userPK(event.userId),
-          userSK()
-        );
-        const userCompanyName = (user?.companyName as string | undefined) ?? undefined;
-        const userIndustry = (user?.industry as string | undefined) ?? undefined;
-
         const recentChangeSummaries = recentChangeItems
           .map((c) => ({
             summary: ((c.aiAnalysis as { summary?: string } | undefined)?.summary ?? '') as string,
@@ -352,6 +363,17 @@ export const handler = async (event: Event): Promise<Output> => {
             },
             priorFindings: priorsCompact,
             recentChanges: recentChangesForAi,
+            userCompanyName,
+            userIndustry,
+            momentum,
+            momentumChangePercent,
+            threatLevel: threatLevel as
+              | 'critical'
+              | 'high'
+              | 'medium'
+              | 'low'
+              | 'monitor'
+              | undefined,
           });
         } catch (err) {
           logger.warn('Prediction failed — continuing without prediction update', {

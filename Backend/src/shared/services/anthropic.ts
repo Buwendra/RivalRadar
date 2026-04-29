@@ -209,29 +209,74 @@ Scoring guide:
 /**
  * Generate a weekly strategic summary using Claude Sonnet.
  */
-export async function generateWeeklySummary(
+export async function generateWeeklySummary(input: {
   changes: Array<{
     competitorName: string;
     summary: string;
     significanceScore: number;
     changeType: string;
-  }>
-): Promise<string> {
+  }>;
+  userCompanyName?: string;
+  userIndustry?: string;
+  competitorSnapshots?: Array<{
+    name: string;
+    momentum?: string;
+    threatLevel?: string;
+    topTags?: string[];
+    stage?: string;
+  }>;
+}): Promise<string> {
   const secrets = await getSecret('rivalscan/api-keys');
 
-  const changeList = changes
+  const changeList = input.changes
     .map((c, i) => `${i + 1}. [${c.changeType.toUpperCase()}] ${c.competitorName}: ${c.summary} (Significance: ${c.significanceScore}/10)`)
     .join('\n');
 
+  const userContextLine =
+    input.userCompanyName || input.userIndustry
+      ? `Briefing for: ${input.userCompanyName ?? '(unknown company)'} (industry: ${input.userIndustry ?? 'unknown'}). Frame the summary around what these competitor moves mean for THIS user specifically — reference their company by name where it strengthens the recommendations.`
+      : `User context: not provided. Write a general competitive briefing.`;
+
+  // Sort competitor snapshots by threat (critical → monitor → unscored)
+  // so the briefing can lead with the most dangerous ones.
+  const threatRank: Record<string, number> = {
+    critical: 0,
+    high: 1,
+    medium: 2,
+    low: 3,
+    monitor: 4,
+  };
+  const portfolioBlock =
+    input.competitorSnapshots && input.competitorSnapshots.length > 0
+      ? `\nPORTFOLIO OVERVIEW (${input.competitorSnapshots.length} tracked competitors, sorted by threat):
+${input.competitorSnapshots
+  .slice()
+  .sort(
+    (a, b) =>
+      (threatRank[a.threatLevel ?? ''] ?? 99) - (threatRank[b.threatLevel ?? ''] ?? 99)
+  )
+  .map(
+    (c) =>
+      `- ${c.name}: threat=${c.threatLevel ?? 'unscored'}, momentum=${c.momentum ?? 'unscored'}${
+        c.stage ? `, stage=${c.stage}` : ''
+      }${c.topTags && c.topTags.length > 0 ? `, tags=[${c.topTags.join(', ')}]` : ''}`
+  )
+  .join('\n')}
+
+When writing the briefing, surface CROSS-COMPETITOR PATTERNS where they exist (e.g. "3 of your ${input.competitorSnapshots.length} competitors are hiring aggressively this period" or "two competitors moved into late-stage simultaneously"). Lead with the most dangerous competitors. Reference specific competitors by name in your recommendations.\n`
+      : '';
+
   const prompt = `You are a senior competitive intelligence strategist. Based on the following competitor changes detected this week, write a concise strategic briefing.
 
+${userContextLine}
+${portfolioBlock}
 CHANGES THIS WEEK:
 ${changeList}
 
 Write a 3-4 paragraph strategic briefing that:
-1. Identifies the most important trend or pattern across these changes
-2. Highlights immediate threats or opportunities
-3. Provides 2-3 specific recommended actions
+1. Identifies the most important trend or pattern across these changes (favour cross-competitor patterns when they exist)
+2. Highlights immediate threats or opportunities, leading with the highest-threat competitor
+3. Provides 2-3 specific recommended actions, each referencing a specific competitor by name
 4. Notes any notable trends to watch
 
 Keep it actionable and concise. Write for a busy founder or marketing leader.`;
@@ -268,11 +313,33 @@ export async function deepResearch(input: {
   name: string;
   url: string;
   industry?: string;
+  userCompanyName?: string;
+  userIndustry?: string;
+  priorContext?: {
+    summary: string;
+    derivedState?: DerivedState;
+    generatedAt: string;
+  };
 }): Promise<Omit<ResearchFinding, 'id' | 'generatedAt'>> {
   const secrets = await getSecret('rivalscan/api-keys');
 
+  const userContextLine =
+    input.userCompanyName || input.userIndustry
+      ? `User context: ${input.userCompanyName ?? '(unknown company)'} (industry: ${input.userIndustry ?? 'unknown'}). Tailor relevance to their POV — flag findings that materially affect their competitive position.`
+      : `User context: not provided. Treat the analysis as general competitive intelligence.`;
+
+  const priorContextBlock = input.priorContext
+    ? `\nPRIOR SNAPSHOT (already on file, generated ${input.priorContext.generatedAt}):
+${input.priorContext.summary}
+Derived state was: ${input.priorContext.derivedState ? JSON.stringify(input.priorContext.derivedState) : '(not captured)'}
+
+Use this prior context to direct your searches toward what's NEW since the prior snapshot date. Still produce a COMPLETE current snapshot in your output — do not omit known facts. If a previously-known item is still relevant, include it again. The downstream consumer needs the full current state to compute deltas.\n`
+    : '';
+
   const prompt = `You are a competitive intelligence analyst. Research the competitor below across the public web.
 
+${userContextLine}
+${priorContextBlock}
 Competitor: ${input.name}
 Website: ${input.url}${input.industry ? `\nIndustry: ${input.industry}` : ''}
 
@@ -473,8 +540,12 @@ Field guidance:
  */
 export async function detectResearchDeltas(input: {
   competitorName: string;
-  previous: Pick<ResearchFinding, 'summary' | 'categories' | 'generatedAt'>;
-  current: Pick<ResearchFinding, 'summary' | 'categories'>;
+  previous: Pick<ResearchFinding, 'summary' | 'categories' | 'generatedAt'> & {
+    derivedState?: DerivedState;
+  };
+  current: Pick<ResearchFinding, 'summary' | 'categories'> & {
+    derivedState?: DerivedState;
+  };
 }): Promise<ResearchDelta[]> {
   const secrets = await getSecret('rivalscan/api-keys');
 
@@ -501,7 +572,12 @@ ${JSON.stringify(compactFinding(input.previous), null, 2)}
 CURRENT FINDINGS (JSON):
 ${JSON.stringify(compactFinding(input.current), null, 2)}
 
+PREVIOUS DERIVED STATE: ${input.previous.derivedState ? JSON.stringify(input.previous.derivedState) : '(not captured)'}
+CURRENT DERIVED STATE: ${input.current.derivedState ? JSON.stringify(input.current.derivedState) : '(not captured)'}
+
 Treat a current item as NEW if the core fact/event it describes is not substantively present in previous (regardless of minor wording differences). Ignore items that are just rephrasings of previously known facts.
+
+ALSO check for derived-state transitions. If any field meaningfully transitioned between previous and current (e.g. stage 'growth' → 'late', fundingState 'bootstrapped' → 'recently-raised', hiringState 'steady' → 'aggressive', strategicDirection 'steady' → 'going-upmarket'), emit ONE synthetic delta describing the transition. Use category "news" and changeType "messaging" for these. Skip transitions involving 'unknown' on either side. Significance for state transitions should be high (7-9) — these are structural shifts in the competitor's posture.
 
 For each new item, analyze its impact. Respond with ONLY valid JSON (no prose, no code fences):
 
@@ -744,6 +820,11 @@ export async function predictNextMoves(input: {
   latestFinding: Pick<ResearchFinding, 'summary' | 'categories' | 'derivedState' | 'generatedAt'>;
   priorFindings: Array<Pick<ResearchFinding, 'summary' | 'categories' | 'derivedState' | 'generatedAt'>>;
   recentChanges: Array<{ summary: string; sourceCategory?: string; detectedAt: string }>;
+  userCompanyName?: string;
+  userIndustry?: string;
+  momentum?: Momentum;
+  momentumChangePercent?: number;
+  threatLevel?: ThreatLevel;
 }): Promise<PredictedMove[]> {
   const secrets = await getSecret('rivalscan/api-keys');
 
@@ -787,8 +868,28 @@ export async function predictNextMoves(input: {
     .slice(0, 8)
     .map((c) => `[${c.sourceCategory ?? 'change'}] ${String(c.summary).slice(0, 120)}`);
 
+  const userContextLine =
+    input.userCompanyName || input.userIndustry
+      ? `User context: ${input.userCompanyName ?? '(unknown company)'} (industry: ${input.userIndustry ?? 'unknown'}). Tailor predictions to moves that would materially affect this user's competitive position.`
+      : `User context: not provided. Predict in absolute competitive terms.`;
+
+  const trajectoryBlock =
+    input.momentum || input.threatLevel
+      ? `\nCURRENT TRAJECTORY:
+- Momentum: ${input.momentum ?? 'unknown'}${
+          typeof input.momentumChangePercent === 'number'
+            ? ` (${input.momentumChangePercent >= 0 ? '+' : ''}${input.momentumChangePercent}% week-over-week)`
+            : ''
+        }
+- Threat level: ${input.threatLevel ?? 'unknown'}
+
+Use this trajectory when calibrating probability and time horizon. Rising/critical competitors are more likely to move fast on visible signals; declining/monitor competitors are unlikely to do anything dramatic and warrant lower-probability or no predictions.\n`
+      : '';
+
   const prompt = `You are a competitive intelligence analyst predicting what "${input.competitorName}" is likely to do in the next 30-90 days.
 
+${userContextLine}
+${trajectoryBlock}
 CURRENT (most recent finding):
 ${JSON.stringify(compactFinding(input.latestFinding), null, 2)}
 
@@ -819,7 +920,28 @@ Respond with ONLY valid JSON — no prose, no code fences:
   ]
 }
 
-If no strong signal: return { "predictions": [] }.`;
+If no strong signal: return { "predictions": [] }.
+
+EXAMPLES of acceptable vs. unacceptable output:
+
+ACCEPT — concrete, evidence-cited, calibrated probability:
+{
+  "move": "Likely to launch enterprise tier with SSO + audit logs",
+  "reasoning": "Recent hiring of 3 senior security engineers and the pricing-page change adding 'Talk to sales' both signal an enterprise GTM push within the next quarter.",
+  "probability": 0.7,
+  "timeHorizon": "60d",
+  "category": "product"
+}
+
+REJECT — generic, no evidence cited, vague:
+{
+  "move": "Likely to launch a new product",
+  "reasoning": "They are an active company that ships features regularly.",
+  "probability": 0.5,
+  "timeHorizon": "60d",
+  "category": "product"
+}
+The reject example would be filtered by the downstream sanitizer because its reasoning doesn't reference any specific input. Don't produce predictions like this — it's better to return an empty array.`;
 
   const response = await callAnthropic(
     secrets.ANTHROPIC_API_KEY,
@@ -1039,7 +1161,26 @@ Respond with ONLY valid JSON — no prose, no code fences:
   ]
 }
 
-Include an entry for every index in the prior predictions list.`;
+Include an entry for every index in the prior predictions list.
+
+EXAMPLES of acceptable vs. unacceptable evaluations:
+
+ACCEPT — specific evidence cited, status conservative:
+{
+  "index": 0,
+  "status": "realized",
+  "evidence": "The current finding's product category includes 'Stripe launches Enterprise tier with SSO and audit logs (Dec 4)' — this directly matches the predicted move.",
+  "evidenceUrl": "https://stripe.com/blog/enterprise-tier"
+}
+
+REJECT — vague, no specific citation:
+{
+  "index": 1,
+  "status": "realized",
+  "evidence": "Their direction of travel suggests this prediction came true.",
+  "evidenceUrl": ""
+}
+This is wrong. "Realized" requires citing a SPECIFIC item from the new evidence, not an inferred direction. If you cannot cite a specific finding/change, mark as "pending" (within horizon) or "expired" (after horizon).`;
 
   let response: Response;
   try {
