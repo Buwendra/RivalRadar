@@ -323,7 +323,12 @@ Field guidance:
     secrets.ANTHROPIC_API_KEY,
     {
       model: SONNET_MODEL,
-      max_tokens: 4096,
+      // 8192 was the previous default but the Phase 0 prompt enrichment
+      // (derivedState block + per-finding sentiment/timeSensitivity) inflated
+      // typical responses past 4096 tokens and caused mid-array truncation.
+      // 16384 gives headroom for the most verbose competitors without paying
+      // much extra (we still consume only what's actually generated).
+      max_tokens: 16384,
       tools: [
         {
           type: 'web_search_20250305',
@@ -348,8 +353,15 @@ Field guidance:
       | { type: 'server_tool_use'; name: string; input: { query?: string } }
       | { type: 'web_search_tool_result'; content: Array<{ url: string; title: string }> }
     >;
+    stop_reason?: string;
     usage?: { input_tokens?: number; output_tokens?: number };
   };
+
+  if (data.stop_reason === 'max_tokens') {
+    logger.warn('deepResearch: response hit max_tokens — output likely truncated', {
+      outputTokens: data.usage?.output_tokens,
+    });
+  }
 
   // Collect citations from web_search_tool_result blocks
   const now = new Date().toISOString();
