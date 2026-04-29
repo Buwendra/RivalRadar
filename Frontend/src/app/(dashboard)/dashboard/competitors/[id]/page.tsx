@@ -49,6 +49,7 @@ import { PageActivityList } from "@/components/dashboard/page-activity-list";
 import { MomentumChip } from "@/components/dashboard/momentum-chip";
 import { ThreatCard } from "@/components/dashboard/threat-card";
 import { CompetitorTagChips } from "@/components/dashboard/competitor-tag-chips";
+import { PredictedMovesCard } from "@/components/dashboard/predicted-moves-card";
 import { formatSmartDate } from "@/lib/utils/format-date";
 import type { CompetitorDetailChange, PageType } from "@/lib/types";
 
@@ -272,6 +273,8 @@ export default function CompetitorDetailPage() {
               </CardContent>
             </Card>
           </div>
+
+          <PredictedMovesCard moves={competitor.predictedMoves} />
 
           {recentChanges.length > 0 && (
             <div>

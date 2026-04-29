@@ -26,6 +26,8 @@ export const handler = apiHandler(async (event) => {
     threatAsOf: item.threatAsOf,
     derivedTags: item.derivedTags,
     derivedTagsAsOf: item.derivedTagsAsOf,
+    predictedMoves: item.predictedMoves,
+    predictedMovesAsOf: item.predictedMovesAsOf,
   }));
 
   return {

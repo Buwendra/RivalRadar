@@ -7,6 +7,9 @@ export type {
   CompetitorStats,
   Momentum,
   ThreatLevel,
+  PredictedMove,
+  PredictedMoveCategory,
+  PredictedMoveTimeHorizon,
   PageType,
 } from "./competitor";
 export type { Change, ChangeDetail, ChangeType, AiAnalysis, ChangeFilters } from "./change";

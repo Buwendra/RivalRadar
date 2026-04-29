@@ -2,6 +2,7 @@ import {
   deepResearch,
   detectResearchDeltas,
   scoreCompetitorThreat,
+  predictNextMoves,
 } from '../../shared/services/anthropic';
 import { putItem, queryByPK, updateItem, getItem } from '../../shared/db/queries';
 import {
@@ -23,7 +24,7 @@ import {
   computeMomentum,
   deriveTagsFromState,
 } from '../../shared/utils/competitor-metrics';
-import type { ResearchFinding } from '../../shared/types';
+import type { ResearchFinding, PredictedMove } from '../../shared/types';
 
 interface Event {
   competitorId: string;
@@ -69,11 +70,13 @@ export const handler = async (event: Event): Promise<Output> => {
   });
 
   try {
-    // 1. Load previous research finding (newest first via descending SK scan)
+    // 1. Load up to 3 prior research findings (newest first via descending SK scan).
+    //    Index 0 is used for delta detection; the full list (up to 3) feeds
+    //    predictNextMoves with richer historical context.
     const { items: priorItems } = await queryByPK(
       `COMP#${event.competitorId}`,
       'RESEARCH#',
-      { limit: 1 }
+      { limit: 3 }
     );
     const previous = (priorItems[0] as unknown as ResearchFinding | undefined) ?? null;
 
@@ -248,6 +251,50 @@ export const handler = async (event: Event): Promise<Output> => {
           | undefined,
       });
 
+      // Predicted next moves — Sonnet call, only when ≥ 1 prior finding exists.
+      // Best-effort: a failure here should not block momentum/threat/tags writes.
+      let predictedMoves: PredictedMove[] = [];
+      if (priorItems.length >= 1) {
+        try {
+          const priorsCompact = priorItems
+            .slice(0, 3)
+            .map((p) => p as unknown as ResearchFinding)
+            .map((p) => ({
+              summary: p.summary,
+              categories: p.categories,
+              derivedState: p.derivedState,
+              generatedAt: p.generatedAt,
+            }));
+          const recentChangesForPrediction = recentChangeItems
+            .slice(0, 8)
+            .map((c) => ({
+              summary:
+                ((c.aiAnalysis as { summary?: string } | undefined)?.summary ??
+                  '') as string,
+              sourceCategory: c.sourceCategory as string | undefined,
+              detectedAt: (c.detectedAt as string) ?? '',
+            }))
+            .filter((c) => c.summary && c.detectedAt);
+
+          predictedMoves = await predictNextMoves({
+            competitorName: event.name,
+            latestFinding: {
+              summary: current.summary,
+              categories: current.categories,
+              derivedState: current.derivedState,
+              generatedAt,
+            },
+            priorFindings: priorsCompact,
+            recentChanges: recentChangesForPrediction,
+          });
+        } catch (err) {
+          logger.warn('Prediction failed — continuing without prediction update', {
+            competitorId: event.competitorId,
+            error: String(err),
+          });
+        }
+      }
+
       // Single update with all enrichment fields set atomically
       const updates: Record<string, unknown> = {
         momentum,
@@ -262,6 +309,10 @@ export const handler = async (event: Event): Promise<Output> => {
         updates.threatReasoning = threatReasoning ?? '';
         updates.threatAsOf = enrichmentNow.toISOString();
       }
+      if (predictedMoves.length > 0) {
+        updates.predictedMoves = predictedMoves;
+        updates.predictedMovesAsOf = enrichmentNow.toISOString();
+      }
 
       await updateItem(
         competitorPK(event.userId),
@@ -275,6 +326,7 @@ export const handler = async (event: Event): Promise<Output> => {
         threatLevel,
         derivedTagsCount: derivedTags.length,
         derivedTags,
+        predictionsCount: predictedMoves.length,
       });
     } catch (err) {
       logger.warn('Post-research enrichment failed — continuing', {

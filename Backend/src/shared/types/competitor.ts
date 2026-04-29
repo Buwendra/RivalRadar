@@ -4,6 +4,24 @@ export type Momentum = 'rising' | 'stable' | 'slowing' | 'declining' | 'insuffic
 
 export type ThreatLevel = 'critical' | 'high' | 'medium' | 'low' | 'monitor';
 
+export type PredictedMoveCategory =
+  | 'product'
+  | 'pricing'
+  | 'funding'
+  | 'hiring'
+  | 'geo'
+  | 'strategic';
+
+export type PredictedMoveTimeHorizon = '30d' | '60d' | '90d';
+
+export interface PredictedMove {
+  move: string;
+  reasoning: string;
+  probability: number;
+  timeHorizon: PredictedMoveTimeHorizon;
+  category: PredictedMoveCategory;
+}
+
 export interface Competitor {
   id: string;
   userId: string;
@@ -21,4 +39,6 @@ export interface Competitor {
   threatAsOf?: string;
   derivedTags?: string[];
   derivedTagsAsOf?: string;
+  predictedMoves?: PredictedMove[];
+  predictedMovesAsOf?: string;
 }

@@ -18,6 +18,9 @@ import {
   DerivedPacing,
   Momentum,
   ThreatLevel,
+  PredictedMove,
+  PredictedMoveCategory,
+  PredictedMoveTimeHorizon,
 } from '../types';
 import { logger } from '../utils/logger';
 
@@ -709,4 +712,209 @@ Respond with ONLY valid JSON — no prose, no code fences:
   const reasoning = String(parsed.reasoning ?? '').slice(0, 400);
 
   return { threatLevel, reasoning };
+}
+
+/**
+ * Generate up to 3 forward-looking predictions about a competitor's next moves
+ * (30/60/90 day horizon) based on the current research finding plus up to 3
+ * historical findings.
+ *
+ * Single dedicated Sonnet call (~$0.02). Returns [] on parse failure rather than
+ * throwing — predictions are optional, the caller's other enrichment must still
+ * complete. Sanitizes per-prediction by requiring `reasoning` to reference at
+ * least one substring from the input findings (cheap heuristic against generic
+ * "likely to launch a product" output).
+ */
+export async function predictNextMoves(input: {
+  competitorName: string;
+  latestFinding: Pick<ResearchFinding, 'summary' | 'categories' | 'derivedState' | 'generatedAt'>;
+  priorFindings: Array<Pick<ResearchFinding, 'summary' | 'categories' | 'derivedState' | 'generatedAt'>>;
+  recentChanges: Array<{ summary: string; sourceCategory?: string; detectedAt: string }>;
+}): Promise<PredictedMove[]> {
+  const secrets = await getSecret('rivalscan/api-keys');
+
+  const ninetyDaysAgo = Date.now() - 90 * 24 * 60 * 60 * 1000;
+
+  // Compact projection of one finding (summary + top items per category + derivedState)
+  const compactFinding = (f: {
+    summary: string;
+    categories: Record<ResearchCategory, FindingItem[]>;
+    derivedState?: typeof input.latestFinding.derivedState;
+    generatedAt: string;
+  }) => {
+    const cats = (Object.keys(f.categories) as ResearchCategory[]).reduce(
+      (acc, cat) => {
+        const top = f.categories[cat]
+          .filter((i) => (i.importance ?? 1) >= 2)
+          .slice(0, 3)
+          .map((i) => i.title);
+        if (top.length > 0) acc[cat] = top;
+        return acc;
+      },
+      {} as Record<string, string[]>
+    );
+    return {
+      generatedAt: f.generatedAt,
+      summary: f.summary.slice(0, 600),
+      derivedState: f.derivedState,
+      topFindings: cats,
+    };
+  };
+
+  const priorsCompact = input.priorFindings
+    .filter((p) => {
+      const ts = Date.parse(p.generatedAt);
+      return !isNaN(ts) && ts >= ninetyDaysAgo;
+    })
+    .slice(0, 3)
+    .map(compactFinding);
+
+  const recentChangesCompact = input.recentChanges
+    .slice(0, 8)
+    .map((c) => `[${c.sourceCategory ?? 'change'}] ${String(c.summary).slice(0, 120)}`);
+
+  const prompt = `You are a competitive intelligence analyst predicting what "${input.competitorName}" is likely to do in the next 30-90 days.
+
+CURRENT (most recent finding):
+${JSON.stringify(compactFinding(input.latestFinding), null, 2)}
+
+PRIOR FINDINGS (newest first, up to 3, all within 90 days):
+${priorsCompact.length > 0 ? JSON.stringify(priorsCompact, null, 2) : '(none)'}
+
+RECENT CHANGES (sourced from research deltas):
+${recentChangesCompact.length > 0 ? recentChangesCompact.map((c) => `- ${c}`).join('\n') : '(none)'}
+
+Generate 0 to 3 specific, evidence-based predictions about what this competitor is most likely to do next. Bias toward fewer high-confidence predictions over many low-confidence ones — return an empty array if you cannot find strong signal.
+
+Each prediction MUST:
+- Cite at least one specific item from the inputs above in its reasoning (a finding title, a stated direction, a recent change)
+- Have a concrete time horizon (30d, 60d, or 90d)
+- Have an honestly calibrated probability (0.0 to 1.0)
+- Fall in one of these categories: product, pricing, funding, hiring, geo, strategic
+
+Respond with ONLY valid JSON — no prose, no code fences:
+{
+  "predictions": [
+    {
+      "move": "short headline (e.g. 'Likely to launch EU pricing tier')",
+      "reasoning": "1-2 sentences. MUST cite at least one specific finding/change.",
+      "probability": 0.0-1.0,
+      "timeHorizon": "30d" | "60d" | "90d",
+      "category": "product" | "pricing" | "funding" | "hiring" | "geo" | "strategic"
+    }
+  ]
+}
+
+If no strong signal: return { "predictions": [] }.`;
+
+  const response = await callAnthropic(
+    secrets.ANTHROPIC_API_KEY,
+    {
+      model: SONNET_MODEL,
+      max_tokens: 2048,
+      messages: [{ role: 'user', content: prompt }],
+    },
+    'predictNextMoves'
+  );
+
+  if (!response.ok) {
+    const errBody = await response.text().catch(() => '');
+    logger.warn('Anthropic predictNextMoves API error', {
+      status: response.status,
+      body: errBody.slice(0, 500),
+    });
+    return [];
+  }
+
+  const data = (await response.json()) as {
+    content: Array<{ type: string; text: string }>;
+  };
+  const text = (data.content.find((b) => b.type === 'text')?.text ?? '').trim();
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    logger.warn('predictNextMoves: no JSON in response', { text: text.slice(0, 500) });
+    return [];
+  }
+
+  let parsed: { predictions?: Array<Record<string, unknown>> };
+  try {
+    parsed = JSON.parse(jsonMatch[0]);
+  } catch (err) {
+    logger.warn('predictNextMoves: JSON parse failed', { error: String(err) });
+    return [];
+  }
+
+  // Build a haystack of input strings to validate "reasoning cites a specific finding"
+  const haystackParts: string[] = [];
+  haystackParts.push(input.latestFinding.summary);
+  for (const cat of Object.keys(input.latestFinding.categories) as ResearchCategory[]) {
+    for (const item of input.latestFinding.categories[cat]) {
+      haystackParts.push(item.title);
+      haystackParts.push(item.detail);
+    }
+  }
+  for (const p of input.priorFindings) {
+    haystackParts.push(p.summary);
+    for (const cat of Object.keys(p.categories) as ResearchCategory[]) {
+      for (const item of p.categories[cat]) {
+        haystackParts.push(item.title);
+      }
+    }
+  }
+  for (const c of input.recentChanges) {
+    haystackParts.push(c.summary);
+  }
+  const haystack = haystackParts.join(' \n ').toLowerCase();
+
+  const referencesInput = (reasoning: string): boolean => {
+    const r = reasoning.toLowerCase();
+    // Check for any 6+ char overlap with the haystack — cheap heuristic to filter generic predictions.
+    // Walk the reasoning in 12-char windows and look for any window that is a substring of the haystack.
+    for (let i = 0; i + 12 <= r.length; i += 4) {
+      const window = r.slice(i, i + 12).trim();
+      if (window.length < 6) continue;
+      if (haystack.includes(window)) return true;
+    }
+    return false;
+  };
+
+  const validCategories: PredictedMoveCategory[] = [
+    'product',
+    'pricing',
+    'funding',
+    'hiring',
+    'geo',
+    'strategic',
+  ];
+  const validHorizons: PredictedMoveTimeHorizon[] = ['30d', '60d', '90d'];
+
+  const rawPreds = Array.isArray(parsed.predictions) ? parsed.predictions : [];
+  const out: PredictedMove[] = [];
+  for (const p of rawPreds) {
+    if (out.length >= 3) break;
+    const move = String(p.move ?? '').slice(0, 200).trim();
+    const reasoning = String(p.reasoning ?? '').trim();
+    if (!move || reasoning.length < 20) continue;
+    if (!referencesInput(reasoning)) {
+      logger.info('predictNextMoves: dropped generic prediction', { move });
+      continue;
+    }
+    const probabilityRaw = Number(p.probability ?? 0);
+    const probability = Math.max(0, Math.min(1, Number.isFinite(probabilityRaw) ? probabilityRaw : 0));
+    const timeHorizon = validHorizons.includes(p.timeHorizon as PredictedMoveTimeHorizon)
+      ? (p.timeHorizon as PredictedMoveTimeHorizon)
+      : '60d';
+    const category = validCategories.includes(p.category as PredictedMoveCategory)
+      ? (p.category as PredictedMoveCategory)
+      : 'strategic';
+    out.push({
+      move,
+      reasoning: reasoning.slice(0, 600),
+      probability,
+      timeHorizon,
+      category,
+    });
+  }
+
+  return out;
 }
