@@ -87,7 +87,13 @@
       "Bash(MSYS_NO_PATHCONV=1 aws cloudformation describe-stacks --region us-east-1 --query 'Stacks[?StackName==`RivalScan-dev-Pipeline` || StackName==`RivalScan-dev-Api`].{name:StackName,status:StackStatus}' --output json)",
       "Bash(MSYS_NO_PATHCONV=1 aws cloudformation describe-stacks --region us-east-1 --query 'Stacks[?StackName==`RivalScan-dev-Pipeline` || StackName==`RivalScan-dev-Api`].{name:StackName,status:StackStatus,updated:LastUpdatedTime}' --output json)",
       "Bash(MSYS_NO_PATHCONV=1 aws amplify list-jobs --app-id d1zrq9gf129s9u --branch-name main --region us-east-1 --max-items 2 --query 'jobSummaries[].{jobId:jobId,status:status,startTime:startTime}' --output json)",
-      "Bash(MSYS_NO_PATHCONV=1 aws amplify get-job --app-id d1zrq9gf129s9u --branch-name main --job-id 10 --region us-east-1 --query 'job.summary.status' --output text)"
+      "Bash(MSYS_NO_PATHCONV=1 aws amplify get-job --app-id d1zrq9gf129s9u --branch-name main --job-id 10 --region us-east-1 --query 'job.summary.status' --output text)",
+      "Bash(MSYS_NO_PATHCONV=1 aws amplify get-job --app-id d1zrq9gf129s9u --branch-name main --job-id 12 --region us-east-1 --query 'job.summary.status' --output text)",
+      "Bash(MSYS_NO_PATHCONV=1 aws stepfunctions list-executions --state-machine-arn arn:aws:states:us-east-1:076561717141:stateMachine:RivalScan-dev-Pipeline-ResearchPipeline --max-items 5 --region us-east-1 --query 'executions[].{status:status,start:startDate,stop:stopDate,name:name}' --output json)",
+      "Bash(MSYS_NO_PATHCONV=1 aws stepfunctions list-executions --state-machine-arn arn:aws:states:us-east-1:076561717141:stateMachine:RivalScan-dev-Pipeline-ResearchPipeline --max-items 3 --region us-east-1 --query 'executions[].{status:status,start:startDate,stop:stopDate}' --output json)",
+      "Bash(MSYS_NO_PATHCONV=1 aws amplify get-job --app-id d1zrq9gf129s9u --branch-name main --job-id 15 --region us-east-1 --query 'job.summary.status' --output text)",
+      "Bash(MSYS_NO_PATHCONV=1 aws cloudformation describe-stacks --region us-east-1 --query 'Stacks[?StackName==`RivalScan-dev-Pipeline`].{name:StackName,status:StackStatus}' --output json)",
+      "Bash(MSYS_NO_PATHCONV=1 aws amplify get-job --app-id d1zrq9gf129s9u --branch-name main --job-id 17 --region us-east-1 --query 'job.summary.status' --output text)"
     ]
   }
 }

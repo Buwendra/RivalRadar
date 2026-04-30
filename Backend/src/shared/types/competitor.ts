@@ -66,4 +66,12 @@ export interface Competitor {
   predictedMovesAsOf?: string;
   predictionHistory?: EvaluatedPrediction[];
   predictionHistoryAsOf?: string;
+
+  // Recurring research cadence (Phase 1). `researchCadenceDays` overrides the
+  // tier-level default from PLAN_LIMITS.researchCadenceDaysDefault. Null/absent
+  // means use the tier default. `lastRecurringResearchAt` is set by the
+  // recurring-research enqueuer Lambda after each scheduled run, used to skip
+  // competitors whose latest run is still fresh.
+  researchCadenceDays?: number;
+  lastRecurringResearchAt?: string;
 }

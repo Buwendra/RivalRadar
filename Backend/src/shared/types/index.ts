@@ -25,11 +25,48 @@ export interface PaginationMeta {
 /** Pricing tier plan names */
 export type PlanTier = 'scout' | 'strategist' | 'command';
 
-/** Plan limits by tier */
-export const PLAN_LIMITS: Record<PlanTier, { maxCompetitors: number; historyDays: number; researchPerDay: number }> = {
-  scout: { maxCompetitors: 3, historyDays: 30, researchPerDay: 10 },
-  strategist: { maxCompetitors: 10, historyDays: 90, researchPerDay: 30 },
-  command: { maxCompetitors: 25, historyDays: 365, researchPerDay: 100 },
+/**
+ * Plan limits by tier.
+ *
+ * - `maxCompetitors` / `historyDays` / `researchPerDay` — hard caps enforced at write time.
+ * - `monthlyCostCap` — soft Anthropic spend ceiling (USD). Computed from observed
+ *   token usage in CloudWatch Logs Insights and rolled into `User.monthToDateCostUsd`
+ *   nightly. Once exceeded, `enforceResearchEligibility` rejects further research
+ *   until the next month or the user upgrades.
+ * - `researchCadenceDaysDefault` — how often the recurring research scheduler
+ *   re-runs each competitor when no per-competitor `researchCadenceDays` override
+ *   is set on the Competitor record.
+ */
+export interface PlanLimits {
+  maxCompetitors: number;
+  historyDays: number;
+  researchPerDay: number;
+  monthlyCostCap: number;
+  researchCadenceDaysDefault: number;
+}
+
+export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
+  scout: {
+    maxCompetitors: 3,
+    historyDays: 30,
+    researchPerDay: 10,
+    monthlyCostCap: 5,
+    researchCadenceDaysDefault: 7,
+  },
+  strategist: {
+    maxCompetitors: 10,
+    historyDays: 90,
+    researchPerDay: 30,
+    monthlyCostCap: 20,
+    researchCadenceDaysDefault: 7,
+  },
+  command: {
+    maxCompetitors: 25,
+    historyDays: 365,
+    researchPerDay: 100,
+    monthlyCostCap: 80,
+    researchCadenceDaysDefault: 14,
+  },
 };
 
 /**

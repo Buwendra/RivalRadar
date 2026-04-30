@@ -21,6 +21,10 @@ export const snapshotSK = (pageUrl: string, timestamp: string) =>
 export const researchPK = (competitorId: string) => `COMP#${competitorId}`;
 export const researchSK = (timestamp: string) => `RESEARCH#${timestamp}`;
 
+// CostDay — per-user daily Anthropic cost rollup (Phase 1)
+export const costDayPK = (userId: string) => `USER#${userId}`;
+export const costDaySK = (date: string) => `COST#${date}`; // date in YYYY-MM-DD
+
 // ─── GSI Key Builders ───
 
 // GSI1: User's changes feed (dashboard)

@@ -59,6 +59,7 @@ export const handler = async (event: Event): Promise<Event & { strategicSummary:
 
   const summary = await generateWeeklySummary({
     changes: event.topChanges,
+    userId: event.userId,
     userCompanyName,
     userIndustry,
     competitorSnapshots: event.competitorSnapshots,

@@ -1,6 +1,7 @@
 import { createHash } from 'crypto';
 import { getSecret } from './secrets';
 import { generateId } from '../utils/id';
+import { computeAnthropicCostUsd } from '../utils/anthropic-pricing';
 import {
   AiAnalysis,
   ResearchFinding,
@@ -127,23 +128,61 @@ function shortHash(input: string): string {
 }
 
 /**
+ * Optional attribution context for an Anthropic call. When `userId` is set,
+ * the cost is attributed to that user in the structured `ai_call_completed`
+ * log line and rolled up nightly into a per-user `CostDay` record. Calls
+ * with no `userId` are system tasks (e.g. scheduled aggregators) and roll up
+ * into the org-level cost only.
+ */
+interface AnthropicCallContext {
+  userId?: string | null;
+}
+
+/**
+ * Best-effort `usage` block extraction. The Anthropic messages endpoint
+ * returns `{ usage: { input_tokens, output_tokens, ... } }` on success;
+ * non-2xx and malformed responses may omit the block entirely. We clone
+ * the Response so the caller still gets to parse the body normally.
+ */
+async function readUsageFromClone(
+  response: Response
+): Promise<{ inputTokens?: number; outputTokens?: number }> {
+  if (!response.ok) return {};
+  try {
+    const cloned = response.clone();
+    const data = (await cloned.json()) as {
+      usage?: { input_tokens?: number; output_tokens?: number };
+    };
+    return {
+      inputTokens: data.usage?.input_tokens,
+      outputTokens: data.usage?.output_tokens,
+    };
+  } catch {
+    return {};
+  }
+}
+
+/**
  * Call the Anthropic messages API, retrying on 429 rate-limit responses.
  * Honors the `retry-after` response header (seconds) when present.
  *
- * Audit logging: every call emits an `ai_call` log event with a unique
- * aiCallId, the prompt's sha256 hash (first 16 hex chars), and the model.
- * This satisfies the COMPLIANCE_ROADMAP item 1.5 forensic-trail requirement
- * without storing prompt content in DynamoDB. PII safe by construction.
+ * Audit logging: every call emits an `ai_call_completed` log event with
+ * the unique aiCallId, the prompt's sha256 hash (first 16 hex chars), the
+ * model, observed input/output tokens, and computed cost in USD. The
+ * scheduled aggregator queries this event via Logs Insights to build
+ * per-user / per-day cost rollups. PII-safe (prompt is hashed, not stored).
  */
 async function callAnthropic(
   apiKey: string,
   body: unknown,
   opName: string,
+  context?: AnthropicCallContext,
   maxRetries = 2
 ): Promise<Response> {
   const aiCallId = generateId();
   const promptHash = shortHash(extractPromptForHashing(body));
   const model = (body as { model?: string }).model ?? 'unknown';
+  const userId = context?.userId ?? null;
   const startedAt = Date.now();
 
   logger.info('ai_call_started', {
@@ -151,6 +190,7 @@ async function callAnthropic(
     opName,
     model,
     promptHash,
+    userId,
   });
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -165,15 +205,22 @@ async function callAnthropic(
     });
 
     if (response.status !== 429 || attempt === maxRetries) {
+      const usage = await readUsageFromClone(response);
+      const costUsd = computeAnthropicCostUsd(model, usage.inputTokens, usage.outputTokens);
+
       logger.info('ai_call_completed', {
         aiCallId,
         opName,
         model,
         promptHash,
+        userId,
         status: response.ok ? 'ok' : 'http-error',
         httpStatus: response.status,
         retryCount: attempt,
         durationMs: Date.now() - startedAt,
+        inputTokens: usage.inputTokens ?? 0,
+        outputTokens: usage.outputTokens ?? 0,
+        costUsd: Number(costUsd.toFixed(6)),
       });
       return response;
     }
@@ -231,7 +278,8 @@ Scoring guide:
       max_tokens: 500,
       messages: [{ role: 'user', content: prompt }],
     },
-    'analyzeChange'
+    'analyzeChange',
+    { userId: null }
   );
 
   if (!response.ok) {
@@ -271,6 +319,7 @@ export async function generateWeeklySummary(input: {
     significanceScore: number;
     changeType: string;
   }>;
+  userId?: string;
   userCompanyName?: string;
   userIndustry?: string;
   competitorSnapshots?: Array<{
@@ -343,7 +392,8 @@ Keep it actionable and concise. Write for a busy founder or marketing leader.`;
       max_tokens: 1000,
       messages: [{ role: 'user', content: prompt }],
     },
-    'generateWeeklySummary'
+    'generateWeeklySummary',
+    { userId: input.userId ?? null }
   );
 
   if (!response.ok) {
@@ -462,7 +512,8 @@ Field guidance:
       ],
       messages: [{ role: 'user', content: prompt }],
     },
-    'deepResearch'
+    'deepResearch',
+    { userId: input.userId }
   );
 
   if (!response.ok) {
@@ -595,6 +646,7 @@ Field guidance:
  */
 export async function detectResearchDeltas(input: {
   competitorName: string;
+  userId?: string;
   previous: Pick<ResearchFinding, 'summary' | 'categories' | 'generatedAt'> & {
     derivedState?: DerivedState;
   };
@@ -665,7 +717,8 @@ If nothing substantively new: return { "deltas": [] }.`;
       max_tokens: 16384,
       messages: [{ role: 'user', content: prompt }],
     },
-    'detectResearchDeltas'
+    'detectResearchDeltas',
+    { userId: input.userId ?? null }
   );
 
   if (!response.ok) {
@@ -754,6 +807,7 @@ If nothing substantively new: return { "deltas": [] }.`;
  */
 export async function scoreCompetitorThreat(input: {
   competitorName: string;
+  userId?: string;
   userCompanyName?: string;
   userIndustry?: string;
   latestFinding: Pick<ResearchFinding, 'summary' | 'categories' | 'derivedState'>;
@@ -824,7 +878,8 @@ Respond with ONLY valid JSON — no prose, no code fences:
       max_tokens: 400,
       messages: [{ role: 'user', content: prompt }],
     },
-    'scoreCompetitorThreat'
+    'scoreCompetitorThreat',
+    { userId: input.userId ?? null }
   );
 
   if (!response.ok) {
@@ -872,6 +927,7 @@ Respond with ONLY valid JSON — no prose, no code fences:
  */
 export async function predictNextMoves(input: {
   competitorName: string;
+  userId?: string;
   latestFinding: Pick<ResearchFinding, 'summary' | 'categories' | 'derivedState' | 'generatedAt'>;
   priorFindings: Array<Pick<ResearchFinding, 'summary' | 'categories' | 'derivedState' | 'generatedAt'>>;
   recentChanges: Array<{ summary: string; sourceCategory?: string; detectedAt: string }>;
@@ -1005,7 +1061,8 @@ The reject example would be filtered by the downstream sanitizer because its rea
       max_tokens: 2048,
       messages: [{ role: 'user', content: prompt }],
     },
-    'predictNextMoves'
+    'predictNextMoves',
+    { userId: input.userId ?? null }
   );
 
   if (!response.ok) {
@@ -1123,6 +1180,7 @@ The reject example would be filtered by the downstream sanitizer because its rea
  */
 export async function evaluatePriorPredictions(input: {
   competitorName: string;
+  userId?: string;
   priorPredictions: Array<{
     move: string;
     reasoning: string;
@@ -1246,7 +1304,8 @@ This is wrong. "Realized" requires citing a SPECIFIC item from the new evidence,
         max_tokens: 2048,
         messages: [{ role: 'user', content: prompt }],
       },
-      'evaluatePriorPredictions'
+      'evaluatePriorPredictions',
+      { userId: input.userId ?? null }
     );
   } catch (err) {
     logger.warn('evaluatePriorPredictions: call failed', { error: String(err) });
@@ -1335,6 +1394,7 @@ export type { EvaluatedPrediction };
 export async function classifyResearchTarget(input: {
   name: string;
   url: string;
+  userId?: string;
 }): Promise<{
   isBusiness: boolean;
   reason: string;
@@ -1390,7 +1450,8 @@ REJECT — individual person:
         max_tokens: 300,
         messages: [{ role: 'user', content: prompt }],
       },
-      'classifyResearchTarget'
+      'classifyResearchTarget',
+      { userId: input.userId ?? null }
     );
   } catch (err) {
     // Fail CLOSED on transport errors — better to reject legitimate users

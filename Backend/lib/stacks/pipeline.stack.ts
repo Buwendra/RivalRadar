@@ -8,6 +8,7 @@ import * as targets from 'aws-cdk-lib/aws-events-targets';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import { Construct } from 'constructs';
 import * as path from 'path';
 
@@ -34,6 +35,7 @@ export class PipelineStack extends cdk.Stack {
       BUCKET_NAME: snapshotBucket.bucketName,
       SECRETS_ARN: apiSecrets.secretArn,
       FRONTEND_URL: process.env.FRONTEND_URL ?? 'http://localhost:3000',
+      STACK_NAME: this.stackName,
     };
 
     const lambdaDefaults: nodejs.NodejsFunctionProps = {
@@ -158,6 +160,53 @@ export class PipelineStack extends cdk.Stack {
       tracingEnabled: true,
     });
 
+    // ─── Recurring Research Enqueuer Lambda ───
+    // Runs Sunday 6am UTC (~26h before the digest aggregation kicks off Monday
+    // 8am UTC) — enough buffer for the Map state's serialized per-competitor
+    // research runs to complete before the digest reads the change feed.
+    const enqueueRecurringFn = new nodejs.NodejsFunction(this, 'EnqueueRecurringResearch', {
+      ...lambdaDefaults,
+      entry: fnPath('pipeline/enqueue-recurring-research.ts'),
+      functionName: `${this.stackName}-EnqueueRecurringResearch`,
+      timeout: cdk.Duration.minutes(5),
+      memorySize: 512,
+      environment: {
+        ...sharedEnv,
+        RESEARCH_PIPELINE_ARN: this.researchStateMachine.stateMachineArn,
+      },
+    });
+    table.grantReadWriteData(enqueueRecurringFn);
+    apiSecrets.grantRead(enqueueRecurringFn); // eligibility classifier reads ANTHROPIC_API_KEY
+    this.researchStateMachine.grantStartExecution(enqueueRecurringFn);
+
+    // ─── Daily AI Cost Aggregator Lambda ───
+    // Runs at 3am UTC. Reads the prior day's `ai_call_completed` log lines
+    // via CloudWatch Logs Insights, rolls them up into per-user CostDay rows
+    // and updates each user's monthToDateCostUsd cache. The eligibility helper
+    // reads that cache to enforce monthly cost caps.
+    const aggregateAiCostsFn = new nodejs.NodejsFunction(this, 'AggregateAiCosts', {
+      ...lambdaDefaults,
+      entry: fnPath('scheduled/aggregate-ai-costs.ts'),
+      functionName: `${this.stackName}-AggregateAiCosts`,
+      timeout: cdk.Duration.minutes(5),
+      memorySize: 512,
+    });
+    table.grantReadWriteData(aggregateAiCostsFn);
+    aggregateAiCostsFn.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: [
+          'logs:DescribeLogGroups',
+          'logs:StartQuery',
+          'logs:GetQueryResults',
+          'logs:StopQuery',
+        ],
+        // Logs Insights queries require '*' for the Describe/Start actions
+        // because they target multiple log groups dynamically. Logs API is
+        // already scoped to the account/region by the credential context.
+        resources: ['*'],
+      })
+    );
+
     // ─── EventBridge Schedules ───
 
     // Weekly Monday at 8:00 AM UTC — digest email
@@ -165,6 +214,20 @@ export class PipelineStack extends cdk.Stack {
       ruleName: `${this.stackName}-WeeklyCron`,
       schedule: events.Schedule.cron({ minute: '0', hour: '8', weekDay: 'MON' }),
       targets: [new targets.SfnStateMachine(this.weeklyStateMachine)],
+    });
+
+    // Weekly Sunday at 6:00 AM UTC — recurring research enqueuer
+    new events.Rule(this, 'RecurringResearchCronRule', {
+      ruleName: `${this.stackName}-RecurringResearchCron`,
+      schedule: events.Schedule.cron({ minute: '0', hour: '6', weekDay: 'SUN' }),
+      targets: [new targets.LambdaFunction(enqueueRecurringFn)],
+    });
+
+    // Daily 3:00 AM UTC — AI cost aggregator
+    new events.Rule(this, 'AggregateAiCostsCronRule', {
+      ruleName: `${this.stackName}-AggregateAiCostsCron`,
+      schedule: events.Schedule.cron({ minute: '0', hour: '3' }),
+      targets: [new targets.LambdaFunction(aggregateAiCostsFn)],
     });
 
     // ─── Outputs ───

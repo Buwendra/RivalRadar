@@ -122,6 +122,7 @@ export const handler = async (event: Event): Promise<Output> => {
     if (previous) {
       deltas = await detectResearchDeltas({
         competitorName: event.name,
+        userId: event.userId,
         previous: {
           summary: previous.summary,
           categories: previous.categories,
@@ -235,6 +236,7 @@ export const handler = async (event: Event): Promise<Output> => {
 
         const threat = await scoreCompetitorThreat({
           competitorName: event.name,
+          userId: event.userId,
           userCompanyName,
           userIndustry,
           latestFinding: {
@@ -304,6 +306,7 @@ export const handler = async (event: Event): Promise<Output> => {
           }));
           const evaluations = await evaluatePriorPredictions({
             competitorName: event.name,
+            userId: event.userId,
             priorPredictions: evalInput,
             latestFinding: {
               summary: current.summary,
@@ -355,6 +358,7 @@ export const handler = async (event: Event): Promise<Output> => {
 
           predictedMoves = await predictNextMoves({
             competitorName: event.name,
+            userId: event.userId,
             latestFinding: {
               summary: current.summary,
               categories: current.categories,

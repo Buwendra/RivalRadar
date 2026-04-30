@@ -28,7 +28,8 @@ export type IneligibilityCode =
   | 'NON_COMMERCIAL_TARGET'
   | 'PROTECTED_GROUP_TARGET'
   | 'CLASSIFIER_UNAVAILABLE'
-  | 'RATE_LIMIT_EXCEEDED';
+  | 'RATE_LIMIT_EXCEEDED'
+  | 'COST_CAP_EXCEEDED';
 
 export interface EligibilityResult {
   allowed: boolean;
@@ -38,6 +39,11 @@ export interface EligibilityResult {
     used: number;
     limit: number;
     resetAt: string;
+  };
+  costCapInfo?: {
+    monthToDateCostUsd: number;
+    capUsd: number;
+    month: string;
   };
 }
 
@@ -117,6 +123,41 @@ export async function enforceResearchEligibility(input: {
     };
   }
 
+  // 1b. Monthly cost cap. Reads the denormalized monthToDateCostUsd cache that
+  // the nightly aggregator writes; up to 24h stale at worst, which is fine in
+  // combination with the synchronous researchPerDay rate-limit below.
+  // The override `monthlyTokenBudget` (per-user) trumps the tier-level cap.
+  const tier: PlanTier = input.user.plan ?? 'scout';
+  const tierCostCap = PLAN_LIMITS[tier].monthlyCostCap;
+  const userOverride = (input.user as { monthlyTokenBudget?: number }).monthlyTokenBudget;
+  const effectiveCap =
+    typeof userOverride === 'number' && userOverride > 0 ? userOverride : tierCostCap;
+  const currentMonth = new Date().toISOString().slice(0, 7); // 'YYYY-MM'
+  const cachedMonth = (input.user as { monthToDateCostMonth?: string }).monthToDateCostMonth;
+  const cachedCost = (input.user as { monthToDateCostUsd?: number }).monthToDateCostUsd ?? 0;
+  // Only enforce when the cached month matches today; on month rollover we
+  // treat the stale cache as zero (the nightly aggregator will refresh it).
+  const monthToDate = cachedMonth === currentMonth ? cachedCost : 0;
+  if (monthToDate >= effectiveCap) {
+    logger.info('research_eligibility_denied', {
+      userId: input.user.id,
+      reason: 'cost-cap',
+      monthToDate,
+      cap: effectiveCap,
+      month: currentMonth,
+    });
+    return {
+      allowed: false,
+      code: 'COST_CAP_EXCEEDED',
+      reason: `You've reached your monthly research budget ($${monthToDate.toFixed(2)} of $${effectiveCap.toFixed(2)}). The cap resets at the start of next month, or upgrade your plan to increase it.`,
+      costCapInfo: {
+        monthToDateCostUsd: monthToDate,
+        capUsd: effectiveCap,
+        month: currentMonth,
+      },
+    };
+  }
+
   // 2. Sanctions / personal-name denylist (sync, deterministic)
   for (const c of input.competitors) {
     const sanctionsResult = checkSanctions(c);
@@ -158,7 +199,9 @@ export async function enforceResearchEligibility(input: {
 
   // 4. Haiku classifier — runs in parallel for multiple competitors
   const classifications = await Promise.all(
-    input.competitors.map((c) => classifyResearchTarget({ name: c.name, url: c.url }))
+    input.competitors.map((c) =>
+      classifyResearchTarget({ name: c.name, url: c.url, userId: input.user.id })
+    )
   );
 
   for (let i = 0; i < classifications.length; i++) {
