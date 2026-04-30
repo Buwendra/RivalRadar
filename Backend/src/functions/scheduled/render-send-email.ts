@@ -94,8 +94,16 @@ export const handler = async (event: Event): Promise<{ sent: boolean }> => {
       </div>
 
       <div style="background: #f9fafb; padding: 16px 32px; border-radius: 0 0 8px 8px; text-align: center;">
-        <p style="color: #9ca3af; font-size: 12px; margin: 0;">
+        <p style="color: #9ca3af; font-size: 12px; margin: 0 0 8px;">
           RivalScan — AI Competitive Intelligence for SMBs
+        </p>
+        <p style="color: #9ca3af; font-size: 11px; margin: 0; line-height: 1.5;">
+          AI-generated analysis. May contain errors. For internal evaluation only — not legal, financial, or investment advice.<br>
+          <a href="${process.env.FRONTEND_URL}/legal/aup" style="color: #6b7280;">Acceptable Use Policy</a>
+          &nbsp;·&nbsp;
+          <a href="${process.env.FRONTEND_URL}/legal/privacy" style="color: #6b7280;">Privacy Policy</a>
+          &nbsp;·&nbsp;
+          <a href="${process.env.FRONTEND_URL}/dashboard/settings" style="color: #6b7280;">Manage Email Preferences</a>
         </p>
       </div>
     </div>

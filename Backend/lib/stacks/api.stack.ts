@@ -125,6 +125,24 @@ export class ApiStack extends cdk.Stack {
     const onboardFn = addRoute('UserOnboard', apigatewayv2.HttpMethod.POST, '/users/onboard', 'api/users/onboard.ts', true, pipelineEnv);
     researchStateMachine.grantStartExecution(onboardFn);
 
+    // GDPR Art. 15+20 / CCPA §1798.110 — data export
+    addRoute('UserExport', apigatewayv2.HttpMethod.GET, '/users/me/export', 'api/users/export.ts');
+
+    // GDPR Art. 17 / CCPA §1798.105 — account deletion (right to erasure).
+    // Lambda needs cognito:AdminDeleteUser to invalidate the auth identity.
+    const userDeleteFn = addRoute(
+      'UserDelete',
+      apigatewayv2.HttpMethod.DELETE,
+      '/users/me',
+      'api/users/delete.ts'
+    );
+    userDeleteFn.addToRolePolicy(
+      new cdk.aws_iam.PolicyStatement({
+        actions: ['cognito-idp:AdminDeleteUser'],
+        resources: [userPool.userPoolArn],
+      })
+    );
+
     // ─── Competitor Routes ───
     addRoute('CompetitorList', apigatewayv2.HttpMethod.GET, '/competitors', 'api/competitors/list.ts');
     addRoute('CompetitorCreate', apigatewayv2.HttpMethod.POST, '/competitors', 'api/competitors/create.ts');

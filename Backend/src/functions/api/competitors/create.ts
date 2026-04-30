@@ -4,6 +4,7 @@ import { putItem, queryByPK, getItem, queryGSI } from '../../../shared/db/querie
 import { userPK, userSK, competitorPK, competitorSK, gsi2ActiveCompetitorKeys } from '../../../shared/db/keys';
 import { generateId } from '../../../shared/utils/id';
 import { PLAN_LIMITS, User } from '../../../shared/types';
+import { enforceResearchEligibility } from '../../../shared/utils/research-eligibility';
 
 export const handler = apiHandler(async (event) => {
   const email = getUserEmail(event);
@@ -24,6 +25,23 @@ export const handler = apiHandler(async (event) => {
       403,
       'PLAN_LIMIT',
       `Your ${user.plan} plan allows up to ${maxCompetitors} competitors. Upgrade to add more.`
+    );
+  }
+
+  // Misuse-defense gate before persisting the competitor. Account status,
+  // sanctions denylist, rate limit, Haiku classifier — see
+  // shared/utils/research-eligibility.ts. Note: rate limit increments here,
+  // so a rejected create does NOT count against the user's daily quota.
+  const eligibility = await enforceResearchEligibility({
+    user,
+    competitors: [{ name: body.name, url: body.url }],
+  });
+  if (!eligibility.allowed) {
+    const status = eligibility.code === 'RATE_LIMIT_EXCEEDED' ? 429 : 403;
+    throw new HttpError(
+      status,
+      eligibility.code ?? 'NOT_ALLOWED',
+      eligibility.reason ?? 'This competitor entry is not allowed.'
     );
   }
 

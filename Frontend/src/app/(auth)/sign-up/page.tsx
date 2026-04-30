@@ -20,10 +20,15 @@ const signUpSchema = z
     email: z.string().email("Please enter a valid email"),
     password: z.string().min(8, "Password must be at least 8 characters"),
     confirmPassword: z.string(),
+    legalAccepted: z.boolean(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
     path: ["confirmPassword"],
+  })
+  .refine((data) => data.legalAccepted === true, {
+    message: "You must agree to the Terms and Privacy Policy to continue.",
+    path: ["legalAccepted"],
   });
 
 type SignUpFormData = z.infer<typeof signUpSchema>;
@@ -39,7 +44,7 @@ export default function SignUpPage() {
     formState: { errors, isSubmitting },
   } = useForm<SignUpFormData>({
     resolver: zodResolver(signUpSchema),
-    defaultValues: { name: "", email: "", password: "", confirmPassword: "" },
+    defaultValues: { name: "", email: "", password: "", confirmPassword: "", legalAccepted: false },
   });
 
   const onSubmit = async (data: SignUpFormData) => {
@@ -138,6 +143,35 @@ export default function SignUpPage() {
             />
             {errors.confirmPassword && (
               <p className="text-xs text-destructive">{errors.confirmPassword.message}</p>
+            )}
+          </div>
+          <div className="space-y-2 pt-2">
+            <label className="flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="mt-1 h-4 w-4 rounded border-brand-700 bg-brand-800 text-primary focus:ring-2 focus:ring-primary"
+                {...register("legalAccepted")}
+              />
+              <span className="leading-snug text-muted-foreground">
+                I agree to the{" "}
+                <Link href="/legal/terms" target="_blank" className="text-primary hover:underline">
+                  Terms of Service
+                </Link>
+                ,{" "}
+                <Link href="/legal/privacy" target="_blank" className="text-primary hover:underline">
+                  Privacy Policy
+                </Link>
+                , and{" "}
+                <Link href="/legal/aup" target="_blank" className="text-primary hover:underline">
+                  Acceptable Use Policy
+                </Link>
+                .
+              </span>
+            </label>
+            {errors.legalAccepted && (
+              <p className="text-xs text-destructive">
+                {errors.legalAccepted.message}
+              </p>
             )}
           </div>
         </CardContent>

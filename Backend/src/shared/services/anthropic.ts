@@ -1,4 +1,6 @@
+import { createHash } from 'crypto';
 import { getSecret } from './secrets';
+import { generateId } from '../utils/id';
 import {
   AiAnalysis,
   ResearchFinding,
@@ -103,8 +105,35 @@ function parseDeltasJson(text: string): { deltas: Array<Record<string, unknown>>
 }
 
 /**
+ * Best-effort prompt extraction from a request body. Used purely for
+ * forensic hashing — we never log the prompt verbatim. Hashing protects
+ * against accidental PII leakage into long-term storage.
+ */
+function extractPromptForHashing(body: unknown): string {
+  try {
+    const messages = (body as { messages?: Array<{ content?: unknown }> }).messages;
+    if (!messages || messages.length === 0) return '';
+    const content = messages[0].content;
+    if (typeof content === 'string') return content;
+    return JSON.stringify(content);
+  } catch {
+    return '';
+  }
+}
+
+function shortHash(input: string): string {
+  if (!input) return 'empty';
+  return createHash('sha256').update(input).digest('hex').slice(0, 16);
+}
+
+/**
  * Call the Anthropic messages API, retrying on 429 rate-limit responses.
  * Honors the `retry-after` response header (seconds) when present.
+ *
+ * Audit logging: every call emits an `ai_call` log event with a unique
+ * aiCallId, the prompt's sha256 hash (first 16 hex chars), and the model.
+ * This satisfies the COMPLIANCE_ROADMAP item 1.5 forensic-trail requirement
+ * without storing prompt content in DynamoDB. PII safe by construction.
  */
 async function callAnthropic(
   apiKey: string,
@@ -112,6 +141,18 @@ async function callAnthropic(
   opName: string,
   maxRetries = 2
 ): Promise<Response> {
+  const aiCallId = generateId();
+  const promptHash = shortHash(extractPromptForHashing(body));
+  const model = (body as { model?: string }).model ?? 'unknown';
+  const startedAt = Date.now();
+
+  logger.info('ai_call_started', {
+    aiCallId,
+    opName,
+    model,
+    promptHash,
+  });
+
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -123,11 +164,25 @@ async function callAnthropic(
       body: JSON.stringify(body),
     });
 
-    if (response.status !== 429 || attempt === maxRetries) return response;
+    if (response.status !== 429 || attempt === maxRetries) {
+      logger.info('ai_call_completed', {
+        aiCallId,
+        opName,
+        model,
+        promptHash,
+        status: response.ok ? 'ok' : 'http-error',
+        httpStatus: response.status,
+        retryCount: attempt,
+        durationMs: Date.now() - startedAt,
+      });
+      return response;
+    }
 
     const retryAfter = Number(response.headers.get('retry-after') ?? '');
     const waitSec = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : 65;
-    logger.warn(`${opName}: 429 rate-limited, waiting ${waitSec}s before retry ${attempt + 1}/${maxRetries}`);
+    logger.warn(`${opName}: 429 rate-limited, waiting ${waitSec}s before retry ${attempt + 1}/${maxRetries}`, {
+      aiCallId,
+    });
     await new Promise((r) => setTimeout(r, waitSec * 1000));
   }
   // Unreachable; TypeScript needs a return
@@ -1261,3 +1316,151 @@ This is wrong. "Realized" requires citing a SPECIFIC item from the new evidence,
 
 // Re-export EvaluatedPrediction so the Lambda can reference it cleanly via the types barrel
 export type { EvaluatedPrediction };
+
+/**
+ * Misuse-defense classifier (Phase 1.1).
+ *
+ * Uses Haiku to classify whether a (name, url) pair represents a legitimate
+ * business entity that's appropriate to research. Rejects individual people,
+ * non-commercial targets, and obvious harassment-vector patterns the
+ * synchronous denylist might miss.
+ *
+ * Cost: ~$0.001 per call. Fail-CLOSED on errors (rather than fail-open) —
+ * better to inconvenience a legitimate user than to research an individual.
+ *
+ * IMPORTANT: this runs AFTER the synchronous OFAC denylist check
+ * (`shared/utils/sanctions.ts`), so the prompt does not need to handle
+ * sanctions cases itself — only fuzzy "is this a real business" judgement.
+ */
+export async function classifyResearchTarget(input: {
+  name: string;
+  url: string;
+}): Promise<{
+  isBusiness: boolean;
+  reason: string;
+  rejectionCategory?:
+    | 'individual-person'
+    | 'non-commercial'
+    | 'protected-group-target'
+    | 'unable-to-determine';
+}> {
+  const secrets = await getSecret('rivalscan/api-keys');
+
+  const prompt = `You are an input-safety classifier for a competitive intelligence tool. The tool researches BUSINESS ENTITIES (companies, organizations, brands). It must NOT research individual people, non-commercial targets, or anything that would constitute harassment or stalking.
+
+Input being checked:
+- Name: "${input.name}"
+- URL: "${input.url}"
+
+Decide whether this input is a legitimate business entity to research. Reject if:
+- It's an individual person's name (e.g. "John Smith", "Elon Musk", "Mary Jones CEO of Acme") — even if the person is a public figure
+- It's a non-commercial target (a government agency unrelated to business intelligence, a religious organization, an educational institution research, etc.)
+- It targets a person by protected category (race, gender, religion, etc.)
+- The URL goes to a personal social media profile (e.g. linkedin.com/in/, twitter.com/username, instagram.com/username)
+
+Accept if:
+- It's a recognizable company / brand / startup (e.g. "Stripe", "Notion", "OpenAI", "your local-coffee-shop.com")
+- It's a B2B SaaS product
+- It's a competitor company even if obscure or non-public
+- The URL is a corporate domain (e.g. acme.com, xyz.io)
+
+Respond with ONLY valid JSON — no prose, no code fences:
+{
+  "isBusiness": true | false,
+  "reason": "1 sentence explaining the decision in user-facing language",
+  "rejectionCategory": "individual-person" | "non-commercial" | "protected-group-target" | "unable-to-determine"
+}
+
+EXAMPLES:
+
+ACCEPT:
+- name: "Stripe", url: "https://stripe.com" → { "isBusiness": true, "reason": "Stripe is a public payments company.", "rejectionCategory": null }
+- name: "Acme Coffee Co", url: "https://acmecoffee.local" → { "isBusiness": true, "reason": "Acme Coffee Co appears to be a local business.", "rejectionCategory": null }
+
+REJECT — individual person:
+- name: "Elon Musk", url: "https://twitter.com/elonmusk" → { "isBusiness": false, "reason": "This appears to target an individual person rather than a company. Please use the official company name (e.g., 'Tesla' or 'X Corp') instead.", "rejectionCategory": "individual-person" }
+- name: "John Smith CEO of Acme", url: "https://linkedin.com/in/johnsmith" → { "isBusiness": false, "reason": "This targets an individual rather than a company. Please research 'Acme' directly.", "rejectionCategory": "individual-person" }`;
+
+  let response: Response;
+  try {
+    response = await callAnthropic(
+      secrets.ANTHROPIC_API_KEY,
+      {
+        model: HAIKU_MODEL,
+        max_tokens: 300,
+        messages: [{ role: 'user', content: prompt }],
+      },
+      'classifyResearchTarget'
+    );
+  } catch (err) {
+    // Fail CLOSED on transport errors — better to reject legitimate users
+    // and ask them to retry than to research someone we shouldn't.
+    logger.warn('classifyResearchTarget: call failed, defaulting to REJECT', {
+      error: String(err),
+    });
+    return {
+      isBusiness: false,
+      reason:
+        'Could not verify the research target right now. Please try again in a few moments, or contact support if the issue persists.',
+      rejectionCategory: 'unable-to-determine',
+    };
+  }
+
+  if (!response.ok) {
+    const errBody = await response.text().catch(() => '');
+    logger.warn('classifyResearchTarget: non-200 response, defaulting to REJECT', {
+      status: response.status,
+      body: errBody.slice(0, 300),
+    });
+    return {
+      isBusiness: false,
+      reason:
+        'Could not verify the research target right now. Please try again in a few moments.',
+      rejectionCategory: 'unable-to-determine',
+    };
+  }
+
+  const data = (await response.json()) as { content: Array<{ type: string; text: string }> };
+  const text = (data.content.find((b) => b.type === 'text')?.text ?? '').trim();
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    logger.warn('classifyResearchTarget: no JSON in response, defaulting to REJECT', {
+      text: text.slice(0, 300),
+    });
+    return {
+      isBusiness: false,
+      reason: 'Could not verify the research target. Please try again.',
+      rejectionCategory: 'unable-to-determine',
+    };
+  }
+
+  let parsed: { isBusiness?: boolean; reason?: string; rejectionCategory?: string };
+  try {
+    parsed = JSON.parse(jsonMatch[0]);
+  } catch {
+    return {
+      isBusiness: false,
+      reason: 'Could not verify the research target. Please try again.',
+      rejectionCategory: 'unable-to-determine',
+    };
+  }
+
+  const validCategories: Array<
+    'individual-person' | 'non-commercial' | 'protected-group-target' | 'unable-to-determine'
+  > = ['individual-person', 'non-commercial', 'protected-group-target', 'unable-to-determine'];
+  const rejectionCategory = validCategories.includes(
+    parsed.rejectionCategory as 'individual-person'
+  )
+    ? (parsed.rejectionCategory as
+        | 'individual-person'
+        | 'non-commercial'
+        | 'protected-group-target'
+        | 'unable-to-determine')
+    : undefined;
+
+  return {
+    isBusiness: parsed.isBusiness === true,
+    reason: String(parsed.reason ?? '').slice(0, 400),
+    rejectionCategory,
+  };
+}

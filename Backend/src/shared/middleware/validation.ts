@@ -49,6 +49,10 @@ export const onboardSchema = z.object({
     )
     .min(1)
     .max(25),
+  // Consent capture: versions of ToS and Privacy the user accepted at sign-up.
+  // The frontend keeps matching constants and sends them on submit.
+  tosVersion: z.string().min(1).max(40).optional(),
+  privacyVersion: z.string().min(1).max(40).optional(),
 });
 
 export const feedbackSchema = z.object({

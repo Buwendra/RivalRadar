@@ -21,6 +21,7 @@ import type {
   EvaluatedPrediction,
   PredictionStatus,
 } from "@/lib/types";
+import { AiDisclaimer } from "./ai-disclaimer";
 
 const CATEGORY_TONE: Record<PredictedMoveCategory, string> = {
   product: "border-brand-700 bg-brand-800 text-foreground",
@@ -254,6 +255,8 @@ export function PredictedMovesCard({ moves, history }: PredictedMovesCardProps) 
             </ul>
           </div>
         )}
+
+        <AiDisclaimer />
       </CardContent>
     </Card>
   );

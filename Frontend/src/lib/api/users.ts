@@ -9,6 +9,8 @@ export interface OnboardInput {
     url: string;
     pagesToTrack: PageType[];
   }>;
+  tosVersion?: string;
+  privacyVersion?: string;
 }
 
 export interface OnboardResponse {

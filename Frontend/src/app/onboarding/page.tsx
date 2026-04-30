@@ -14,6 +14,7 @@ import { StepCompanyInfo } from "@/components/onboarding/step-company-info";
 import { StepCompetitors, type CompetitorEntry } from "@/components/onboarding/step-competitors";
 import { StepPageTracking } from "@/components/onboarding/step-page-tracking";
 import { LoadingSpinner } from "@/components/shared/loading-spinner";
+import { TOS_VERSION, PRIVACY_VERSION } from "@/lib/utils/constants";
 import type { PageType } from "@/lib/types";
 
 const STEPS = ["Company", "Competitors", "Pages"];
@@ -96,6 +97,8 @@ export default function OnboardingPage() {
           url: c.url.trim(),
           pagesToTrack: pagesToTrack[i],
         })),
+        tosVersion: TOS_VERSION,
+        privacyVersion: PRIVACY_VERSION,
       });
       await refreshUser();
       toast.success("Setup complete! Your competitors are being scanned.");

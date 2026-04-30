@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/accordion";
 import { formatSmartDate } from "@/lib/utils/format-date";
 import type { ResearchFinding, ResearchCategory, FindingItem } from "@/lib/types";
+import { AiDisclaimer } from "./ai-disclaimer";
 
 const CATEGORY_META: Record<ResearchCategory, { label: string; Icon: typeof Newspaper }> = {
   news: { label: "News & Press", Icon: Newspaper },
@@ -94,6 +95,7 @@ export function ResearchCard({ finding }: ResearchCardProps) {
             )}
           </Accordion>
         )}
+        <AiDisclaimer />
       </CardContent>
     </Card>
   );

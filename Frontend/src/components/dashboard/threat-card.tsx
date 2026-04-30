@@ -4,6 +4,7 @@ import { ShieldAlert, AlertTriangle, Eye, ShieldCheck, Shield } from "lucide-rea
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { ThreatLevel } from "@/lib/types";
+import { AiDisclaimer } from "./ai-disclaimer";
 
 const CONFIG: Record<
   ThreatLevel,
@@ -100,6 +101,7 @@ export function ThreatCard({ threatLevel, reasoning }: ThreatCardProps) {
             {reasoning}
           </p>
         )}
+        <AiDisclaimer className="mt-2" />
       </CardContent>
     </Card>
   );
