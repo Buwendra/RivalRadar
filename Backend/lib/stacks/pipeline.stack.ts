@@ -21,6 +21,16 @@ export class PipelineStack extends cdk.Stack {
   public readonly weeklyStateMachine: sfn.StateMachine;
   public readonly researchStateMachine: sfn.StateMachine;
 
+  // Critical Lambdas exposed for MonitoringStack to attach alarms.
+  // Failure of any of these is user-visible: research breaks, digest goes
+  // unsent, cost cap stops advancing, or the recurring loop silently dies.
+  public readonly deepResearchFn: nodejs.NodejsFunction;
+  public readonly aggregateChangesFn: nodejs.NodejsFunction;
+  public readonly generateSummaryFn: nodejs.NodejsFunction;
+  public readonly renderSendEmailFn: nodejs.NodejsFunction;
+  public readonly enqueueRecurringFn: nodejs.NodejsFunction;
+  public readonly aggregateAiCostsFn: nodejs.NodejsFunction;
+
   constructor(scope: Construct, id: string, props: PipelineStackProps) {
     super(scope, id, props);
 
@@ -68,23 +78,23 @@ export class PipelineStack extends cdk.Stack {
 
     // ─── Deep Research Lambda ───
     // Larger memory & longer timeout — Claude web_search + delta synthesis can take 90-150s.
-    const deepResearchFn = new nodejs.NodejsFunction(this, 'DeepResearch', {
+    this.deepResearchFn = new nodejs.NodejsFunction(this, 'DeepResearch', {
       ...lambdaDefaults,
       entry: fnPath('pipeline/deep-research.ts'),
       functionName: `${this.stackName}-DeepResearch`,
       timeout: cdk.Duration.minutes(5),
       memorySize: 1024,
     });
-    table.grantReadWriteData(deepResearchFn);
-    apiSecrets.grantRead(deepResearchFn);
+    table.grantReadWriteData(this.deepResearchFn);
+    apiSecrets.grantRead(this.deepResearchFn);
 
     const sendAlertFn = createPipelineFn('SendAlert', 'pipeline/send-alert.ts');
 
     // ─── Weekly Digest Lambdas ───
     const getSubscribersFn = createPipelineFn('GetSubscribers', 'scheduled/get-subscribers.ts');
-    const aggregateChangesFn = createPipelineFn('AggregateChanges', 'scheduled/aggregate-changes.ts');
-    const generateSummaryFn = createPipelineFn('GenerateSummary', 'scheduled/generate-summary.ts');
-    const renderSendEmailFn = createPipelineFn('RenderSendEmail', 'scheduled/render-send-email.ts');
+    this.aggregateChangesFn = createPipelineFn('AggregateChanges', 'scheduled/aggregate-changes.ts');
+    this.generateSummaryFn = createPipelineFn('GenerateSummary', 'scheduled/generate-summary.ts');
+    this.renderSendEmailFn = createPipelineFn('RenderSendEmail', 'scheduled/render-send-email.ts');
 
     // ─── Weekly Digest State Machine ───
     const getSubscribersTask = new tasks.LambdaInvoke(this, 'GetSubscribersTask', {
@@ -93,17 +103,17 @@ export class PipelineStack extends cdk.Stack {
     });
 
     const aggregateTask = new tasks.LambdaInvoke(this, 'AggregateChangesTask', {
-      lambdaFunction: aggregateChangesFn,
+      lambdaFunction: this.aggregateChangesFn,
       outputPath: '$.Payload',
     });
 
     const summaryTask = new tasks.LambdaInvoke(this, 'GenerateSummaryTask', {
-      lambdaFunction: generateSummaryFn,
+      lambdaFunction: this.generateSummaryFn,
       outputPath: '$.Payload',
     });
 
     const emailTask = new tasks.LambdaInvoke(this, 'RenderSendEmailTask', {
-      lambdaFunction: renderSendEmailFn,
+      lambdaFunction: this.renderSendEmailFn,
       outputPath: '$.Payload',
     });
 
@@ -129,7 +139,7 @@ export class PipelineStack extends cdk.Stack {
     // Input: { competitors: [{ competitorId, userId, name, url, industry? }] }
     // Per competitor: DeepResearch (research + delta detection + store changes) → SendAlert.
     const deepResearchTask = new tasks.LambdaInvoke(this, 'DeepResearchTask', {
-      lambdaFunction: deepResearchFn,
+      lambdaFunction: this.deepResearchFn,
       outputPath: '$.Payload',
     });
 
@@ -164,7 +174,7 @@ export class PipelineStack extends cdk.Stack {
     // Runs Sunday 6am UTC (~26h before the digest aggregation kicks off Monday
     // 8am UTC) — enough buffer for the Map state's serialized per-competitor
     // research runs to complete before the digest reads the change feed.
-    const enqueueRecurringFn = new nodejs.NodejsFunction(this, 'EnqueueRecurringResearch', {
+    this.enqueueRecurringFn = new nodejs.NodejsFunction(this, 'EnqueueRecurringResearch', {
       ...lambdaDefaults,
       entry: fnPath('pipeline/enqueue-recurring-research.ts'),
       functionName: `${this.stackName}-EnqueueRecurringResearch`,
@@ -175,24 +185,24 @@ export class PipelineStack extends cdk.Stack {
         RESEARCH_PIPELINE_ARN: this.researchStateMachine.stateMachineArn,
       },
     });
-    table.grantReadWriteData(enqueueRecurringFn);
-    apiSecrets.grantRead(enqueueRecurringFn); // eligibility classifier reads ANTHROPIC_API_KEY
-    this.researchStateMachine.grantStartExecution(enqueueRecurringFn);
+    table.grantReadWriteData(this.enqueueRecurringFn);
+    apiSecrets.grantRead(this.enqueueRecurringFn); // eligibility classifier reads ANTHROPIC_API_KEY
+    this.researchStateMachine.grantStartExecution(this.enqueueRecurringFn);
 
     // ─── Daily AI Cost Aggregator Lambda ───
     // Runs at 3am UTC. Reads the prior day's `ai_call_completed` log lines
     // via CloudWatch Logs Insights, rolls them up into per-user CostDay rows
     // and updates each user's monthToDateCostUsd cache. The eligibility helper
     // reads that cache to enforce monthly cost caps.
-    const aggregateAiCostsFn = new nodejs.NodejsFunction(this, 'AggregateAiCosts', {
+    this.aggregateAiCostsFn = new nodejs.NodejsFunction(this, 'AggregateAiCosts', {
       ...lambdaDefaults,
       entry: fnPath('scheduled/aggregate-ai-costs.ts'),
       functionName: `${this.stackName}-AggregateAiCosts`,
       timeout: cdk.Duration.minutes(5),
       memorySize: 512,
     });
-    table.grantReadWriteData(aggregateAiCostsFn);
-    aggregateAiCostsFn.addToRolePolicy(
+    table.grantReadWriteData(this.aggregateAiCostsFn);
+    this.aggregateAiCostsFn.addToRolePolicy(
       new iam.PolicyStatement({
         actions: [
           'logs:DescribeLogGroups',
@@ -220,14 +230,14 @@ export class PipelineStack extends cdk.Stack {
     new events.Rule(this, 'RecurringResearchCronRule', {
       ruleName: `${this.stackName}-RecurringResearchCron`,
       schedule: events.Schedule.cron({ minute: '0', hour: '6', weekDay: 'SUN' }),
-      targets: [new targets.LambdaFunction(enqueueRecurringFn)],
+      targets: [new targets.LambdaFunction(this.enqueueRecurringFn)],
     });
 
     // Daily 3:00 AM UTC — AI cost aggregator
     new events.Rule(this, 'AggregateAiCostsCronRule', {
       ruleName: `${this.stackName}-AggregateAiCostsCron`,
       schedule: events.Schedule.cron({ minute: '0', hour: '3' }),
-      targets: [new targets.LambdaFunction(aggregateAiCostsFn)],
+      targets: [new targets.LambdaFunction(this.aggregateAiCostsFn)],
     });
 
     // ─── Outputs ───

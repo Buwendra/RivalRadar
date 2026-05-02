@@ -52,6 +52,15 @@ new MonitoringStack(app, `${prefix}-Monitoring`, {
   env,
   table: databaseStack.table,
   api: apiStack.httpApi,
+  criticalLambdas: {
+    deepResearch: pipelineStack.deepResearchFn,
+    aggregateChanges: pipelineStack.aggregateChangesFn,
+    generateSummary: pipelineStack.generateSummaryFn,
+    renderSendEmail: pipelineStack.renderSendEmailFn,
+    enqueueRecurring: pipelineStack.enqueueRecurringFn,
+    aggregateAiCosts: pipelineStack.aggregateAiCostsFn,
+  },
+  alertEmail: process.env.ALERT_EMAIL,
 });
 
 app.synth();

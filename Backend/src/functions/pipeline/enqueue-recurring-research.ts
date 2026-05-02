@@ -209,6 +209,6 @@ export const handler = async (): Promise<EnqueueResult> => {
     }
   }
 
-  logger.info('enqueue-recurring-research completed', result);
+  logger.info('enqueue-recurring-research completed', { ...result });
   return result;
 };
