@@ -1,5 +1,6 @@
 import { sendEmail } from '../../shared/services/ses';
 import { logger } from '../../shared/utils/logger';
+import type { Recommendation } from '../../shared/types';
 
 interface AggregatedChange {
   competitorName: string;
@@ -16,6 +17,7 @@ interface Event {
   name: string;
   topChanges: AggregatedChange[];
   strategicSummary: string;
+  topRecommendations?: Recommendation[];
 }
 
 const BADGE_COLORS: Record<string, string> = {
@@ -24,6 +26,21 @@ const BADGE_COLORS: Record<string, string> = {
   messaging: '#7c3aed',
   hiring: '#059669',
   content: '#d97706',
+};
+
+const RECOMMENDATION_CATEGORY_LABELS: Record<string, string> = {
+  positioning: 'Positioning',
+  pricing: 'Pricing',
+  messaging: 'Messaging',
+  product: 'Product',
+  sales: 'Sales',
+  talent: 'Talent',
+};
+
+const TIME_HORIZON_LABELS: Record<string, string> = {
+  'this-week': 'This week',
+  'this-month': 'This month',
+  'this-quarter': 'This quarter',
 };
 
 /**
@@ -66,6 +83,37 @@ export const handler = async (event: Event): Promise<{ sent: boolean }> => {
       <div style="padding: 24px 32px;">
         <p style="color: #6b7280; margin: 0 0 20px;">${dateRange}</p>
         <p>Hi ${event.name},</p>
+
+        ${
+          (event.topRecommendations ?? []).length > 0
+            ? `
+          <h2 style="font-size: 16px; margin: 24px 0 12px;">Recommended Actions</h2>
+          <div style="space-y: 12px;">
+            ${(event.topRecommendations ?? [])
+              .map((r, i) => {
+                const horizonLabel = TIME_HORIZON_LABELS[r.timeHorizon] ?? r.timeHorizon;
+                const categoryLabel = RECOMMENDATION_CATEGORY_LABELS[r.category] ?? r.category;
+                const confPct = Math.round(r.confidence * 100);
+                return `
+                  <div style="background: #fff7ed; border-left: 4px solid #d97706; padding: 14px 16px; border-radius: 0 8px 8px 0; margin-bottom: 12px;">
+                    <div style="display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px;">
+                      <span style="color: #d97706; font-weight: 600; font-size: 13px;">${i + 1}.</span>
+                      <strong style="font-size: 14px;">${r.title}</strong>
+                    </div>
+                    <p style="margin: 4px 0 8px 18px; line-height: 1.5; font-size: 13px; color: #374151;">${r.body}</p>
+                    <div style="margin-left: 18px; font-size: 11px; color: #6b7280;">
+                      <span style="background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 10px;">${categoryLabel}</span>
+                      &nbsp;·&nbsp; ${horizonLabel}
+                      &nbsp;·&nbsp; ${r.effortLevel} effort
+                      &nbsp;·&nbsp; ${confPct}% confidence
+                    </div>
+                  </div>`;
+              })
+              .join('')}
+          </div>
+        `
+            : ''
+        }
 
         <h2 style="font-size: 16px; margin: 24px 0 12px;">Top Changes This Week</h2>
         ${event.topChanges.length > 0 ? `

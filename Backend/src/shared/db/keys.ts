@@ -25,6 +25,10 @@ export const researchSK = (timestamp: string) => `RESEARCH#${timestamp}`;
 export const costDayPK = (userId: string) => `USER#${userId}`;
 export const costDaySK = (date: string) => `COST#${date}`; // date in YYYY-MM-DD
 
+// Recommendation — per-user weekly strategic recommendations (Phase 2)
+export const recommendationPK = (userId: string) => `USER#${userId}`;
+export const recommendationSK = (timestamp: string) => `REC#${timestamp}`;
+
 // ─── GSI Key Builders ───
 
 // GSI1: User's changes feed (dashboard)
@@ -37,6 +41,12 @@ export const gsi1ChangeKeys = (userId: string, timestamp: string) => ({
 export const gsi1ResearchKeys = (userId: string, timestamp: string) => ({
   GSI1PK: userId,
   GSI1SK: `RESEARCH#${timestamp}`,
+});
+
+// GSI1: User's recommendations feed (Phase 2)
+export const gsi1RecommendationKeys = (userId: string, timestamp: string) => ({
+  GSI1PK: userId,
+  GSI1SK: `REC#${timestamp}`,
 });
 
 // GSI2: Active competitors (for daily cron)

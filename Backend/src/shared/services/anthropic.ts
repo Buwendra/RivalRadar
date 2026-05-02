@@ -26,6 +26,9 @@ import {
   PredictedMoveTimeHorizon,
   EvaluatedPrediction,
   PredictionStatus,
+  RecommendationCategory,
+  RecommendationEffortLevel,
+  RecommendationTimeHorizon,
 } from '../types';
 import { logger } from '../utils/logger';
 
@@ -1375,6 +1378,311 @@ This is wrong. "Realized" requires citing a SPECIFIC item from the new evidence,
 
 // Re-export EvaluatedPrediction so the Lambda can reference it cleanly via the types barrel
 export type { EvaluatedPrediction };
+
+/**
+ * Generate weekly strategic recommendations for a user (Phase 2).
+ *
+ * Single Sonnet call (~$0.05/user/week) producing 3-7 actionable
+ * recommendations. The prompt is specifically NOT asked to predict competitor
+ * moves (`predictNextMoves` already does that) — its job is to translate the
+ * portfolio's recent activity + the user's own context into "what should
+ * THIS user do" guidance.
+ *
+ * Returns [] on parse failure rather than throwing — recommendations are
+ * supplemental, the rest of the weekly digest must still go out. Each rec
+ * is sanitized to require:
+ *   - non-empty title
+ *   - body ≥ 30 chars (filters generic "consider doing X")
+ *   - body references at least one specific input (cheap 12-char overlap
+ *     scan against the changes/snapshot haystack — same heuristic as
+ *     `predictNextMoves` uses against generic predictions)
+ */
+export async function generateRecommendations(input: {
+  userId: string;
+  userCompanyName?: string;
+  userIndustry?: string;
+  weeklyChanges: Array<{
+    competitorName: string;
+    summary: string;
+    significanceScore: number;
+    changeType: string;
+    changeId?: string;
+  }>;
+  competitorSnapshots: Array<{
+    name: string;
+    momentum?: string;
+    threatLevel?: string;
+    topTags?: string[];
+    stage?: string;
+    predictedMoves?: Array<{ move: string; timeHorizon: string; category: string }>;
+  }>;
+  strategicSummary?: string;
+}): Promise<
+  Array<{
+    competitorName?: string;
+    triggeringChangeIds: string[];
+    category: RecommendationCategory;
+    title: string;
+    body: string;
+    effortLevel: RecommendationEffortLevel;
+    timeHorizon: RecommendationTimeHorizon;
+    confidence: number;
+  }>
+> {
+  if (input.weeklyChanges.length === 0 && input.competitorSnapshots.length === 0) {
+    return [];
+  }
+
+  const secrets = await getSecret('rivalscan/api-keys');
+
+  const userContextLine =
+    input.userCompanyName || input.userIndustry
+      ? `User: ${input.userCompanyName ?? '(unknown company)'} (industry: ${input.userIndustry ?? 'unknown'}). Frame every recommendation around what THIS user should do — reference the user's company by name where it strengthens the action.`
+      : `User context: not provided. Recommend in general competitive terms.`;
+
+  const changesBlock =
+    input.weeklyChanges.length > 0
+      ? `CHANGES THIS WEEK (top significance):\n${input.weeklyChanges
+          .slice(0, 10)
+          .map(
+            (c, i) =>
+              `${i}. [${c.changeType}, sig ${c.significanceScore}/10] ${c.competitorName}: ${c.summary}${c.changeId ? ` (changeId=${c.changeId})` : ''}`
+          )
+          .join('\n')}`
+      : 'CHANGES THIS WEEK: (none)';
+
+  const snapshotsBlock =
+    input.competitorSnapshots.length > 0
+      ? `\nPORTFOLIO STATE (${input.competitorSnapshots.length} competitors):\n${input.competitorSnapshots
+          .map((c) => {
+            const tags = c.topTags && c.topTags.length > 0 ? `, tags=[${c.topTags.join(', ')}]` : '';
+            const moves =
+              c.predictedMoves && c.predictedMoves.length > 0
+                ? `, predicted=[${c.predictedMoves.map((m) => `${m.move} (${m.timeHorizon})`).join('; ')}]`
+                : '';
+            return `- ${c.name}: threat=${c.threatLevel ?? 'unscored'}, momentum=${c.momentum ?? 'unscored'}${c.stage ? `, stage=${c.stage}` : ''}${tags}${moves}`;
+          })
+          .join('\n')}`
+      : '';
+
+  const summaryBlock = input.strategicSummary
+    ? `\nSTRATEGIC SUMMARY (already drafted for the email):\n${input.strategicSummary}\n`
+    : '';
+
+  const prompt = `You are a senior competitive strategist advising a busy founder or marketing leader. Based on the inputs below, generate 3 to 7 SPECIFIC, ACTIONABLE recommendations for what THE USER (not the competitors) should consider doing.
+
+${userContextLine}
+
+${changesBlock}
+${snapshotsBlock}
+${summaryBlock}
+Each recommendation MUST:
+- Translate competitor activity into a USER ACTION ("we should X" / "consider doing Y")
+- Cite at least one specific input above in the body (a competitor name, a change, a tag, a predicted move)
+- Have a concrete category, effort level, and time horizon
+- Have honestly calibrated confidence (0.0 to 1.0)
+
+Bias toward fewer high-confidence recommendations over many vague ones. Return an empty array if you cannot find strong signal.
+
+Categories:
+- positioning — how the user differentiates / messages their value prop
+- pricing    — pricing changes, packaging, discounts, tiering
+- messaging  — content, marketing collateral, sales talk tracks
+- product    — features to build, kill, or accelerate
+- sales      — outbound, ICP, deal motion, channel strategy
+- talent     — hires, org changes, retention plays
+
+Effort levels:
+- low      — 1-3 day effort (write a doc, send an email, change a page)
+- medium   — 1-3 weeks (build a feature, launch a campaign, restructure pricing)
+- high     — 1-3 months (significant build, market positioning shift, hiring round)
+
+Time horizons:
+- this-week  — needs to ship within 7 days to capture the moment
+- this-month — strategic but not urgent
+- this-quarter — longer-term play
+
+Respond with ONLY valid JSON — no prose, no code fences:
+{
+  "recommendations": [
+    {
+      "competitorName": "name of the primary competitor this rec responds to (or omit if cross-portfolio)",
+      "triggeringChangeIds": ["changeId1", "changeId2"],
+      "category": "positioning" | "pricing" | "messaging" | "product" | "sales" | "talent",
+      "title": "short imperative headline (e.g. 'Tighten enterprise messaging on the homepage')",
+      "body": "2-4 sentence rationale + concrete action. MUST cite at least one specific input.",
+      "effortLevel": "low" | "medium" | "high",
+      "timeHorizon": "this-week" | "this-month" | "this-quarter",
+      "confidence": 0.0-1.0
+    }
+  ]
+}
+
+EXAMPLES of acceptable vs. unacceptable output:
+
+ACCEPT — concrete, evidence-cited, clear action:
+{
+  "competitorName": "Stripe",
+  "triggeringChangeIds": ["c123"],
+  "category": "messaging",
+  "title": "Highlight your SOC 2 status above the fold",
+  "body": "Stripe's pricing-page change adding 'Talk to sales' for enterprise plus their recent SOC 2 compliance announcement signal an enterprise GTM push. Move your existing SOC 2 badge from the footer to the hero, and add a one-liner about audit-ready reporting.",
+  "effortLevel": "low",
+  "timeHorizon": "this-week",
+  "confidence": 0.7
+}
+
+REJECT — generic, no specific evidence:
+{
+  "category": "messaging",
+  "title": "Update your messaging",
+  "body": "Competitors are evolving so we should refresh our messaging.",
+  "effortLevel": "medium",
+  "timeHorizon": "this-month",
+  "confidence": 0.5
+}
+The reject example would be filtered downstream. Don't produce recommendations like this — return an empty array if signal is weak.`;
+
+  let response: Response;
+  try {
+    response = await callAnthropic(
+      secrets.ANTHROPIC_API_KEY,
+      {
+        model: SONNET_MODEL,
+        max_tokens: 4096,
+        messages: [{ role: 'user', content: prompt }],
+      },
+      'generateRecommendations',
+      { userId: input.userId }
+    );
+  } catch (err) {
+    logger.warn('generateRecommendations: call failed', { error: String(err) });
+    return [];
+  }
+
+  if (!response.ok) {
+    const errBody = await response.text().catch(() => '');
+    logger.warn('Anthropic generateRecommendations API error', {
+      status: response.status,
+      body: errBody.slice(0, 500),
+    });
+    return [];
+  }
+
+  const data = (await response.json()) as { content: Array<{ type: string; text: string }> };
+  const text = (data.content.find((b) => b.type === 'text')?.text ?? '').trim();
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    logger.warn('generateRecommendations: no JSON in response', { text: text.slice(0, 500) });
+    return [];
+  }
+
+  let parsed: { recommendations?: Array<Record<string, unknown>> };
+  try {
+    parsed = JSON.parse(jsonMatch[0]);
+  } catch (err) {
+    logger.warn('generateRecommendations: JSON parse failed', { error: String(err) });
+    return [];
+  }
+
+  // Build a haystack of input substrings to validate "body cites a specific input"
+  const haystackParts: string[] = [];
+  for (const c of input.weeklyChanges) {
+    haystackParts.push(c.competitorName);
+    haystackParts.push(c.summary);
+  }
+  for (const s of input.competitorSnapshots) {
+    haystackParts.push(s.name);
+    if (s.topTags) for (const t of s.topTags) haystackParts.push(t);
+    if (s.predictedMoves) for (const m of s.predictedMoves) haystackParts.push(m.move);
+  }
+  if (input.strategicSummary) haystackParts.push(input.strategicSummary);
+  const haystack = haystackParts.join(' \n ').toLowerCase();
+
+  const referencesInput = (body: string): boolean => {
+    const r = body.toLowerCase();
+    for (let i = 0; i + 12 <= r.length; i += 4) {
+      const window = r.slice(i, i + 12).trim();
+      if (window.length < 6) continue;
+      if (haystack.includes(window)) return true;
+    }
+    return false;
+  };
+
+  const validCategories: RecommendationCategory[] = [
+    'positioning',
+    'pricing',
+    'messaging',
+    'product',
+    'sales',
+    'talent',
+  ];
+  const validEfforts: RecommendationEffortLevel[] = ['low', 'medium', 'high'];
+  const validHorizons: RecommendationTimeHorizon[] = [
+    'this-week',
+    'this-month',
+    'this-quarter',
+  ];
+
+  const out: Array<{
+    competitorName?: string;
+    triggeringChangeIds: string[];
+    category: RecommendationCategory;
+    title: string;
+    body: string;
+    effortLevel: RecommendationEffortLevel;
+    timeHorizon: RecommendationTimeHorizon;
+    confidence: number;
+  }> = [];
+
+  for (const r of parsed.recommendations ?? []) {
+    if (out.length >= 7) break;
+    const title = String(r.title ?? '').slice(0, 200).trim();
+    const body = String(r.body ?? '').trim();
+    if (!title || body.length < 30) continue;
+    if (!referencesInput(body)) {
+      logger.info('generateRecommendations: dropped generic recommendation', { title });
+      continue;
+    }
+    const category = validCategories.includes(r.category as RecommendationCategory)
+      ? (r.category as RecommendationCategory)
+      : 'messaging';
+    const effortLevel = validEfforts.includes(r.effortLevel as RecommendationEffortLevel)
+      ? (r.effortLevel as RecommendationEffortLevel)
+      : 'medium';
+    const timeHorizon = validHorizons.includes(r.timeHorizon as RecommendationTimeHorizon)
+      ? (r.timeHorizon as RecommendationTimeHorizon)
+      : 'this-month';
+    const confidenceRaw = Number(r.confidence ?? 0);
+    const confidence = Math.max(
+      0,
+      Math.min(1, Number.isFinite(confidenceRaw) ? confidenceRaw : 0)
+    );
+    const triggeringChangeIds = Array.isArray(r.triggeringChangeIds)
+      ? (r.triggeringChangeIds as unknown[])
+          .map((x) => String(x))
+          .filter((s) => s.length > 0)
+          .slice(0, 5)
+      : [];
+    const competitorName =
+      typeof r.competitorName === 'string' && r.competitorName.trim().length > 0
+        ? r.competitorName.slice(0, 200)
+        : undefined;
+
+    out.push({
+      ...(competitorName ? { competitorName } : {}),
+      triggeringChangeIds,
+      category,
+      title,
+      body: body.slice(0, 1500),
+      effortLevel,
+      timeHorizon,
+      confidence,
+    });
+  }
+
+  return out;
+}
 
 /**
  * Misuse-defense classifier (Phase 1.1).

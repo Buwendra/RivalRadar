@@ -56,6 +56,7 @@ new MonitoringStack(app, `${prefix}-Monitoring`, {
     deepResearch: pipelineStack.deepResearchFn,
     aggregateChanges: pipelineStack.aggregateChangesFn,
     generateSummary: pipelineStack.generateSummaryFn,
+    generateRecommendations: pipelineStack.generateRecommendationsFn,
     renderSendEmail: pipelineStack.renderSendEmailFn,
     enqueueRecurring: pipelineStack.enqueueRecurringFn,
     aggregateAiCosts: pipelineStack.aggregateAiCostsFn,

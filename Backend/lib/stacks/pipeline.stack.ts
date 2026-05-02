@@ -27,6 +27,7 @@ export class PipelineStack extends cdk.Stack {
   public readonly deepResearchFn: nodejs.NodejsFunction;
   public readonly aggregateChangesFn: nodejs.NodejsFunction;
   public readonly generateSummaryFn: nodejs.NodejsFunction;
+  public readonly generateRecommendationsFn: nodejs.NodejsFunction;
   public readonly renderSendEmailFn: nodejs.NodejsFunction;
   public readonly enqueueRecurringFn: nodejs.NodejsFunction;
   public readonly aggregateAiCostsFn: nodejs.NodejsFunction;
@@ -94,6 +95,10 @@ export class PipelineStack extends cdk.Stack {
     const getSubscribersFn = createPipelineFn('GetSubscribers', 'scheduled/get-subscribers.ts');
     this.aggregateChangesFn = createPipelineFn('AggregateChanges', 'scheduled/aggregate-changes.ts');
     this.generateSummaryFn = createPipelineFn('GenerateSummary', 'scheduled/generate-summary.ts');
+    this.generateRecommendationsFn = createPipelineFn(
+      'GenerateRecommendations',
+      'scheduled/generate-recommendations.ts'
+    );
     this.renderSendEmailFn = createPipelineFn('RenderSendEmail', 'scheduled/render-send-email.ts');
 
     // ─── Weekly Digest State Machine ───
@@ -112,12 +117,17 @@ export class PipelineStack extends cdk.Stack {
       outputPath: '$.Payload',
     });
 
+    const recommendationsTask = new tasks.LambdaInvoke(this, 'GenerateRecommendationsTask', {
+      lambdaFunction: this.generateRecommendationsFn,
+      outputPath: '$.Payload',
+    });
+
     const emailTask = new tasks.LambdaInvoke(this, 'RenderSendEmailTask', {
       lambdaFunction: this.renderSendEmailFn,
       outputPath: '$.Payload',
     });
 
-    const perSubscriberChain = aggregateTask.next(summaryTask).next(emailTask);
+    const perSubscriberChain = aggregateTask.next(summaryTask).next(recommendationsTask).next(emailTask);
 
     const mapSubscribers = new sfn.Map(this, 'MapSubscribers', {
       itemsPath: '$.subscribers',

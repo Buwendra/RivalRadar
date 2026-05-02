@@ -3,6 +3,7 @@ export * from './competitor';
 export * from './change';
 export * from './subscription';
 export * from './research';
+export * from './recommendation';
 
 /** Standard API response envelope */
 export interface ApiResponse<T> {

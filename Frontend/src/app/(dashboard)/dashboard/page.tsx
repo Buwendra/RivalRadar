@@ -10,6 +10,7 @@ import { ChangeFilters } from "@/components/dashboard/change-filters";
 import { ChangeFeed } from "@/components/dashboard/change-feed";
 import { AddCompetitorDialog } from "@/components/dashboard/add-competitor-dialog";
 import { CompetitorRankedStrip } from "@/components/dashboard/competitor-ranked-strip";
+import { RecommendationsCard } from "@/components/dashboard/recommendations-card";
 import { Button } from "@/components/ui/button";
 
 export default function DashboardPage() {
@@ -38,6 +39,8 @@ export default function DashboardPage() {
       </PageHeader>
 
       <CompetitorRankedStrip competitors={competitors} />
+
+      <RecommendationsCard />
 
       <StatsCards competitors={competitors} changes={allChanges} />
 

@@ -42,6 +42,7 @@ export class ApiStack extends cdk.Stack {
           apigatewayv2.CorsHttpMethod.GET,
           apigatewayv2.CorsHttpMethod.POST,
           apigatewayv2.CorsHttpMethod.PUT,
+          apigatewayv2.CorsHttpMethod.PATCH,
           apigatewayv2.CorsHttpMethod.DELETE,
           apigatewayv2.CorsHttpMethod.OPTIONS,
         ],
@@ -155,6 +156,10 @@ export class ApiStack extends cdk.Stack {
     addRoute('ChangesList', apigatewayv2.HttpMethod.GET, '/changes', 'api/changes/list.ts');
     addRoute('ChangesGet', apigatewayv2.HttpMethod.GET, '/changes/{id}', 'api/changes/get.ts');
     addRoute('ChangesFeedback', apigatewayv2.HttpMethod.POST, '/changes/{id}/feedback', 'api/changes/feedback.ts');
+
+    // ─── Recommendations Routes (Phase 2) ───
+    addRoute('RecommendationsList', apigatewayv2.HttpMethod.GET, '/recommendations', 'api/recommendations/list.ts');
+    addRoute('RecommendationsUpdate', apigatewayv2.HttpMethod.PATCH, '/recommendations/{id}', 'api/recommendations/update-status.ts');
 
     // ─── Subscription Routes ───
     addRoute('SubCurrent', apigatewayv2.HttpMethod.GET, '/subscriptions/me', 'api/subscriptions/current.ts');

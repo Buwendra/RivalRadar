@@ -17,3 +17,10 @@ export type {
 export type { Change, ChangeDetail, ChangeType, AiAnalysis, ChangeFilters } from "./change";
 export type { Subscription, PlanTier } from "./subscription";
 export type { ResearchFinding, ResearchCategory, FindingItem, Citation } from "./research";
+export type {
+  Recommendation,
+  RecommendationCategory,
+  RecommendationEffortLevel,
+  RecommendationTimeHorizon,
+  RecommendationStatus,
+} from "./recommendation";

@@ -14,7 +14,7 @@ export class ApiClientError extends Error {
 }
 
 interface RequestOptions {
-  method?: "GET" | "POST" | "PUT" | "DELETE";
+  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
   params?: Record<string, string | number | undefined>;
   requireAuth?: boolean;

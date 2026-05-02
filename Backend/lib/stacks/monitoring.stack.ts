@@ -14,6 +14,7 @@ interface CriticalLambdaSet {
   /** Weekly digest chain — every error pages (digest is mission-critical). */
   aggregateChanges: lambda.IFunction;
   generateSummary: lambda.IFunction;
+  generateRecommendations: lambda.IFunction;
   renderSendEmail: lambda.IFunction;
   /** Phase 1 scheduled Lambdas — silent failure breaks the loop / cost cap. */
   enqueueRecurring: lambda.IFunction;
@@ -177,6 +178,7 @@ export class MonitoringStack extends cdk.Stack {
 
     addAnyErrorAlarm('AggregateChangesErrors', criticalLambdas.aggregateChanges);
     addAnyErrorAlarm('GenerateSummaryErrors', criticalLambdas.generateSummary);
+    addAnyErrorAlarm('GenerateRecommendationsErrors', criticalLambdas.generateRecommendations);
     addAnyErrorAlarm('RenderSendEmailErrors', criticalLambdas.renderSendEmail);
     addAnyErrorAlarm('EnqueueRecurringErrors', criticalLambdas.enqueueRecurring);
     addAnyErrorAlarm('AggregateAiCostsErrors', criticalLambdas.aggregateAiCosts);
