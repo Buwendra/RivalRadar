@@ -12,6 +12,7 @@ import { AddCompetitorDialog } from "@/components/dashboard/add-competitor-dialo
 import { CompetitorRankedStrip } from "@/components/dashboard/competitor-ranked-strip";
 import { RecommendationsCard } from "@/components/dashboard/recommendations-card";
 import { FirstRunTour } from "@/components/dashboard/first-run-tour";
+import { ExportButton } from "@/components/dashboard/export-button";
 import { Button } from "@/components/ui/button";
 
 export default function DashboardPage() {
@@ -33,10 +34,13 @@ export default function DashboardPage() {
         title="Dashboard"
         description="Your competitive intelligence feed"
       >
-        <Button onClick={() => setAddDialogOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Competitor
-        </Button>
+        <div className="flex items-center gap-2">
+          <ExportButton />
+          <Button onClick={() => setAddDialogOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Competitor
+          </Button>
+        </div>
       </PageHeader>
 
       <div data-tour="competitor-strip">

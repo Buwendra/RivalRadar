@@ -10,4 +10,5 @@ export interface User {
   createdAt: string;
   updatedAt: string;
   notificationPreferences?: NotificationPreferences;
+  customRecommendationCategories?: string[];
 }

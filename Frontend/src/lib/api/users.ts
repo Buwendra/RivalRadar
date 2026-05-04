@@ -24,6 +24,7 @@ export const usersApi = {
   updateProfile: (data: {
     name?: string;
     notificationPreferences?: NotificationPreferences;
+    customRecommendationCategories?: string[];
   }) =>
     apiClient<{ message: string }>("/users/me", {
       method: "PUT",

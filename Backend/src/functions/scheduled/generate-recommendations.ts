@@ -31,7 +31,8 @@ import {
 } from '../../shared/db/keys';
 import { generateId } from '../../shared/utils/id';
 import { logger } from '../../shared/utils/logger';
-import type { Recommendation, PredictedMove } from '../../shared/types';
+import { hasCapability } from '../../shared/utils/capability';
+import type { Recommendation, PredictedMove, User } from '../../shared/types';
 
 interface AggregatedChange {
   competitorName: string;
@@ -71,6 +72,7 @@ export const handler = async (event: Event): Promise<Output> => {
 
   let userCompanyName: string | undefined;
   let userIndustry: string | undefined;
+  let customCategories: string[] | undefined;
   let competitorsForPrompt: Array<{
     name: string;
     momentum?: string;
@@ -82,11 +84,22 @@ export const handler = async (event: Event): Promise<Output> => {
 
   try {
     const [userRecord, competitorsResult] = await Promise.all([
-      getItem<Record<string, unknown>>(userPK(event.userId), userSK()),
+      getItem<User & Record<string, unknown>>(userPK(event.userId), userSK()),
       queryByPK(competitorPK(event.userId), 'COMP#', { scanForward: true }),
     ]);
     userCompanyName = userRecord?.companyName as string | undefined;
     userIndustry = userRecord?.industry as string | undefined;
+    // Custom recommendation focus areas (Command-tier only). The capability
+    // gate prevents lower tiers from getting custom categories applied even
+    // if a stale field somehow survives a downgrade.
+    if (
+      userRecord &&
+      hasCapability(userRecord, 'customRecommendationCategories') &&
+      Array.isArray(userRecord.customRecommendationCategories) &&
+      userRecord.customRecommendationCategories.length > 0
+    ) {
+      customCategories = userRecord.customRecommendationCategories.slice(0, 3);
+    }
 
     // Enrich each snapshot with predictedMoves from the live Competitor record.
     // Snapshots from aggregate-changes don't include predictedMoves to keep the
@@ -125,6 +138,7 @@ export const handler = async (event: Event): Promise<Output> => {
     userId: event.userId,
     userCompanyName,
     userIndustry,
+    ...(customCategories ? { customCategories } : {}),
     weeklyChanges: event.topChanges.map((c) => ({
       competitorName: c.competitorName,
       summary: c.summary,

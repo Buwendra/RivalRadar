@@ -41,6 +41,12 @@ export interface User {
   // dispatch checks (channel, eventType) before firing; the IntegrationCredential
   // row controls *whether* the channel exists at all.
   notificationPreferences?: NotificationPreferences;
+
+  // Custom recommendation focus areas (Phase 6a — Command tier only). 1–3
+  // user-defined themes (e.g. "ABM strategy", "channel partnerships") that
+  // generateRecommendations threads into the Sonnet prompt to bias output
+  // toward what this user actually cares about. Empty/undefined = generic.
+  customRecommendationCategories?: string[];
 }
 
 /**

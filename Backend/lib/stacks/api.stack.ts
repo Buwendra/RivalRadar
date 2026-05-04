@@ -165,6 +165,9 @@ export class ApiStack extends cdk.Stack {
     // ─── Onboarding Routes (Phase 5) ───
     addRoute('OnboardingSuggestCompetitors', apigatewayv2.HttpMethod.POST, '/onboarding/suggest-competitors', 'api/onboarding/suggest-competitors.ts');
 
+    // ─── Exports Routes (Phase 6a) ───
+    addRoute('ExportsCsv', apigatewayv2.HttpMethod.POST, '/exports/csv', 'api/exports/csv.ts');
+
     // ─── Integrations Routes (Phase 3) ───
     addRoute('IntegrationsList', apigatewayv2.HttpMethod.GET, '/integrations', 'api/integrations/list.ts');
     addRoute('IntegrationsSet', apigatewayv2.HttpMethod.POST, '/integrations', 'api/integrations/set.ts');

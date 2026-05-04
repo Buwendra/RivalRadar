@@ -1401,6 +1401,13 @@ export async function generateRecommendations(input: {
   userId: string;
   userCompanyName?: string;
   userIndustry?: string;
+  /**
+   * Phase 6a — Command-tier exclusive. Up to 3 user-defined focus areas
+   * (e.g. "ABM strategy", "channel partnerships") that bias the recommendation
+   * output toward themes the user explicitly cares about. Caller is responsible
+   * for the tier check — this helper takes any non-empty array and threads it.
+   */
+  customCategories?: string[];
   weeklyChanges: Array<{
     competitorName: string;
     summary: string;
@@ -1469,13 +1476,21 @@ export async function generateRecommendations(input: {
     ? `\nSTRATEGIC SUMMARY (already drafted for the email):\n${input.strategicSummary}\n`
     : '';
 
+  const customCategoriesBlock =
+    input.customCategories && input.customCategories.length > 0
+      ? `\nUSER'S STATED FOCUS AREAS (bias output toward these themes when relevant):\n${input.customCategories
+          .slice(0, 3)
+          .map((c, i) => `${i + 1}. ${c}`)
+          .join('\n')}\n`
+      : '';
+
   const prompt = `You are a senior competitive strategist advising a busy founder or marketing leader. Based on the inputs below, generate 3 to 7 SPECIFIC, ACTIONABLE recommendations for what THE USER (not the competitors) should consider doing.
 
 ${userContextLine}
 
 ${changesBlock}
 ${snapshotsBlock}
-${summaryBlock}
+${customCategoriesBlock}${summaryBlock}
 Each recommendation MUST:
 - Translate competitor activity into a USER ACTION ("we should X" / "consider doing Y")
 - Cite at least one specific input above in the body (a competitor name, a change, a tag, a predicted move)
