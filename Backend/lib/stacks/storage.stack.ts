@@ -14,6 +14,18 @@ export class StorageStack extends cdk.Stack {
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       versioned: false,
       removalPolicy: cdk.RemovalPolicy.RETAIN,
+      // Phase 6b — let presigned-GET URLs work from the browser. The URL
+      // itself is a time-limited credential so CORS adds no security; we
+      // allow GET from any origin to survive preview deploys + custom
+      // domains without redeploying the bucket.
+      cors: [
+        {
+          allowedMethods: [s3.HttpMethods.GET],
+          allowedOrigins: ['*'],
+          allowedHeaders: ['*'],
+          maxAge: 3600,
+        },
+      ],
       lifecycleRules: [
         {
           // Move old snapshots to Infrequent Access after 90 days

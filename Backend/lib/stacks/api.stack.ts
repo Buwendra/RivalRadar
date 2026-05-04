@@ -165,8 +165,46 @@ export class ApiStack extends cdk.Stack {
     // ─── Onboarding Routes (Phase 5) ───
     addRoute('OnboardingSuggestCompetitors', apigatewayv2.HttpMethod.POST, '/onboarding/suggest-competitors', 'api/onboarding/suggest-competitors.ts');
 
-    // ─── Exports Routes (Phase 6a) ───
+    // ─── Exports Routes (Phase 6a + 6b) ───
     addRoute('ExportsCsv', apigatewayv2.HttpMethod.POST, '/exports/csv', 'api/exports/csv.ts');
+
+    // PDF export needs more memory + a longer timeout than the default 256 MB / 30s
+    // because PDFKit + S3 upload can take 1–3s and the bundled PDFKit binary
+    // benefits from more RAM during cold start. Created outside `addRoute()` so
+    // we can override the lambdaDefaults; otherwise mirrors the same grants
+    // (table RW, bucket RW, secrets read) and route registration.
+    const exportsPdfFn = new nodejs.NodejsFunction(this, 'ExportsPdf', {
+      ...lambdaDefaults,
+      entry: path.join(__dirname, '..', '..', 'src', 'functions', 'api/exports/pdf.ts'),
+      functionName: `${this.stackName}-ExportsPdf`,
+      timeout: cdk.Duration.seconds(60),
+      memorySize: 1024,
+      // pdfkit ships AFM font metrics as .afm files — keep them in the bundle.
+      bundling: {
+        ...lambdaDefaults.bundling,
+        commandHooks: {
+          beforeBundling: () => [],
+          beforeInstall: () => [],
+          afterBundling(inputDir: string, outputDir: string) {
+            // Copy the bundled .afm font files PDFKit reads at runtime.
+            // esbuild treats these as binary assets and won't bundle them
+            // automatically; copying preserves the relative path PDFKit expects.
+            return [
+              `node -e "const fs=require('fs'),path=require('path');const src=path.join('${inputDir.replace(/\\/g, '/')}','node_modules/pdfkit/js/data');const dst=path.join('${outputDir.replace(/\\/g, '/')}','data');if(fs.existsSync(src)){fs.mkdirSync(dst,{recursive:true});for(const f of fs.readdirSync(src))fs.copyFileSync(path.join(src,f),path.join(dst,f));}"`,
+            ];
+          },
+        },
+      },
+    });
+    table.grantReadWriteData(exportsPdfFn);
+    snapshotBucket.grantReadWrite(exportsPdfFn);
+    apiSecrets.grantRead(exportsPdfFn);
+    this.httpApi.addRoutes({
+      path: '/exports/pdf',
+      methods: [apigatewayv2.HttpMethod.POST],
+      integration: new apigatewayv2Int.HttpLambdaIntegration('ExportsPdf-Int', exportsPdfFn),
+      authorizer,
+    });
 
     // ─── Integrations Routes (Phase 3) ───
     addRoute('IntegrationsList', apigatewayv2.HttpMethod.GET, '/integrations', 'api/integrations/list.ts');

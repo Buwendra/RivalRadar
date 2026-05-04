@@ -9,11 +9,25 @@ export interface CsvExportResponse {
   type: CsvExportType;
 }
 
+export interface PdfExportResponse {
+  downloadUrl: string;
+  filename: string;
+  expiresAt: string;
+  exportId: string;
+  pdfBytes: number;
+}
+
 export const exportsApi = {
   csv: (type: CsvExportType, since?: string) =>
     apiClient<CsvExportResponse>("/exports/csv", {
       method: "POST",
       body: { type, ...(since ? { since } : {}) },
+    }),
+
+  pdf: () =>
+    apiClient<PdfExportResponse>("/exports/pdf", {
+      method: "POST",
+      body: {},
     }),
 };
 
