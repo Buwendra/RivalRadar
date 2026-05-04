@@ -11,13 +11,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { OnboardingProgress } from "@/components/onboarding/onboarding-progress";
 import { StepCompanyInfo } from "@/components/onboarding/step-company-info";
+import { StepDiscoverCompetitors } from "@/components/onboarding/step-discover-competitors";
 import { StepCompetitors, type CompetitorEntry } from "@/components/onboarding/step-competitors";
 import { StepPageTracking } from "@/components/onboarding/step-page-tracking";
 import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import { TOS_VERSION, PRIVACY_VERSION } from "@/lib/utils/constants";
+import type { SuggestedCompetitor } from "@/lib/api/onboarding";
 import type { PageType } from "@/lib/types";
 
-const STEPS = ["Company", "Competitors", "Pages"];
+const STEPS = ["Company", "Discover", "Competitors", "Pages"];
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -27,6 +29,7 @@ export default function OnboardingPage() {
 
   const [companyName, setCompanyName] = useState("");
   const [industry, setIndustry] = useState("");
+  const [companyUrl, setCompanyUrl] = useState("");
   const [competitors, setCompetitors] = useState<CompetitorEntry[]>([
     { name: "", url: "" },
   ]);
@@ -61,14 +64,25 @@ export default function OnboardingPage() {
     setPagesToTrack(updated);
   };
 
+  const handleApplySuggestions = (suggestions: SuggestedCompetitor[]) => {
+    if (suggestions.length === 0) return;
+    setCompetitors(suggestions.map((s) => ({ name: s.name, url: s.url })));
+    setPagesToTrack(suggestions.map(() => ["homepage"]));
+    setCurrentStep(2);
+  };
+
+  const handleSkipDiscover = () => setCurrentStep(2);
+
   const canProceed = () => {
     if (currentStep === 0) {
       return companyName.trim().length > 0 && industry.length > 0;
     }
-    if (currentStep === 1) {
+    // Discover step (1) is always skippable — the step's own buttons drive flow.
+    if (currentStep === 1) return true;
+    if (currentStep === 2) {
       return competitors.every((c) => c.name.trim() && c.url.trim());
     }
-    if (currentStep === 2) {
+    if (currentStep === 3) {
       return pagesToTrack.every((pages) => pages.length > 0);
     }
     return false;
@@ -134,6 +148,16 @@ export default function OnboardingPage() {
             />
           )}
           {currentStep === 1 && (
+            <StepDiscoverCompetitors
+              companyName={companyName}
+              industry={industry}
+              companyUrl={companyUrl}
+              onCompanyUrlChange={setCompanyUrl}
+              onApply={handleApplySuggestions}
+              onSkip={handleSkipDiscover}
+            />
+          )}
+          {currentStep === 2 && (
             <StepCompetitors
               competitors={competitors}
               maxCompetitors={maxCompetitors}
@@ -142,7 +166,7 @@ export default function OnboardingPage() {
               onUpdate={handleUpdateCompetitor}
             />
           )}
-          {currentStep === 2 && (
+          {currentStep === 3 && (
             <StepPageTracking
               competitors={competitorsWithPages}
               onTogglePage={handleTogglePage}

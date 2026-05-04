@@ -11,6 +11,7 @@ import { ChangeFeed } from "@/components/dashboard/change-feed";
 import { AddCompetitorDialog } from "@/components/dashboard/add-competitor-dialog";
 import { CompetitorRankedStrip } from "@/components/dashboard/competitor-ranked-strip";
 import { RecommendationsCard } from "@/components/dashboard/recommendations-card";
+import { FirstRunTour } from "@/components/dashboard/first-run-tour";
 import { Button } from "@/components/ui/button";
 
 export default function DashboardPage() {
@@ -38,11 +39,17 @@ export default function DashboardPage() {
         </Button>
       </PageHeader>
 
-      <CompetitorRankedStrip competitors={competitors} />
+      <div data-tour="competitor-strip">
+        <CompetitorRankedStrip competitors={competitors} />
+      </div>
 
-      <RecommendationsCard />
+      <div data-tour="recommendations">
+        <RecommendationsCard />
+      </div>
 
-      <StatsCards competitors={competitors} changes={allChanges} />
+      <div data-tour="stats-cards">
+        <StatsCards competitors={competitors} changes={allChanges} />
+      </div>
 
       <ChangeFilters
         competitors={competitors}
@@ -60,6 +67,8 @@ export default function DashboardPage() {
       />
 
       <AddCompetitorDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} />
+
+      <FirstRunTour />
     </div>
   );
 }

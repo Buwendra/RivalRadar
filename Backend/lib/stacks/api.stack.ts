@@ -115,6 +115,7 @@ export class ApiStack extends cdk.Stack {
     // ─── Auth Routes (public) ───
     addRoute('AuthSignup', apigatewayv2.HttpMethod.POST, '/auth/signup', 'api/auth/signup.ts', false);
     addRoute('AuthSignin', apigatewayv2.HttpMethod.POST, '/auth/signin', 'api/auth/signin.ts', false);
+    addRoute('AuthResendVerification', apigatewayv2.HttpMethod.POST, '/auth/resend-verification', 'api/auth/resend-verification.ts', false);
 
     const pipelineEnv = {
       RESEARCH_PIPELINE_ARN: researchStateMachine.stateMachineArn,
@@ -160,6 +161,9 @@ export class ApiStack extends cdk.Stack {
     // ─── Recommendations Routes (Phase 2) ───
     addRoute('RecommendationsList', apigatewayv2.HttpMethod.GET, '/recommendations', 'api/recommendations/list.ts');
     addRoute('RecommendationsUpdate', apigatewayv2.HttpMethod.PATCH, '/recommendations/{id}', 'api/recommendations/update-status.ts');
+
+    // ─── Onboarding Routes (Phase 5) ───
+    addRoute('OnboardingSuggestCompetitors', apigatewayv2.HttpMethod.POST, '/onboarding/suggest-competitors', 'api/onboarding/suggest-competitors.ts');
 
     // ─── Integrations Routes (Phase 3) ───
     addRoute('IntegrationsList', apigatewayv2.HttpMethod.GET, '/integrations', 'api/integrations/list.ts');

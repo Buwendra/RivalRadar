@@ -6,6 +6,7 @@ import { userPK, userSK, competitorPK, competitorSK, gsi2ActiveCompetitorKeys } 
 import { generateId } from '../../../shared/utils/id';
 import { PLAN_LIMITS, User } from '../../../shared/types';
 import { enforceResearchEligibility } from '../../../shared/utils/research-eligibility';
+import { logger } from '../../../shared/utils/logger';
 
 const sfn = new SFNClient({});
 
@@ -105,6 +106,12 @@ export const handler = apiHandler(async (event) => {
       })
     );
   }
+
+  logger.info('onboarding_completed', {
+    userId,
+    competitorCount: body.competitors.length,
+    industry: body.industry,
+  });
 
   return {
     statusCode: 200,

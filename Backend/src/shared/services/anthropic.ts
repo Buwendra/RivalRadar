@@ -1685,6 +1685,133 @@ The reject example would be filtered downstream. Don't produce recommendations l
 }
 
 /**
+ * Phase 5 — Onboarding competitor suggestion.
+ *
+ * Single Sonnet call (~$0.03/onboarding) returning 5–8 candidate competitors
+ * for the user's company. Triggered from the Discover step in onboarding so
+ * users don't face a blank-page when asked "who are your competitors".
+ *
+ * Returns [] on parse failure rather than throwing — onboarding still works
+ * without suggestions (the user can fall back to manual entry). Each
+ * suggestion is sanitized to require a non-empty name + url + rationale,
+ * with rationale length >= 30 chars to filter generic "competitor in the
+ * same space" output.
+ */
+export async function suggestCompetitors(input: {
+  userId: string;
+  companyName: string;
+  companyUrl: string;
+  industry: string;
+}): Promise<
+  Array<{
+    name: string;
+    url: string;
+    rationale: string;
+    confidence: 'high' | 'medium' | 'low';
+  }>
+> {
+  const secrets = await getSecret('rivalscan/api-keys');
+
+  const prompt = `You are a competitive intelligence analyst helping a user identify their primary business competitors. Suggest 5–8 specific companies the user should consider tracking.
+
+User's company:
+- Name: ${input.companyName}
+- Website: ${input.companyUrl}
+- Industry: ${input.industry}
+
+Rules for selection:
+- Suggest companies that are DIRECT competitors (same target customer + comparable product/service).
+- Mix recognizable players with at least 2 less-obvious ones the user might not know.
+- Prefer competitors of similar size/stage where possible — a small SaaS doesn't need to track Microsoft.
+- For each, include the canonical homepage URL (e.g. https://stripe.com), not a deep link.
+- Skip if you cannot identify any specific competitors with confidence — return an empty array rather than guessing.
+
+Respond with ONLY valid JSON — no prose, no code fences:
+{
+  "suggestions": [
+    {
+      "name": "Stripe",
+      "url": "https://stripe.com",
+      "rationale": "2-3 sentence explanation of why this is a competitor — what they offer that overlaps with the user's product, who their target customer is, and what makes them notable.",
+      "confidence": "high" | "medium" | "low"
+    }
+  ]
+}
+
+Confidence guidance:
+- "high" — well-known direct competitor in the same segment
+- "medium" — adjacent or smaller competitor, partial overlap
+- "low" — speculative; the user should validate
+
+If you cannot find 5+ confident suggestions: return only the ones you CAN justify, not padding. Empty array is acceptable.`;
+
+  let response: Response;
+  try {
+    response = await callAnthropic(
+      secrets.ANTHROPIC_API_KEY,
+      {
+        model: SONNET_MODEL,
+        max_tokens: 2048,
+        messages: [{ role: 'user', content: prompt }],
+      },
+      'suggestCompetitors',
+      { userId: input.userId }
+    );
+  } catch (err) {
+    logger.warn('suggestCompetitors: call failed', { error: String(err) });
+    return [];
+  }
+
+  if (!response.ok) {
+    const errBody = await response.text().catch(() => '');
+    logger.warn('Anthropic suggestCompetitors API error', {
+      status: response.status,
+      body: errBody.slice(0, 500),
+    });
+    return [];
+  }
+
+  const data = (await response.json()) as { content: Array<{ type: string; text: string }> };
+  const text = (data.content.find((b) => b.type === 'text')?.text ?? '').trim();
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    logger.warn('suggestCompetitors: no JSON in response', { text: text.slice(0, 500) });
+    return [];
+  }
+
+  let parsed: { suggestions?: Array<Record<string, unknown>> };
+  try {
+    parsed = JSON.parse(jsonMatch[0]);
+  } catch (err) {
+    logger.warn('suggestCompetitors: JSON parse failed', { error: String(err) });
+    return [];
+  }
+
+  const validConfidence: Array<'high' | 'medium' | 'low'> = ['high', 'medium', 'low'];
+  const out: Array<{
+    name: string;
+    url: string;
+    rationale: string;
+    confidence: 'high' | 'medium' | 'low';
+  }> = [];
+
+  for (const s of parsed.suggestions ?? []) {
+    if (out.length >= 8) break;
+    const name = String(s.name ?? '').slice(0, 100).trim();
+    const url = String(s.url ?? '').trim();
+    const rationale = String(s.rationale ?? '').trim();
+    if (!name || !url || rationale.length < 30) continue;
+    if (!url.startsWith('http://') && !url.startsWith('https://')) continue;
+    const confidence = validConfidence.includes(s.confidence as 'high')
+      ? (s.confidence as 'high' | 'medium' | 'low')
+      : 'medium';
+    out.push({ name, url: url.slice(0, 500), rationale: rationale.slice(0, 600), confidence });
+  }
+
+  return out;
+}
+
+/**
  * Misuse-defense classifier (Phase 1.1).
  *
  * Uses Haiku to classify whether a (name, url) pair represents a legitimate

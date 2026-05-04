@@ -37,4 +37,11 @@ export const authApi = {
       body: data,
       requireAuth: false,
     }),
+
+  resendVerification: (email: string) =>
+    apiClient<{ message: string }>("/auth/resend-verification", {
+      method: "POST",
+      body: { email },
+      requireAuth: false,
+    }),
 };

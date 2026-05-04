@@ -7,6 +7,7 @@ import { validate } from '../../../shared/middleware/validation';
 import { putItem } from '../../../shared/db/queries';
 import { userPK, userSK, gsi3EmailKeys } from '../../../shared/db/keys';
 import { generateId } from '../../../shared/utils/id';
+import { logger } from '../../../shared/utils/logger';
 import { z } from 'zod';
 
 const cognito = new CognitoIdentityProviderClient({});
@@ -19,6 +20,8 @@ const signupSchema = z.object({
 
 export const handler = apiHandler<PublicEvent>(async (event) => {
   const body = validate(signupSchema, parseBody(event));
+
+  logger.info('signup_started', { email: body.email });
 
   // Create Cognito user
   let cognitoSub: string;
@@ -59,6 +62,8 @@ export const handler = apiHandler<PublicEvent>(async (event) => {
     updatedAt: now,
     ...gsi3EmailKeys(body.email, userId),
   });
+
+  logger.info('signup_completed', { userId, email: body.email });
 
   return {
     statusCode: 201,

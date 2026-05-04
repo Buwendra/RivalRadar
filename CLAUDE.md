@@ -152,6 +152,10 @@ The enrichment block is wrapped in try/catch — Haiku failures don't break mome
 
 `MapResearch` in `pipeline.stack.ts` uses **`maxConcurrency: 1`** to serialize per-minute Anthropic token usage and avoid rate-limit pile-ups during multi-competitor onboarding. Each research run can burn 10-20k input tokens across 2-3 Sonnet calls; running 3 in parallel reliably trips the 30k input-tokens-per-minute org limit. If you change this back to >1, re-test multi-competitor onboarding.
 
+### Analytics events (Phase 5)
+
+Funnel events are emitted as structured JSON via `logger.info(eventName, metadata)` and queryable via CloudWatch Logs Insights. Events: `signup_started`, `signup_completed`, `signin_attempt`, `signin_succeeded`, `signin_failed`, `verification_resent`, `onboarding_completed`, `first_research_completed`, `recommendation_acted_on`, `recommendation_dismissed`. Insights example: `filter message = "onboarding_completed" | stats count(*) by bin(1d)`. **No client-side tracking pixel** — every event fires from a backend handler at the known transition point. Don't grep the frontend for these names.
+
 ## DynamoDB Single-Table Design
 
 | Entity | PK | SK |

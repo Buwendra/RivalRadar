@@ -5,7 +5,9 @@ import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { toast } from "sonner";
 import { useAuth } from "@/lib/auth/use-auth";
+import { authApi } from "@/lib/api/auth";
 import { ApiClientError } from "@/lib/api/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,6 +39,9 @@ export default function SignUpPage() {
   const { signUp } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [submittedEmail, setSubmittedEmail] = useState<string | null>(null);
+  const [isResending, setIsResending] = useState(false);
+  const [resentAt, setResentAt] = useState<number | null>(null);
 
   const {
     register,
@@ -51,6 +56,7 @@ export default function SignUpPage() {
     setError(null);
     try {
       await signUp(data.email, data.password, data.name);
+      setSubmittedEmail(data.email);
       setSuccess(true);
     } catch (err) {
       if (err instanceof ApiClientError) {
@@ -65,7 +71,23 @@ export default function SignUpPage() {
     }
   };
 
+  const handleResend = async () => {
+    if (!submittedEmail) return;
+    setIsResending(true);
+    try {
+      await authApi.resendVerification(submittedEmail);
+      setResentAt(Date.now());
+      toast.success("Verification email sent. Please check your inbox.");
+    } catch (err) {
+      const msg = err instanceof ApiClientError ? err.message : "Couldn't resend the email";
+      toast.error(msg);
+    } finally {
+      setIsResending(false);
+    }
+  };
+
   if (success) {
+    const justResent = resentAt && Date.now() - resentAt < 30_000;
     return (
       <Card className="border-brand-700 bg-brand-900">
         <CardContent className="flex flex-col items-center gap-4 py-8">
@@ -78,6 +100,20 @@ export default function SignUpPage() {
           <Button asChild variant="outline" className="mt-4">
             <Link href="/sign-in">Go to Sign In</Link>
           </Button>
+          <div className="mt-2 flex flex-col items-center gap-1">
+            <button
+              type="button"
+              onClick={handleResend}
+              disabled={isResending}
+              className="text-xs text-muted-foreground hover:text-foreground hover:underline disabled:opacity-50"
+            >
+              {isResending
+                ? "Sending…"
+                : justResent
+                ? "Sent! Didn't get it? Resend again"
+                : "Didn't get the email? Resend"}
+            </button>
+          </div>
         </CardContent>
       </Card>
     );

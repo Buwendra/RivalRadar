@@ -348,8 +348,8 @@ export default function CompetitorDetailPage() {
               {filteredChanges.map((c) => (
                 <Link key={c.id} href={`/dashboard/changes/${c.id}`}>
                   <Card className="border-brand-700 bg-brand-900 transition-colors hover:bg-brand-800">
-                    <CardContent className="flex items-center justify-between p-4">
-                      <div className="space-y-1">
+                    <CardContent className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="min-w-0 flex-1 space-y-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <ChangeTypeBadge type={c.aiAnalysis.changeType} />
                           <SignificanceBadge score={c.significance} />

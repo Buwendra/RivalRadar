@@ -44,7 +44,7 @@ export function StatsCards({ competitors, changes }: StatsCardsProps) {
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
       {stats.map((stat) => (
         <Card key={stat.label} className="border-brand-700 bg-brand-900">
           <CardContent className="flex items-center gap-3 p-4">

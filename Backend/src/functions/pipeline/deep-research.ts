@@ -88,6 +88,7 @@ export const handler = async (event: Event): Promise<Output> => {
     ]);
     const priorItems = priorResult.items;
     const previous = (priorItems[0] as unknown as ResearchFinding | undefined) ?? null;
+    const isFirstRun = priorItems.length === 0;
     const userCompanyName = (userRecord?.companyName as string | undefined) ?? undefined;
     const userIndustry = (userRecord?.industry as string | undefined) ?? undefined;
 
@@ -157,6 +158,24 @@ export const handler = async (event: Event): Promise<Output> => {
       tokensUsed: current.tokensUsed,
       ...gsi1ResearchKeys(event.userId, generatedAt),
     });
+
+    // Phase 5 funnel event — emit on the first successful research per competitor.
+    // The whole-user-first-research event is harder to dedupe cheaply (would
+    // need a separate per-user marker); per-competitor is the metric we
+    // actually care about for funnel measurement.
+    if (isFirstRun) {
+      logger.info('first_research_completed', {
+        userId: event.userId,
+        competitorId: event.competitorId,
+        researchId,
+        findingsCount:
+          current.categories.news.length +
+          current.categories.product.length +
+          current.categories.funding.length +
+          current.categories.hiring.length +
+          current.categories.social.length,
+      });
+    }
 
     // 5. Persist each delta as a Change record + fire real-time critical
     //    alerts for significance >= 8 (the Phase 3 "Slack-pings-now" bar).

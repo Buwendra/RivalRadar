@@ -187,7 +187,7 @@ export function CompetitorRankedStrip({ competitors }: CompetitorRankedStripProp
         </div>
 
         {/* Threat bucket counters */}
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-5">
           {THREAT_BUCKETS.map((b) => {
             const count = bucketCounts[b.level];
             const Icon = b.icon;
@@ -238,7 +238,7 @@ export function CompetitorRankedStrip({ competitors }: CompetitorRankedStripProp
             No competitors match this filter.
           </p>
         ) : (
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4">
             {filtered.map((c) => (
               <CompetitorChip key={c.id} competitor={c} />
             ))}
