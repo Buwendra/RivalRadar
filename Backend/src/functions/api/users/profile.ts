@@ -5,8 +5,22 @@ import { User } from '../../../shared/types';
 import { validate } from '../../../shared/middleware/validation';
 import { z } from 'zod';
 
+const channelPrefsSchema = z
+  .object({
+    weeklyDigest: z.boolean().optional(),
+    criticalAlerts: z.boolean().optional(),
+  })
+  .optional();
+
 const updateSchema = z.object({
   name: z.string().min(1).max(100).optional(),
+  notificationPreferences: z
+    .object({
+      email: channelPrefsSchema,
+      slack: channelPrefsSchema,
+      webhook: channelPrefsSchema,
+    })
+    .optional(),
 });
 
 export const handler = apiHandler(async (event) => {
@@ -36,6 +50,7 @@ export const handler = apiHandler(async (event) => {
           plan: user.plan,
           onboardingComplete: user.onboardingComplete,
           createdAt: user.createdAt,
+          notificationPreferences: user.notificationPreferences,
         },
       },
     };
@@ -45,6 +60,7 @@ export const handler = apiHandler(async (event) => {
   const body = validate(updateSchema, parseBody(event));
   const updates: Record<string, unknown> = { updatedAt: new Date().toISOString() };
   if (body.name) updates.name = body.name;
+  if (body.notificationPreferences) updates.notificationPreferences = body.notificationPreferences;
 
   await updateItem(userPK(userId), userSK(), updates);
 

@@ -161,6 +161,12 @@ export class ApiStack extends cdk.Stack {
     addRoute('RecommendationsList', apigatewayv2.HttpMethod.GET, '/recommendations', 'api/recommendations/list.ts');
     addRoute('RecommendationsUpdate', apigatewayv2.HttpMethod.PATCH, '/recommendations/{id}', 'api/recommendations/update-status.ts');
 
+    // ─── Integrations Routes (Phase 3) ───
+    addRoute('IntegrationsList', apigatewayv2.HttpMethod.GET, '/integrations', 'api/integrations/list.ts');
+    addRoute('IntegrationsSet', apigatewayv2.HttpMethod.POST, '/integrations', 'api/integrations/set.ts');
+    addRoute('IntegrationsTest', apigatewayv2.HttpMethod.POST, '/integrations/{provider}/test', 'api/integrations/test.ts');
+    addRoute('IntegrationsDelete', apigatewayv2.HttpMethod.DELETE, '/integrations/{provider}', 'api/integrations/delete.ts');
+
     // ─── Subscription Routes ───
     addRoute('SubCurrent', apigatewayv2.HttpMethod.GET, '/subscriptions/me', 'api/subscriptions/current.ts');
     addRoute('SubCheckout', apigatewayv2.HttpMethod.POST, '/subscriptions/checkout', 'api/subscriptions/checkout.ts', true, {

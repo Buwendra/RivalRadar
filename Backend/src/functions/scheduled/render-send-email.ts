@@ -1,6 +1,8 @@
-import { sendEmail } from '../../shared/services/ses';
+import { dispatchWeeklyDigest } from '../../shared/services/notifier';
+import { getItem } from '../../shared/db/queries';
+import { userPK, userSK } from '../../shared/db/keys';
 import { logger } from '../../shared/utils/logger';
-import type { Recommendation } from '../../shared/types';
+import type { Recommendation, User } from '../../shared/types';
 
 interface AggregatedChange {
   competitorName: string;
@@ -157,11 +159,40 @@ export const handler = async (event: Event): Promise<{ sent: boolean }> => {
     </div>
   `;
 
+  // Dispatch via the notifier facade — fans out to email + any configured
+  // Slack / webhook integrations the user has opted in for `weeklyDigest`.
+  // Each channel is best-effort; one failure doesn't block another.
   try {
-    await sendEmail(event.email, `Your Weekly Competitive Brief — ${dateRange}`, html);
-    logger.info('Weekly digest sent', { userId: event.userId, email: event.email });
+    const userRecord = await getItem<User & Record<string, unknown>>(
+      userPK(event.userId),
+      userSK()
+    );
+    const top = (event.topRecommendations ?? [])[0];
+    const dispatchResult = await dispatchWeeklyDigest({
+      user: {
+        userId: event.userId,
+        email: event.email,
+        name: event.name,
+        notificationPreferences: userRecord?.notificationPreferences,
+      },
+      emailSubject: `Your Weekly Competitive Brief — ${dateRange}`,
+      emailHtml: html,
+      changeCount: event.topChanges.length,
+      ...(top ? { topRecommendation: { title: top.title, body: top.body } } : {}),
+      webhookData: {
+        changeCount: event.topChanges.length,
+        topRecommendations: (event.topRecommendations ?? [])
+          .slice(0, 3)
+          .map((r) => ({ title: r.title, body: r.body, category: r.category })),
+        weekRange: { start: weekStart.toISOString(), end: now.toISOString() },
+      },
+    });
+    logger.info('Weekly digest dispatched', { userId: event.userId, dispatchResult });
   } catch (err) {
-    logger.error('Failed to send weekly digest — continuing pipeline', { userId: event.userId, error: err });
+    logger.error('Failed to dispatch weekly digest — continuing pipeline', {
+      userId: event.userId,
+      error: err,
+    });
   }
 
   return { sent: true };

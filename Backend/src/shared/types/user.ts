@@ -1,4 +1,5 @@
 import { PlanTier } from './index';
+import type { NotificationPreferences } from './integration';
 
 export type AccountStatus = 'active' | 'restricted' | 'pending-deletion';
 
@@ -34,6 +35,12 @@ export interface User {
   monthToDateCostUsd?: number;
   monthToDateCostMonth?: string;      // 'YYYY-MM' — used to detect month rollover
   monthlyTokenBudget?: number;        // optional override of tier-level cap (null = use tier default)
+
+  // Multi-channel notifications (Phase 3). Per-channel-per-event toggle map.
+  // Absent = use DEFAULT_NOTIFICATION_PREFERENCES from `integration.ts`. Each
+  // dispatch checks (channel, eventType) before firing; the IntegrationCredential
+  // row controls *whether* the channel exists at all.
+  notificationPreferences?: NotificationPreferences;
 }
 
 /**

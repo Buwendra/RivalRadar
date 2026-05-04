@@ -24,3 +24,10 @@ export type {
   RecommendationTimeHorizon,
   RecommendationStatus,
 } from "./recommendation";
+export type {
+  IntegrationProvider,
+  IntegrationListItem,
+  SetIntegrationResponse,
+  NotificationChannelPreferences,
+  NotificationPreferences,
+} from "./integration";

@@ -1,5 +1,5 @@
 import { apiClient } from "./client";
-import type { User, PageType } from "@/lib/types";
+import type { User, PageType, NotificationPreferences } from "@/lib/types";
 
 export interface OnboardInput {
   companyName: string;
@@ -21,7 +21,10 @@ export interface OnboardResponse {
 export const usersApi = {
   getProfile: () => apiClient<User>("/users/me"),
 
-  updateProfile: (data: { name?: string }) =>
+  updateProfile: (data: {
+    name?: string;
+    notificationPreferences?: NotificationPreferences;
+  }) =>
     apiClient<{ message: string }>("/users/me", {
       method: "PUT",
       body: data,

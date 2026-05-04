@@ -1,7 +1,8 @@
-import { sendEmail } from '../../shared/services/ses';
+import { dispatchCriticalAlert } from '../../shared/services/notifier';
 import { getItem } from '../../shared/db/queries';
 import { userPK, userSK } from '../../shared/db/keys';
 import { logger } from '../../shared/utils/logger';
+import type { User } from '../../shared/types';
 
 interface StoredChange {
   changeId: string;
@@ -18,55 +19,66 @@ interface Event {
 }
 
 /**
- * Step Function Lambda: Send email alerts for high-significance changes (score >= 7).
+ * Step Function Lambda — Sends a follow-up alert for high-significance
+ * changes (score >= 7) detected during a research run.
+ *
+ * Note: deep-research.ts ALSO fires `dispatchCriticalAlert` inline for
+ * deltas with significance >= 8 (the "real-time critical" threshold per
+ * the Phase 3 plan). This Lambda handles the slightly-lower bar (>= 7)
+ * via the same notifier facade — same fan-out to email + Slack + webhook
+ * per the user's preferences, just without the "🚨 Critical" framing.
+ *
+ * The two thresholds are intentional:
+ *   - sig 8+ = real-time interrupt (Slack ping immediately)
+ *   - sig 7  = next-pipeline-step alert (email summary, less urgent)
  */
 export const handler = async (event: Event): Promise<{ alertsSent: number }> => {
-  const highSigChanges = event.storedChanges.filter((c) => c.significance >= 7);
-
+  // Skip changes already handled by the inline >= 8 critical-alert path so
+  // we don't double-notify on the same delta.
+  const highSigChanges = event.storedChanges.filter(
+    (c) => c.significance >= 7 && c.significance < 8
+  );
   if (highSigChanges.length === 0) {
     return { alertsSent: 0 };
   }
 
-  // Get user email
-  const user = await getItem<Record<string, unknown>>(userPK(event.userId), userSK());
+  const user = await getItem<User & Record<string, unknown>>(userPK(event.userId), userSK());
   if (!user?.email) {
     logger.warn('Cannot send alert — user not found', { userId: event.userId });
     return { alertsSent: 0 };
   }
 
-  const changesList = highSigChanges
-    .map(
-      (c) =>
-        `<li><strong>${c.pageUrl}</strong> (Significance: ${c.significance}/10)<br/>${c.summary}</li>`
-    )
-    .join('');
-
-  const html = `
-    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2 style="color: #dc2626;">High-Priority Competitor Alert</h2>
-      <p>We detected ${highSigChanges.length} significant change(s) from <strong>${event.name}</strong>:</p>
-      <ul>${changesList}</ul>
-      <p style="margin-top: 20px;">
-        <a href="${process.env.FRONTEND_URL}/dashboard" style="background: #2563eb; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none;">
-          View Details
-        </a>
-      </p>
-      <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">
-        — RivalScan Competitive Intelligence
-      </p>
-    </div>
-  `;
-
-  try {
-    await sendEmail(
-      user.email as string,
-      `Alert: ${highSigChanges.length} significant change(s) from ${event.name}`,
-      html
-    );
-    logger.info('Alerts sent', { userId: event.userId, count: highSigChanges.length });
-  } catch (err) {
-    logger.error('Failed to send alert email — continuing pipeline', { userId: event.userId, error: err });
+  // Send one dispatch per change so each gets its own Slack/webhook entry.
+  // Email is the only channel that batches — the notifier already de-dupes
+  // by event so the user gets one Slack ping per change rather than one
+  // bundled mention.
+  let alertsSent = 0;
+  for (const change of highSigChanges) {
+    try {
+      await dispatchCriticalAlert({
+        user: {
+          userId: event.userId,
+          email: user.email,
+          name: user.name ?? '',
+          notificationPreferences: user.notificationPreferences,
+        },
+        competitorName: event.name,
+        changeId: change.changeId,
+        changeTitle: change.summary,
+        changeDetail: change.summary,
+        significance: change.significance,
+        category: 'change',
+      });
+      alertsSent += 1;
+    } catch (err) {
+      logger.error('Failed to dispatch high-sig alert — continuing pipeline', {
+        userId: event.userId,
+        changeId: change.changeId,
+        error: err,
+      });
+    }
   }
 
-  return { alertsSent: highSigChanges.length };
+  logger.info('High-sig alerts dispatched', { userId: event.userId, count: alertsSent });
+  return { alertsSent };
 };

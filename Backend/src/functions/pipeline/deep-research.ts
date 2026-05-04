@@ -5,6 +5,8 @@ import {
   predictNextMoves,
   evaluatePriorPredictions,
 } from '../../shared/services/anthropic';
+import { dispatchCriticalAlert } from '../../shared/services/notifier';
+import type { User } from '../../shared/types';
 import { putItem, queryByPK, updateItem, getItem } from '../../shared/db/queries';
 import {
   researchPK,
@@ -156,7 +158,11 @@ export const handler = async (event: Event): Promise<Output> => {
       ...gsi1ResearchKeys(event.userId, generatedAt),
     });
 
-    // 5. Persist each delta as a Change record
+    // 5. Persist each delta as a Change record + fire real-time critical
+    //    alerts for significance >= 8 (the Phase 3 "Slack-pings-now" bar).
+    //    The chained send-alert.ts task handles the lower 7-bucket via the
+    //    same notifier facade — these two thresholds give us interrupt vs
+    //    follow-up framing without double-notifying on the same delta.
     const storedChanges: StoredChange[] = [];
     for (const delta of deltas) {
       const changeId = generateId();
@@ -192,6 +198,34 @@ export const handler = async (event: Event): Promise<Output> => {
         pageUrl: delta.sourceUrl,
         summary: delta.title,
       });
+
+      // Real-time critical alert (sig >= 8). Best-effort — failure logs
+      // but doesn't break the research run.
+      if (delta.significanceScore >= 8 && userRecord?.email) {
+        try {
+          await dispatchCriticalAlert({
+            user: {
+              userId: event.userId,
+              email: userRecord.email as string,
+              name: (userRecord.name as string) ?? '',
+              notificationPreferences: (userRecord as unknown as User).notificationPreferences,
+            },
+            competitorName: event.name,
+            changeId,
+            changeTitle: delta.title,
+            changeDetail: delta.detail,
+            significance: delta.significanceScore,
+            category: delta.category,
+            citationUrl: delta.sourceUrl,
+          });
+        } catch (err) {
+          logger.warn('deep-research: critical-alert dispatch failed — continuing', {
+            competitorId: event.competitorId,
+            changeId,
+            error: String(err),
+          });
+        }
+      }
     }
 
     // 6. Post-research enrichment: momentum (rules) + threat (Haiku) + tags (rules)

@@ -29,6 +29,10 @@ export const costDaySK = (date: string) => `COST#${date}`; // date in YYYY-MM-DD
 export const recommendationPK = (userId: string) => `USER#${userId}`;
 export const recommendationSK = (timestamp: string) => `REC#${timestamp}`;
 
+// IntegrationCredential — per-user (provider) notification webhook URLs (Phase 3)
+export const integrationPK = (userId: string) => `USER#${userId}`;
+export const integrationSK = (provider: string) => `INTEGRATION#${provider}`;
+
 // ─── GSI Key Builders ───
 
 // GSI1: User's changes feed (dashboard)
