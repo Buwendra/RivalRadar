@@ -30,6 +30,15 @@ const updateSchema = z.object({
     .array(z.string().min(1).max(100))
     .max(3)
     .optional(),
+  /**
+   * Phase 6c — Command-tier exclusive. Toggle for the monthly PDF briefing
+   * cron (1st of month, 8am UTC).
+   */
+  scheduledReports: z
+    .object({
+      monthly: z.boolean().optional(),
+    })
+    .optional(),
 });
 
 export const handler = apiHandler(async (event) => {
@@ -61,6 +70,7 @@ export const handler = apiHandler(async (event) => {
           createdAt: user.createdAt,
           notificationPreferences: user.notificationPreferences,
           customRecommendationCategories: user.customRecommendationCategories,
+          scheduledReports: user.scheduledReports,
         },
       },
     };
@@ -72,19 +82,35 @@ export const handler = apiHandler(async (event) => {
   if (body.name) updates.name = body.name;
   if (body.notificationPreferences) updates.notificationPreferences = body.notificationPreferences;
 
-  // Custom categories are tier-gated (Command only). Lower tiers attempting
-  // to set them get a 403 — backend is the source of truth even though the
-  // frontend hides the UI behind useCapability().
-  if (body.customRecommendationCategories !== undefined) {
+  // Custom categories + scheduled reports are tier-gated (Command only). Lower
+  // tiers attempting to set them get a 403 — backend is the source of truth
+  // even though the frontend hides the UI behind useCapability(). Both gates
+  // load the user record; do it once if either field is present.
+  if (
+    body.customRecommendationCategories !== undefined ||
+    body.scheduledReports !== undefined
+  ) {
     const userForGate = await getItem<User & Record<string, unknown>>(userPK(userId), userSK());
-    if (!hasCapability(userForGate ?? undefined, 'customRecommendationCategories')) {
-      throw new HttpError(
-        403,
-        'PLAN_REQUIRED',
-        'Custom recommendation focus areas require the Command plan.'
-      );
+    if (body.customRecommendationCategories !== undefined) {
+      if (!hasCapability(userForGate ?? undefined, 'customRecommendationCategories')) {
+        throw new HttpError(
+          403,
+          'PLAN_REQUIRED',
+          'Custom recommendation focus areas require the Command plan.'
+        );
+      }
+      updates.customRecommendationCategories = body.customRecommendationCategories;
     }
-    updates.customRecommendationCategories = body.customRecommendationCategories;
+    if (body.scheduledReports !== undefined) {
+      if (!hasCapability(userForGate ?? undefined, 'scheduledReports')) {
+        throw new HttpError(
+          403,
+          'PLAN_REQUIRED',
+          'Scheduled reports require the Command plan.'
+        );
+      }
+      updates.scheduledReports = body.scheduledReports;
+    }
   }
 
   await updateItem(userPK(userId), userSK(), updates);

@@ -19,6 +19,8 @@ interface CriticalLambdaSet {
   /** Phase 1 scheduled Lambdas — silent failure breaks the loop / cost cap. */
   enqueueRecurring: lambda.IFunction;
   aggregateAiCosts: lambda.IFunction;
+  /** Phase 6c — silent failure means Command users miss their monthly briefing. */
+  sendScheduledReports: lambda.IFunction;
 }
 
 interface MonitoringStackProps extends cdk.StackProps {
@@ -182,6 +184,7 @@ export class MonitoringStack extends cdk.Stack {
     addAnyErrorAlarm('RenderSendEmailErrors', criticalLambdas.renderSendEmail);
     addAnyErrorAlarm('EnqueueRecurringErrors', criticalLambdas.enqueueRecurring);
     addAnyErrorAlarm('AggregateAiCostsErrors', criticalLambdas.aggregateAiCosts);
+    addAnyErrorAlarm('SendScheduledReportsErrors', criticalLambdas.sendScheduledReports);
 
     // DeepResearch is occasionally going to fail on bad inputs (broken
     // competitor URLs, transient web_search failures, etc). Alert only on

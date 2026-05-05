@@ -11,4 +11,5 @@ export interface User {
   updatedAt: string;
   notificationPreferences?: NotificationPreferences;
   customRecommendationCategories?: string[];
+  scheduledReports?: { monthly?: boolean };
 }

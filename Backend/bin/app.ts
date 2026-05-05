@@ -60,6 +60,7 @@ new MonitoringStack(app, `${prefix}-Monitoring`, {
     renderSendEmail: pipelineStack.renderSendEmailFn,
     enqueueRecurring: pipelineStack.enqueueRecurringFn,
     aggregateAiCosts: pipelineStack.aggregateAiCostsFn,
+    sendScheduledReports: pipelineStack.sendScheduledReportsFn,
   },
   alertEmail: process.env.ALERT_EMAIL,
 });

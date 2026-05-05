@@ -31,6 +31,7 @@ export class PipelineStack extends cdk.Stack {
   public readonly renderSendEmailFn: nodejs.NodejsFunction;
   public readonly enqueueRecurringFn: nodejs.NodejsFunction;
   public readonly aggregateAiCostsFn: nodejs.NodejsFunction;
+  public readonly sendScheduledReportsFn: nodejs.NodejsFunction;
 
   constructor(scope: Construct, id: string, props: PipelineStackProps) {
     super(scope, id, props);
@@ -248,6 +249,56 @@ export class PipelineStack extends cdk.Stack {
       ruleName: `${this.stackName}-AggregateAiCostsCron`,
       schedule: events.Schedule.cron({ minute: '0', hour: '3' }),
       targets: [new targets.LambdaFunction(this.aggregateAiCostsFn)],
+    });
+
+    // ─── Send Scheduled Reports Lambda (Phase 6c) ───
+    // PDFKit + S3 upload + SES per user — bumped memory + timeout to match
+    // the on-demand /exports/pdf handler. The cron runs once a month so
+    // cold-start cost is irrelevant.
+    this.sendScheduledReportsFn = new nodejs.NodejsFunction(this, 'SendScheduledReports', {
+      ...lambdaDefaults,
+      entry: fnPath('scheduled/send-scheduled-reports.ts'),
+      functionName: `${this.stackName}-SendScheduledReports`,
+      timeout: cdk.Duration.minutes(5),
+      memorySize: 1024,
+      bundling: {
+        ...lambdaDefaults.bundling,
+        commandHooks: {
+          beforeBundling: () => [],
+          beforeInstall: () => [],
+          afterBundling(inputDir: string, outputDir: string) {
+            // Same .afm font copy as the api/exports/pdf handler.
+            return [
+              `node -e "const fs=require('fs'),path=require('path');const src=path.join('${inputDir.replace(/\\/g, '/')}','node_modules/pdfkit/js/data');const dst=path.join('${outputDir.replace(/\\/g, '/')}','data');if(fs.existsSync(src)){fs.mkdirSync(dst,{recursive:true});for(const f of fs.readdirSync(src))fs.copyFileSync(path.join(src,f),path.join(dst,f));}"`,
+            ];
+          },
+        },
+      },
+    });
+    table.grantReadWriteData(this.sendScheduledReportsFn);
+    snapshotBucket.grantReadWrite(this.sendScheduledReportsFn);
+    // SES send permission — the email-sending sibling Lambdas (send-alert,
+    // render-send-email) implicitly rely on either a verified identity policy
+    // or an account-level default; making it explicit here so the new Lambda
+    // doesn't depend on undocumented setup.
+    this.sendScheduledReportsFn.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ['ses:SendEmail', 'ses:SendRawEmail'],
+        resources: ['*'],
+      })
+    );
+
+    // Monthly cron — 1st of every month at 8:00 AM UTC
+    new events.Rule(this, 'MonthlyReportsCronRule', {
+      ruleName: `${this.stackName}-MonthlyReportsCron`,
+      schedule: events.Schedule.cron({
+        minute: '0',
+        hour: '8',
+        day: '1',
+        month: '*',
+        year: '*',
+      }),
+      targets: [new targets.LambdaFunction(this.sendScheduledReportsFn)],
     });
 
     // ─── Outputs ───

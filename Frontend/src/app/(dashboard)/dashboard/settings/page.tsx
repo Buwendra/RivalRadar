@@ -8,6 +8,7 @@ import { PlanUpgradeCard } from "@/components/settings/plan-upgrade-card";
 import { NotificationPreferencesSection } from "@/components/settings/notification-preferences-section";
 import { IntegrationsSection } from "@/components/settings/integrations-section";
 import { CustomCategoriesSection } from "@/components/settings/custom-categories-section";
+import { ScheduledReportsSection } from "@/components/settings/scheduled-reports-section";
 
 export default function SettingsPage() {
   return (
@@ -28,6 +29,7 @@ export default function SettingsPage() {
 
         <TabsContent value="notifications" className="mt-6 space-y-6">
           <NotificationPreferencesSection />
+          <ScheduledReportsSection />
           <IntegrationsSection />
         </TabsContent>
 

@@ -25,6 +25,7 @@ export const usersApi = {
     name?: string;
     notificationPreferences?: NotificationPreferences;
     customRecommendationCategories?: string[];
+    scheduledReports?: { monthly?: boolean };
   }) =>
     apiClient<{ message: string }>("/users/me", {
       method: "PUT",

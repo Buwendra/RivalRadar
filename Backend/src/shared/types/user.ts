@@ -47,6 +47,15 @@ export interface User {
   // generateRecommendations threads into the Sonnet prompt to bias output
   // toward what this user actually cares about. Empty/undefined = generic.
   customRecommendationCategories?: string[];
+
+  // Scheduled monthly briefing reports (Phase 6c — Command tier only).
+  // The send-scheduled-reports Lambda runs on the 1st of each month and
+  // delivers a PDF briefing via email link to opted-in Command users.
+  // `lastScheduledReportAt` is used to dedupe in case the cron retries.
+  scheduledReports?: {
+    monthly?: boolean;
+  };
+  lastScheduledReportAt?: string;
 }
 
 /**
