@@ -7,4 +7,6 @@ export interface Subscription {
   plan: PlanTier;
   status: 'active' | 'canceled' | 'past_due' | 'trialing' | 'paused';
   currentPeriodEnd: string;
+  createdAt?: string;
+  updatedAt?: string;
 }

@@ -39,6 +39,10 @@ export const changeNoteSK = (changeId: string, timestamp: string) =>
   `NOTE#${changeId}#${timestamp}`;
 export const changeNoteSKPrefix = (changeId: string) => `NOTE#${changeId}#`;
 
+// CancellationFeedback — exit-survey response keyed by opaque token (Phase 8b)
+export const cancelFeedbackPK = (token: string) => `CANCEL_FEEDBACK#${token}`;
+export const cancelFeedbackSK = () => 'META';
+
 // ─── GSI Key Builders ───
 
 // GSI1: User's changes feed (dashboard)

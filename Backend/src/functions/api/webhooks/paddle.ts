@@ -5,12 +5,23 @@ import {
   TransactionNotification,
 } from '@paddle/paddle-node-sdk';
 import { apiHandler, HttpError, PublicEvent } from '../../../shared/middleware/handler';
-import { putItemIfNotExists, updateItem } from '../../../shared/db/queries';
-import { subscriptionPK, subscriptionSK, userPK, userSK } from '../../../shared/db/keys';
+import { getItem, putItem, putItemIfNotExists, updateItem } from '../../../shared/db/queries';
+import {
+  cancelFeedbackPK,
+  cancelFeedbackSK,
+  subscriptionPK,
+  subscriptionSK,
+  userPK,
+  userSK,
+} from '../../../shared/db/keys';
 import { verifyPaddleWebhook } from '../../../shared/services/paddle';
 import { sendEmail } from '../../../shared/services/ses';
+import { generateId } from '../../../shared/utils/id';
 import { PlanTier } from '../../../shared/types';
+import type { CancellationFeedback, User } from '../../../shared/types';
 import { logger } from '../../../shared/utils/logger';
+
+const SURVEY_TTL_DAYS = 30;
 
 function getRawBody(event: PublicEvent): string {
   return event.isBase64Encoded
@@ -111,15 +122,80 @@ export const handler = apiHandler<PublicEvent>(async (event) => {
         break;
       }
 
+      const now = new Date();
+
       await updateItem(subscriptionPK(userId), subscriptionSK(), {
         status: 'canceled',
-        updatedAt: new Date().toISOString(),
+        updatedAt: now.toISOString(),
       });
+
+      // Load the user record so we know which plan they were on (for the
+      // analytics) and where to send the survey email. We do this BEFORE the
+      // downgrade so we capture the canceled tier, not 'scout'.
+      const user = await getItem<User & Record<string, unknown>>(userPK(userId), userSK());
+      const canceledPlan: PlanTier = (user?.plan as PlanTier | undefined) ?? 'scout';
 
       await updateItem(userPK(userId), userSK(), {
         plan: 'scout',
-        updatedAt: new Date().toISOString(),
+        updatedAt: now.toISOString(),
       });
+
+      logger.info('subscription_canceled', { userId, subId: sub.id, canceledPlan });
+
+      // Phase 8b — best-effort exit-survey email. Generate an opaque ULID
+      // token, persist a CancellationFeedback row keyed by it, then email
+      // a one-click survey link. Best-effort — survey-email failures must
+      // not unwind the cancellation processing.
+      if (user?.email) {
+        try {
+          const token = generateId();
+          const expiresAtSec =
+            Math.floor(now.getTime() / 1000) + SURVEY_TTL_DAYS * 24 * 60 * 60;
+          const row: CancellationFeedback = {
+            token,
+            userId,
+            email: user.email,
+            plan: canceledPlan,
+            paddleSubscriptionId: sub.id,
+            createdAt: now.toISOString(),
+            expiresAt: expiresAtSec,
+          };
+          await putItem({
+            PK: cancelFeedbackPK(token),
+            SK: cancelFeedbackSK(),
+            ...row,
+          });
+
+          const surveyUrl = `${process.env.FRONTEND_URL ?? 'http://localhost:3000'}/cancellation-survey/${token}`;
+          await sendEmail(
+            user.email,
+            'Sorry to see you go — 30 seconds to help us improve?',
+            `
+              <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 0 auto;">
+                <div style="padding: 24px 28px;">
+                  <p>Hi ${user.name ?? 'there'},</p>
+                  <p>We noticed you canceled your RivalScan ${canceledPlan} subscription. We'd love to know why so we can do better for the next person.</p>
+                  <p>30 seconds to fill in — no follow-up sales pitch:</p>
+                  <div style="text-align: center; margin: 24px 0;">
+                    <a href="${surveyUrl}" style="background: #2563eb; color: white; padding: 12px 28px; border-radius: 6px; text-decoration: none; font-weight: 500;">
+                      Tell us why
+                    </a>
+                  </div>
+                  <p style="color: #6b7280; font-size: 12px;">
+                    The link expires in 30 days. If you change your mind, you can resubscribe anytime in your dashboard.
+                  </p>
+                </div>
+              </div>
+            `
+          );
+          logger.info('cancellation_survey_sent', { userId, token, plan: canceledPlan });
+        } catch (err) {
+          logger.warn('cancellation_survey_send_failed', {
+            userId,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
+      }
 
       logger.info('Subscription canceled, user downgraded to scout', { userId, subId: sub.id });
       break;

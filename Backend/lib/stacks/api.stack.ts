@@ -231,6 +231,25 @@ export class ApiStack extends cdk.Stack {
     // ─── Webhook Routes (public, verified by signature) ───
     addRoute('PaddleWebhook', apigatewayv2.HttpMethod.POST, '/webhooks/paddle', 'api/webhooks/paddle.ts', false);
 
+    // ─── Cancellation Feedback (Phase 8b — public, token-validated) ───
+    addRoute(
+      'CancellationFeedbackSubmit',
+      apigatewayv2.HttpMethod.POST,
+      '/cancellation-feedback/{token}',
+      'api/cancellation/submit.ts',
+      false
+    );
+
+    // ─── Admin Business Snapshot (Phase 8b — owner-only via ADMIN_EMAILS allowlist) ───
+    addRoute(
+      'AdminBusiness',
+      apigatewayv2.HttpMethod.GET,
+      '/admin/business',
+      'api/admin/business.ts',
+      true,
+      { ADMIN_EMAILS: process.env.ADMIN_EMAILS ?? '' }
+    );
+
     // ─── Outputs ───
     new cdk.CfnOutput(this, 'ApiUrl', { value: this.httpApi.apiEndpoint });
   }
