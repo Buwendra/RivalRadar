@@ -33,6 +33,12 @@ export const recommendationSK = (timestamp: string) => `REC#${timestamp}`;
 export const integrationPK = (userId: string) => `USER#${userId}`;
 export const integrationSK = (provider: string) => `INTEGRATION#${provider}`;
 
+// ChangeNote — analyst annotation on a Change (Phase 7a)
+export const changeNotePK = (competitorId: string) => `COMP#${competitorId}`;
+export const changeNoteSK = (changeId: string, timestamp: string) =>
+  `NOTE#${changeId}#${timestamp}`;
+export const changeNoteSKPrefix = (changeId: string) => `NOTE#${changeId}#`;
+
 // ─── GSI Key Builders ───
 
 // GSI1: User's changes feed (dashboard)

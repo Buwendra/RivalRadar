@@ -27,4 +27,13 @@ export const competitorsApi = {
     apiClient<{ message: string }>(`/competitors/${id}/research`, {
       method: "POST",
     }),
+
+  snooze: (id: string, snoozedUntil: string | null) =>
+    apiClient<{ id: string; snoozedUntil: string | null; snoozedAt: string | null }>(
+      `/competitors/${id}/snooze`,
+      {
+        method: "PATCH",
+        body: { snoozedUntil },
+      }
+    ),
 };

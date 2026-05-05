@@ -12,6 +12,7 @@ export type {
   PredictedMoveTimeHorizon,
   PredictionStatus,
   EvaluatedPrediction,
+  ChangeNote,
   PageType,
 } from "./competitor";
 export type { Change, ChangeDetail, ChangeType, AiAnalysis, ChangeFilters } from "./change";

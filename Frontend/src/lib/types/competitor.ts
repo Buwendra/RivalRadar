@@ -65,6 +65,18 @@ export interface Competitor {
   predictedMovesAsOf?: string;
   predictionHistory?: EvaluatedPrediction[];
   predictionHistoryAsOf?: string;
+  snoozedUntil?: string | null;
+  snoozedAt?: string | null;
+}
+
+export interface ChangeNote {
+  id: string;
+  changeId: string;
+  competitorId: string;
+  authorUserId: string;
+  authorName: string;
+  body: string;
+  createdAt: string;
 }
 
 export interface CompetitorDetailChange {

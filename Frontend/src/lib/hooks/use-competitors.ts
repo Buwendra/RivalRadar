@@ -43,3 +43,15 @@ export function useTriggerResearch() {
     },
   });
 }
+
+export function useSnoozeCompetitor() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, snoozedUntil }: { id: string; snoozedUntil: string | null }) =>
+      competitorsApi.snooze(id, snoozedUntil),
+    onSuccess: (_data, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["competitors"] });
+      queryClient.invalidateQueries({ queryKey: ["competitors", vars.id] });
+    },
+  });
+}

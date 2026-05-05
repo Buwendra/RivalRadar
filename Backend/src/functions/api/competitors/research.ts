@@ -3,6 +3,7 @@ import { apiHandler, getUserEmail, HttpError } from '../../../shared/middleware/
 import { getItem, queryGSI } from '../../../shared/db/queries';
 import { competitorPK, competitorSK, userPK, userSK } from '../../../shared/db/keys';
 import { enforceResearchEligibility } from '../../../shared/utils/research-eligibility';
+import { isSnoozed } from '../../../shared/utils/snooze';
 import type { User } from '../../../shared/types/user';
 
 const sfn = new SFNClient({});
@@ -23,6 +24,16 @@ export const handler = apiHandler(async (event) => {
   ]);
   if (!user) throw new HttpError(404, 'USER_NOT_FOUND', 'User not found');
   if (!competitor) throw new HttpError(404, 'NOT_FOUND', 'Competitor not found');
+
+  // Phase 7a — block manual research on snoozed competitors. Frontend hides
+  // the button when snoozed; this is the backend backstop.
+  if (isSnoozed(competitor as { snoozedUntil?: string })) {
+    throw new HttpError(
+      409,
+      'COMPETITOR_SNOOZED',
+      'This competitor is snoozed. Un-snooze before running research.'
+    );
+  }
 
   // Misuse-defense gate: status check + sanctions denylist + rate limit + Haiku classifier.
   // Failures here surface as 4xx with an actionable reason (and the rate-limit reset window

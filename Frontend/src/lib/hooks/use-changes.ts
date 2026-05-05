@@ -1,6 +1,11 @@
 "use client";
 
-import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { changesApi } from "@/lib/api/changes";
 import type { ChangeFilters } from "@/lib/types";
 
@@ -23,6 +28,26 @@ export function useChangeFeedback() {
       changesApi.feedback(id, helpful),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["changes"] });
+    },
+  });
+}
+
+export function useChangeNotes(changeId: string | undefined) {
+  return useQuery({
+    queryKey: ["changes", changeId, "notes"],
+    queryFn: () => changesApi.listNotes(changeId!),
+    enabled: !!changeId,
+    staleTime: 30_000,
+  });
+}
+
+export function useCreateChangeNote() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ changeId, body }: { changeId: string; body: string }) =>
+      changesApi.createNote(changeId, body),
+    onSuccess: (_data, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["changes", vars.changeId, "notes"] });
     },
   });
 }

@@ -152,11 +152,16 @@ export class ApiStack extends cdk.Stack {
     addRoute('CompetitorDelete', apigatewayv2.HttpMethod.DELETE, '/competitors/{id}', 'api/competitors/delete.ts');
     const researchFn = addRoute('CompetitorResearch', apigatewayv2.HttpMethod.POST, '/competitors/{id}/research', 'api/competitors/research.ts', true, pipelineEnv);
     researchStateMachine.grantStartExecution(researchFn);
+    // Phase 7a — snooze toggle
+    addRoute('CompetitorSnooze', apigatewayv2.HttpMethod.PATCH, '/competitors/{id}/snooze', 'api/competitors/snooze.ts');
 
     // ─── Changes Routes ───
     addRoute('ChangesList', apigatewayv2.HttpMethod.GET, '/changes', 'api/changes/list.ts');
     addRoute('ChangesGet', apigatewayv2.HttpMethod.GET, '/changes/{id}', 'api/changes/get.ts');
     addRoute('ChangesFeedback', apigatewayv2.HttpMethod.POST, '/changes/{id}/feedback', 'api/changes/feedback.ts');
+    // Phase 7a — change notes (single handler dispatches GET vs POST internally)
+    addRoute('ChangesNotesList', apigatewayv2.HttpMethod.GET, '/changes/{id}/notes', 'api/changes/notes.ts');
+    addRoute('ChangesNotesCreate', apigatewayv2.HttpMethod.POST, '/changes/{id}/notes', 'api/changes/notes.ts');
 
     // ─── Recommendations Routes (Phase 2) ───
     addRoute('RecommendationsList', apigatewayv2.HttpMethod.GET, '/recommendations', 'api/recommendations/list.ts');

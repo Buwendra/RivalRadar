@@ -1,6 +1,12 @@
 import { apiClientWithMeta } from "./client";
 import { apiClient } from "./client";
-import type { Change, ChangeDetail, ChangeFilters, PaginationMeta } from "@/lib/types";
+import type {
+  Change,
+  ChangeDetail,
+  ChangeFilters,
+  ChangeNote,
+  PaginationMeta,
+} from "@/lib/types";
 
 export interface ChangesListResponse {
   data: Change[];
@@ -29,5 +35,14 @@ export const changesApi = {
     apiClient<{ message: string }>(`/changes/${id}/feedback`, {
       method: "POST",
       body: { helpful },
+    }),
+
+  listNotes: (changeId: string) =>
+    apiClient<ChangeNote[]>(`/changes/${changeId}/notes`),
+
+  createNote: (changeId: string, body: string) =>
+    apiClient<ChangeNote>(`/changes/${changeId}/notes`, {
+      method: "POST",
+      body: { body },
     }),
 };

@@ -1,6 +1,7 @@
 import { queryGSI, queryByPK } from '../../shared/db/queries';
 import { competitorPK } from '../../shared/db/keys';
 import { logger } from '../../shared/utils/logger';
+import { isSnoozed } from '../../shared/utils/snooze';
 
 interface Event {
   userId: string;
@@ -52,8 +53,20 @@ export const handler = async (
     queryByPK(competitorPK(event.userId), 'COMP#', { scanForward: true }),
   ]);
 
-  // Map and sort changes by significance
+  // Build a snooze map by competitor name so we can drop changes from
+  // currently-snoozed competitors before they leak into the digest. Keying
+  // by name (not id) because aggregated changes have only the denormalized
+  // competitorName field. Names are unique within a user's portfolio at
+  // create-time so collisions are not a concern.
+  const snoozedNames = new Set(
+    competitorsResult.items
+      .filter((c) => isSnoozed(c as { snoozedUntil?: string }))
+      .map((c) => c.name as string)
+  );
+
+  // Map and sort changes by significance, filtering out snoozed competitors
   const changes: AggregatedChange[] = changesResult.items
+    .filter((item) => !snoozedNames.has(item.competitorName as string))
     .map((item) => {
       const analysis = item.aiAnalysis as Record<string, unknown>;
       return {
@@ -71,8 +84,10 @@ export const handler = async (
   // Compact projection of each competitor's current portfolio state. Only
   // include competitors that have been enriched at least once (have momentum
   // or threat) so the digest doesn't include stale "unscored" placeholders.
+  // Snoozed competitors are also excluded — the user explicitly asked us
+  // not to surface them.
   const competitorSnapshots: CompetitorSnapshot[] = competitorsResult.items
-    .filter((c) => c.momentum || c.threatLevel || c.derivedTags)
+    .filter((c) => (c.momentum || c.threatLevel || c.derivedTags) && !isSnoozed(c as { snoozedUntil?: string }))
     .map((c) => {
       const derivedState = c.derivedState as { stage?: string } | undefined;
       const tags = (c.derivedTags as string[] | undefined) ?? [];

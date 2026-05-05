@@ -8,6 +8,7 @@ import { ErrorAlert } from "@/components/shared/error-alert";
 import { AiAnalysisPanel } from "@/components/dashboard/ai-analysis-panel";
 import { DiffViewer } from "@/components/dashboard/diff-viewer";
 import { FeedbackButtons } from "@/components/dashboard/feedback-buttons";
+import { ChangeNotesSection } from "@/components/dashboard/change-notes-section";
 import { SignificanceBadge } from "@/components/dashboard/significance-badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -72,6 +73,10 @@ export default function ChangeDetailPage() {
       <Separator className="bg-brand-700" />
 
       <FeedbackButtons changeId={change.id} currentFeedback={change.feedbackHelpful} />
+
+      <Separator className="bg-brand-700" />
+
+      <ChangeNotesSection changeId={change.id} />
     </div>
   );
 }

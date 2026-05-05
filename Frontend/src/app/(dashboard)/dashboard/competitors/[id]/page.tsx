@@ -48,6 +48,7 @@ import { ActivitySparkline } from "@/components/dashboard/activity-sparkline";
 import { PageActivityList } from "@/components/dashboard/page-activity-list";
 import { MomentumChip } from "@/components/dashboard/momentum-chip";
 import { ThreatCard } from "@/components/dashboard/threat-card";
+import { SnoozeButton } from "@/components/dashboard/snooze-button";
 import { CompetitorTagChips } from "@/components/dashboard/competitor-tag-chips";
 import { PredictedMovesCard } from "@/components/dashboard/predicted-moves-card";
 import { formatSmartDate } from "@/lib/utils/format-date";
@@ -147,11 +148,17 @@ export default function CompetitorDetailPage() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <PageHeader title={competitor.name}>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
+              <SnoozeButton
+                competitorId={competitor.id}
+                competitorName={competitor.name}
+                snoozedUntil={competitor.snoozedUntil}
+                variant="compact"
+              />
               <Button
                 size="sm"
                 onClick={handleResearch}
-                disabled={triggerResearch.isPending}
+                disabled={triggerResearch.isPending || !!(competitor.snoozedUntil && Date.parse(competitor.snoozedUntil) > Date.now())}
                 className="bg-cta text-brand-950 hover:bg-cta-hover"
               >
                 {triggerResearch.isPending ? (

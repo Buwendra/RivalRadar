@@ -29,6 +29,7 @@ import { SFNClient, StartExecutionCommand } from '@aws-sdk/client-sfn';
 import { queryGSI, getItem, updateItem } from '../../shared/db/queries';
 import { competitorPK, competitorSK, userPK, userSK } from '../../shared/db/keys';
 import { enforceResearchEligibility } from '../../shared/utils/research-eligibility';
+import { isSnoozed } from '../../shared/utils/snooze';
 import { PLAN_LIMITS } from '../../shared/types';
 import type { User } from '../../shared/types/user';
 import type { Competitor } from '../../shared/types/competitor';
@@ -123,6 +124,10 @@ export const handler = async (): Promise<EnqueueResult> => {
   const dueByUser = new Map<string, Array<Competitor & Record<string, unknown>>>();
 
   for (const comp of activeCompetitors) {
+    // Phase 7a — snoozed competitors are fully silenced: skip recurring
+    // research entirely. The user explicitly asked us not to bother.
+    if (isSnoozed(comp)) continue;
+
     let user = userCache.get(comp.userId);
     if (user === undefined) {
       user =

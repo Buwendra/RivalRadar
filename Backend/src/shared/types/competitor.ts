@@ -74,4 +74,14 @@ export interface Competitor {
   // competitors whose latest run is still fresh.
   researchCadenceDays?: number;
   lastRecurringResearchAt?: string;
+
+  // Snooze (Phase 7a). When set + in the future, the competitor is fully
+  // silenced: recurring research skips it, aggregate-changes filters out
+  // its changes from the weekly digest, real-time critical alerts are
+  // suppressed, and the dashboard hides changes from this competitor by
+  // default. Auto-expires at `snoozedUntil`. Set to null/undefined to
+  // un-snooze. `snoozedAt` records when the snooze started for forensic
+  // logging + a future "snooze history" view.
+  snoozedUntil?: string;
+  snoozedAt?: string;
 }
