@@ -56,6 +56,13 @@ export interface User {
     monthly?: boolean;
   };
   lastScheduledReportAt?: string;
+
+  // Retention loop (Phase 8a). `lastLoginAt` is bumped by a once-per-session
+  // ping from the dashboard layout. `lastRetentionNudgeAt` is stamped by the
+  // daily send-retention-nudges Lambda after a nudge email goes out and acts
+  // as a 90-day cooldown to prevent nudge fatigue.
+  lastLoginAt?: string;
+  lastRetentionNudgeAt?: string;
 }
 
 /**

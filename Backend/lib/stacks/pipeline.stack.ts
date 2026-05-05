@@ -32,6 +32,7 @@ export class PipelineStack extends cdk.Stack {
   public readonly enqueueRecurringFn: nodejs.NodejsFunction;
   public readonly aggregateAiCostsFn: nodejs.NodejsFunction;
   public readonly sendScheduledReportsFn: nodejs.NodejsFunction;
+  public readonly sendRetentionNudgesFn: nodejs.NodejsFunction;
 
   constructor(scope: Construct, id: string, props: PipelineStackProps) {
     super(scope, id, props);
@@ -299,6 +300,25 @@ export class PipelineStack extends cdk.Stack {
         year: '*',
       }),
       targets: [new targets.LambdaFunction(this.sendScheduledReportsFn)],
+    });
+
+    // ─── Send Retention Nudges Lambda (Phase 8a) ───
+    // Daily 4am UTC scan for users who haven't logged in for 7+ days.
+    // Quarterly cap on per-user nudges enforced inside the handler.
+    this.sendRetentionNudgesFn = createPipelineFn(
+      'SendRetentionNudges',
+      'scheduled/send-retention-nudges.ts'
+    );
+    this.sendRetentionNudgesFn.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ['ses:SendEmail', 'ses:SendRawEmail'],
+        resources: ['*'],
+      })
+    );
+    new events.Rule(this, 'DailyRetentionCronRule', {
+      ruleName: `${this.stackName}-DailyRetentionCron`,
+      schedule: events.Schedule.cron({ minute: '0', hour: '4' }),
+      targets: [new targets.LambdaFunction(this.sendRetentionNudgesFn)],
     });
 
     // ─── Outputs ───

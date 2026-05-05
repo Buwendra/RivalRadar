@@ -1,6 +1,6 @@
 "use client";
 
-import { ExternalLink, Newspaper, Package, DollarSign, Users, MessageCircle } from "lucide-react";
+import { ExternalLink, Newspaper, Package, DollarSign, Users, MessageCircle, ShieldCheck } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -9,8 +9,14 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { cn } from "@/lib/utils";
 import { formatSmartDate } from "@/lib/utils/format-date";
-import type { ResearchFinding, ResearchCategory, FindingItem } from "@/lib/types";
+import {
+  scoreSource,
+  dedupeCitations,
+  type SourceQuality,
+} from "@/lib/utils/source-quality";
+import type { ResearchFinding, ResearchCategory, FindingItem, Citation } from "@/lib/types";
 import { AiDisclaimer } from "./ai-disclaimer";
 
 const CATEGORY_META: Record<ResearchCategory, { label: string; Icon: typeof Newspaper }> = {
@@ -29,9 +35,21 @@ const IMPORTANCE_VARIANT: Record<1 | 2 | 3, "secondary" | "default" | "destructi
 
 interface ResearchCardProps {
   finding: ResearchFinding;
+  /**
+   * Competitor's own website URL — citations to this domain count as 'high'
+   * source quality (their own announcement). Optional — when absent, the
+   * first-party rule is skipped.
+   */
+  competitorUrl?: string;
 }
 
-export function ResearchCard({ finding }: ResearchCardProps) {
+const QUALITY_CLASS: Record<SourceQuality, string> = {
+  high: "text-primary hover:underline font-medium",
+  medium: "text-primary hover:underline",
+  low: "text-primary/60 hover:underline opacity-70",
+};
+
+export function ResearchCard({ finding, competitorUrl }: ResearchCardProps) {
   const totalFindings =
     finding.categories.news.length +
     finding.categories.product.length +
@@ -42,6 +60,11 @@ export function ResearchCard({ finding }: ResearchCardProps) {
   const nonEmptyCategories = (Object.keys(finding.categories) as ResearchCategory[]).filter(
     (cat) => finding.categories[cat].length > 0
   );
+
+  // Dedupe citations across categories — the same URL often appears in
+  // multiple findings (e.g. a single TechCrunch article cited from both
+  // "news" and "funding"). Show once with a count badge instead.
+  const dedupedCitations = dedupeCitations(finding.citations as Citation[]);
 
   return (
     <Card className="border-brand-700 bg-brand-900">
@@ -67,28 +90,46 @@ export function ResearchCard({ finding }: ResearchCardProps) {
               <CategorySection key={cat} category={cat} items={finding.categories[cat]} />
             ))}
 
-            {finding.citations.length > 0 && (
+            {dedupedCitations.length > 0 && (
               <AccordionItem value="citations" className="border-brand-700">
                 <AccordionTrigger className="text-sm hover:no-underline">
                   <span className="flex items-center gap-2">
                     <ExternalLink className="h-4 w-4" />
-                    Sources ({finding.citations.length})
+                    Sources ({dedupedCitations.length})
                   </span>
                 </AccordionTrigger>
                 <AccordionContent>
                   <ul className="space-y-1 pt-1">
-                    {finding.citations.map((citation) => (
-                      <li key={citation.url} className="text-xs">
-                        <a
-                          href={citation.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-primary hover:underline"
-                        >
-                          {citation.title}
-                        </a>
-                      </li>
-                    ))}
+                    {dedupedCitations.map((citation) => {
+                      const quality = scoreSource(citation.url, competitorUrl);
+                      return (
+                        <li key={citation.url} className="flex items-baseline gap-1.5 text-xs">
+                          {quality === "high" && (
+                            <ShieldCheck
+                              className="h-3 w-3 flex-shrink-0 text-emerald-400"
+                              aria-label="Reputable source"
+                            />
+                          )}
+                          <a
+                            href={citation.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={cn("flex-1 truncate", QUALITY_CLASS[quality])}
+                            title={quality === "low" ? "Low-signal source — verify before relying on this" : undefined}
+                          >
+                            {citation.title}
+                          </a>
+                          {citation.occurrences > 1 && (
+                            <Badge
+                              variant="outline"
+                              className="h-4 flex-shrink-0 px-1 text-[10px] tabular-nums"
+                            >
+                              ×{citation.occurrences}
+                            </Badge>
+                          )}
+                        </li>
+                      );
+                    })}
                   </ul>
                 </AccordionContent>
               </AccordionItem>

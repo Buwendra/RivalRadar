@@ -124,6 +124,8 @@ export class ApiStack extends cdk.Stack {
     // ─── User Routes ───
     addRoute('UserProfile', apigatewayv2.HttpMethod.GET, '/users/me', 'api/users/profile.ts');
     addRoute('UserUpdate', apigatewayv2.HttpMethod.PUT, '/users/me', 'api/users/profile.ts');
+    // Phase 8a — once-per-session login ping for the retention-nudge cron
+    addRoute('UserPing', apigatewayv2.HttpMethod.POST, '/users/me/ping', 'api/users/ping.ts');
     const onboardFn = addRoute('UserOnboard', apigatewayv2.HttpMethod.POST, '/users/onboard', 'api/users/onboard.ts', true, pipelineEnv);
     researchStateMachine.grantStartExecution(onboardFn);
 

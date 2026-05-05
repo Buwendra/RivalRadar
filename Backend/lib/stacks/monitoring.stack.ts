@@ -21,6 +21,8 @@ interface CriticalLambdaSet {
   aggregateAiCosts: lambda.IFunction;
   /** Phase 6c — silent failure means Command users miss their monthly briefing. */
   sendScheduledReports: lambda.IFunction;
+  /** Phase 8a — silent failure means inactive users don't get re-engagement emails. */
+  sendRetentionNudges: lambda.IFunction;
 }
 
 interface MonitoringStackProps extends cdk.StackProps {
@@ -185,6 +187,7 @@ export class MonitoringStack extends cdk.Stack {
     addAnyErrorAlarm('EnqueueRecurringErrors', criticalLambdas.enqueueRecurring);
     addAnyErrorAlarm('AggregateAiCostsErrors', criticalLambdas.aggregateAiCosts);
     addAnyErrorAlarm('SendScheduledReportsErrors', criticalLambdas.sendScheduledReports);
+    addAnyErrorAlarm('SendRetentionNudgesErrors', criticalLambdas.sendRetentionNudges);
 
     // DeepResearch is occasionally going to fail on bad inputs (broken
     // competitor URLs, transient web_search failures, etc). Alert only on

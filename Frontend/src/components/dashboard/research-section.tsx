@@ -11,10 +11,11 @@ import type { ResearchFinding } from "@/lib/types";
 
 interface ResearchSectionProps {
   competitorId: string;
+  competitorUrl?: string;
   research: ResearchFinding[];
 }
 
-export function ResearchSection({ competitorId, research }: ResearchSectionProps) {
+export function ResearchSection({ competitorId, competitorUrl, research }: ResearchSectionProps) {
   const triggerResearch = useTriggerResearch();
 
   const handleTrigger = async () => {
@@ -48,7 +49,7 @@ export function ResearchSection({ competitorId, research }: ResearchSectionProps
       </div>
 
       {latest ? (
-        <ResearchCard finding={latest} />
+        <ResearchCard finding={latest} competitorUrl={competitorUrl} />
       ) : (
         <Card className="border-brand-700 bg-brand-900">
           <CardContent className="p-5 text-center">

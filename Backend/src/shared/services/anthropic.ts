@@ -2,6 +2,7 @@ import { createHash } from 'crypto';
 import { getSecret } from './secrets';
 import { generateId } from '../utils/id';
 import { computeAnthropicCostUsd } from '../utils/anthropic-pricing';
+import { getPromptVersion } from './prompt-registry';
 import {
   AiAnalysis,
   ResearchFinding,
@@ -136,9 +137,15 @@ function shortHash(input: string): string {
  * log line and rolled up nightly into a per-user `CostDay` record. Calls
  * with no `userId` are system tasks (e.g. scheduled aggregators) and roll up
  * into the org-level cost only.
+ *
+ * `promptVersion` (Phase 8a) tags the event with the prompt-registry version
+ * for offline quality measurement. If absent, callAnthropic looks up the
+ * current version for the opName via the registry — every helper gets a
+ * version automatically without per-call boilerplate.
  */
 interface AnthropicCallContext {
   userId?: string | null;
+  promptVersion?: string;
 }
 
 /**
@@ -186,6 +193,7 @@ async function callAnthropic(
   const promptHash = shortHash(extractPromptForHashing(body));
   const model = (body as { model?: string }).model ?? 'unknown';
   const userId = context?.userId ?? null;
+  const promptVersion = context?.promptVersion ?? getPromptVersion(opName);
   const startedAt = Date.now();
 
   logger.info('ai_call_started', {
@@ -193,6 +201,7 @@ async function callAnthropic(
     opName,
     model,
     promptHash,
+    promptVersion,
     userId,
   });
 
@@ -216,6 +225,7 @@ async function callAnthropic(
         opName,
         model,
         promptHash,
+        promptVersion,
         userId,
         status: response.ok ? 'ok' : 'http-error',
         httpStatus: response.status,

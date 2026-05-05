@@ -380,6 +380,7 @@ export default function CompetitorDetailPage() {
         <TabsContent value="research" className="space-y-6">
           <ResearchSection
             competitorId={id}
+            competitorUrl={competitor.url}
             research={recentResearch}
           />
 
@@ -401,7 +402,7 @@ export default function CompetitorDetailPage() {
                       {r.citations.length === 1 ? "" : "s"}
                     </AccordionTrigger>
                     <AccordionContent>
-                      <ResearchCard finding={r} />
+                      <ResearchCard finding={r} competitorUrl={competitor.url} />
                     </AccordionContent>
                   </AccordionItem>
                 ))}

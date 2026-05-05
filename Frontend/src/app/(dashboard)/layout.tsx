@@ -1,10 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AuthGuard } from "@/components/layout/auth-guard";
 import { DashboardSidebar } from "@/components/layout/dashboard-sidebar";
 import { DashboardHeader } from "@/components/layout/dashboard-header";
 import { MobileSidebar } from "@/components/layout/mobile-sidebar";
+import { usersApi } from "@/lib/api/users";
+
+const PING_SESSION_KEY = "rs_pinged_this_session";
 
 export default function DashboardLayout({
   children,
@@ -12,6 +15,19 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
+  // Phase 8a — bump server-side lastLoginAt once per session for the
+  // retention-nudge cron. sessionStorage guard prevents re-firing on
+  // intra-session navigation; cleared automatically on tab close.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.sessionStorage.getItem(PING_SESSION_KEY)) return;
+    window.sessionStorage.setItem(PING_SESSION_KEY, "1");
+    // Best-effort — failures don't affect the user experience
+    usersApi.ping().catch((err) => {
+      console.warn("login ping failed", err);
+    });
+  }, []);
 
   return (
     <AuthGuard>

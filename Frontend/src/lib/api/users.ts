@@ -37,4 +37,15 @@ export const usersApi = {
       method: "POST",
       body: data,
     }),
+
+  /**
+   * Phase 8a — bumps server-side `lastLoginAt`. Called once per session from
+   * the dashboard layout's mount effect (sessionStorage-guarded). Used by
+   * the retention-nudge cron to identify users who haven't returned in 7+ days.
+   */
+  ping: () =>
+    apiClient<{ pinged: boolean }>("/users/me/ping", {
+      method: "POST",
+      body: {},
+    }),
 };
