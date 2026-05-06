@@ -1,9 +1,13 @@
 import { SFNClient, StartExecutionCommand } from '@aws-sdk/client-sfn';
 import { apiHandler, getUserEmail, HttpError } from '../../../shared/middleware/handler';
-import { getItem, queryGSI } from '../../../shared/db/queries';
+import { getItem } from '../../../shared/db/queries';
 import { competitorPK, competitorSK, userPK, userSK } from '../../../shared/db/keys';
 import { enforceResearchEligibility } from '../../../shared/utils/research-eligibility';
 import { isSnoozed } from '../../../shared/utils/snooze';
+import {
+  resolveTenantContext,
+  getRequestedWorkspaceId,
+} from '../../../shared/middleware/tenant';
 import type { User } from '../../../shared/types/user';
 
 const sfn = new SFNClient({});
@@ -14,9 +18,11 @@ export const handler = apiHandler(async (event) => {
 
   if (!compId) throw new HttpError(400, 'MISSING_ID', 'Competitor ID is required');
 
-  const { items: emailItems } = await queryGSI('GSI3', 'GSI3PK', email, 'USER#');
-  if (emailItems.length === 0) throw new HttpError(404, 'USER_NOT_FOUND', 'User not found');
-  const userId = (emailItems[0].GSI3SK as string).replace('USER#', '');
+  const ctx = await resolveTenantContext(
+    email,
+    getRequestedWorkspaceId(event.headers as Record<string, string | undefined>)
+  );
+  const userId = ctx.tenantUserId;
 
   const [user, competitor] = await Promise.all([
     getItem<User & Record<string, unknown>>(userPK(userId), userSK()),

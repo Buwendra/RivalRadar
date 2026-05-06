@@ -1,10 +1,14 @@
 import { z } from 'zod';
 import { randomBytes } from 'crypto';
-import { apiHandler, getUserEmail, HttpError, parseBody } from '../../../shared/middleware/handler';
-import { queryGSI, putItem, getItem } from '../../../shared/db/queries';
+import { apiHandler, getUserEmail, parseBody } from '../../../shared/middleware/handler';
+import { putItem, getItem } from '../../../shared/db/queries';
 import { integrationPK, integrationSK } from '../../../shared/db/keys';
 import { validate } from '../../../shared/middleware/validation';
 import { logger } from '../../../shared/utils/logger';
+import {
+  resolveTenantContext,
+  getRequestedWorkspaceId,
+} from '../../../shared/middleware/tenant';
 import type { IntegrationCredential, IntegrationProvider } from '../../../shared/types';
 
 const slackSchema = z.object({
@@ -42,9 +46,11 @@ export const handler = apiHandler(async (event) => {
   const email = getUserEmail(event);
   const body = validate(setSchema, parseBody(event));
 
-  const { items: emailItems } = await queryGSI('GSI3', 'GSI3PK', email, 'USER#');
-  if (emailItems.length === 0) throw new HttpError(404, 'USER_NOT_FOUND', 'User not found');
-  const userId = (emailItems[0].GSI3SK as string).replace('USER#', '');
+  const ctx = await resolveTenantContext(
+    email,
+    getRequestedWorkspaceId(event.headers as Record<string, string | undefined>)
+  );
+  const userId = ctx.tenantUserId;
 
   const provider: IntegrationProvider = body.provider;
   const now = new Date().toISOString();

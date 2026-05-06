@@ -1,8 +1,20 @@
 import { SFNClient, StartExecutionCommand } from '@aws-sdk/client-sfn';
 import { apiHandler, getUserEmail, parseBody, HttpError } from '../../../shared/middleware/handler';
 import { validate, onboardSchema } from '../../../shared/middleware/validation';
-import { putItem, updateItem, queryGSI, getItem } from '../../../shared/db/queries';
-import { userPK, userSK, competitorPK, competitorSK, gsi2ActiveCompetitorKeys } from '../../../shared/db/keys';
+import { putItem, updateItem, queryGSI, queryByPK, getItem } from '../../../shared/db/queries';
+import {
+  userPK,
+  userSK,
+  competitorPK,
+  competitorSK,
+  gsi2ActiveCompetitorKeys,
+  workspacePK,
+  workspaceSK,
+  membershipByUserPK,
+  membershipByUserSK,
+  memberByWorkspacePK,
+  memberByWorkspaceSK,
+} from '../../../shared/db/keys';
 import { generateId } from '../../../shared/utils/id';
 import { PLAN_LIMITS, User } from '../../../shared/types';
 import { enforceResearchEligibility } from '../../../shared/utils/research-eligibility';
@@ -69,6 +81,52 @@ export const handler = apiHandler(async (event) => {
       updatedAt: now,
       ...gsi2ActiveCompetitorKeys(compId),
     });
+  }
+
+  // Phase 4a — bootstrap a default workspace + owner Membership for this
+  // user. The workspace owner's userId becomes the tenant key for all of
+  // the user's data (which stays under USER#<userId> as before). When the
+  // user invites collaborators later, the invitee resolves to THIS userId
+  // via the resolveTenantContext middleware. Idempotent: if the user
+  // re-onboards (rare), the existing membership is detected and creation
+  // is skipped.
+  const { items: priorMembershipItems } = await queryByPK(
+    membershipByUserPK(userId),
+    'MEMBERSHIP#',
+    { limit: 1 }
+  );
+  if (priorMembershipItems.length === 0) {
+    const workspaceId = generateId();
+    const workspaceName = `${body.companyName} workspace`;
+    await putItem({
+      PK: workspacePK(workspaceId),
+      SK: workspaceSK(),
+      id: workspaceId,
+      name: workspaceName,
+      ownerUserId: userId,
+      createdAt: now,
+      updatedAt: now,
+    });
+    // Membership written under both PKs for cheap lookup in either direction
+    await putItem({
+      PK: membershipByUserPK(userId),
+      SK: membershipByUserSK(workspaceId),
+      workspaceId,
+      userId,
+      role: 'owner',
+      joinedAt: now,
+      workspaceName,
+    });
+    await putItem({
+      PK: memberByWorkspacePK(workspaceId),
+      SK: memberByWorkspaceSK(userId),
+      workspaceId,
+      userId,
+      role: 'owner',
+      joinedAt: now,
+      email,
+    });
+    logger.info('workspace_created_default', { userId, workspaceId, workspaceName });
   }
 
   // Mark onboarding complete + record consent versions for audit trail.

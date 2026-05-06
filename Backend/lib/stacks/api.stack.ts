@@ -47,7 +47,7 @@ export class ApiStack extends cdk.Stack {
           apigatewayv2.CorsHttpMethod.DELETE,
           apigatewayv2.CorsHttpMethod.OPTIONS,
         ],
-        allowHeaders: ['Content-Type', 'Authorization', 'X-Idempotency-Key'],
+        allowHeaders: ['Content-Type', 'Authorization', 'X-Idempotency-Key', 'X-Workspace-Id'],
         allowCredentials: true,
         maxAge: cdk.Duration.hours(1),
       },
@@ -133,6 +133,13 @@ export class ApiStack extends cdk.Stack {
     addRoute('UserAcceptTos', apigatewayv2.HttpMethod.POST, '/users/me/accept-tos', 'api/users/accept-tos.ts');
     const onboardFn = addRoute('UserOnboard', apigatewayv2.HttpMethod.POST, '/users/onboard', 'api/users/onboard.ts', true, pipelineEnv);
     researchStateMachine.grantStartExecution(onboardFn);
+
+    // ─── Workspaces (Phase 4a) ───
+    addRoute('WorkspacesList', apigatewayv2.HttpMethod.GET, '/workspaces', 'api/workspaces/list.ts');
+    addRoute('WorkspaceMembersList', apigatewayv2.HttpMethod.GET, '/workspaces/current/members', 'api/workspaces/members.ts');
+    addRoute('WorkspaceMemberRemove', apigatewayv2.HttpMethod.DELETE, '/workspaces/current/members/{userId}', 'api/workspaces/members.ts');
+    addRoute('WorkspaceInvite', apigatewayv2.HttpMethod.POST, '/workspaces/current/invitations', 'api/workspaces/invite.ts');
+    addRoute('InvitationAccept', apigatewayv2.HttpMethod.POST, '/invitations/{token}/accept', 'api/workspaces/accept-invitation.ts');
 
     // GDPR Art. 15+20 / CCPA §1798.110 — data export
     addRoute('UserExport', apigatewayv2.HttpMethod.GET, '/users/me/export', 'api/users/export.ts');

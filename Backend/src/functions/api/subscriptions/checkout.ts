@@ -1,8 +1,12 @@
 import { apiHandler, getUserEmail, parseBody, HttpError } from '../../../shared/middleware/handler';
-import { getItem, updateItem, queryGSI } from '../../../shared/db/queries';
+import { getItem, updateItem } from '../../../shared/db/queries';
 import { userPK, userSK } from '../../../shared/db/keys';
 import { validate } from '../../../shared/middleware/validation';
 import { getPaddleClient } from '../../../shared/services/paddle';
+import {
+  resolveTenantContext,
+  getRequestedWorkspaceId,
+} from '../../../shared/middleware/tenant';
 import { z } from 'zod';
 
 const checkoutSchema = z.object({
@@ -24,9 +28,11 @@ export const handler = apiHandler(async (event) => {
     throw new HttpError(500, 'PRICE_NOT_CONFIGURED', `Paddle price ID for plan "${body.plan}" is not configured`);
   }
 
-  const { items: emailItems } = await queryGSI('GSI3', 'GSI3PK', email, 'USER#');
-  if (emailItems.length === 0) throw new HttpError(404, 'USER_NOT_FOUND', 'User not found');
-  const userId = (emailItems[0].GSI3SK as string).replace('USER#', '');
+  const ctx = await resolveTenantContext(
+    email,
+    getRequestedWorkspaceId(event.headers as Record<string, string | undefined>)
+  );
+  const userId = ctx.tenantUserId;
 
   const user = await getItem<Record<string, unknown>>(userPK(userId), userSK());
   if (!user) throw new HttpError(404, 'USER_NOT_FOUND', 'User not found');

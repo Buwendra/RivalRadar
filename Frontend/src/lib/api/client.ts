@@ -48,6 +48,11 @@ export async function apiClient<T>(
       throw new ApiClientError("UNAUTHENTICATED", 401, "Not authenticated");
     }
     headers["Authorization"] = `Bearer ${token}`;
+
+    const workspaceId = localStorage.getItem("rs_current_workspace_id");
+    if (workspaceId) {
+      headers["X-Workspace-Id"] = workspaceId;
+    }
   }
 
   const response = await fetch(url, {
@@ -107,6 +112,11 @@ export async function apiClientWithMeta<T>(
       throw new ApiClientError("UNAUTHENTICATED", 401, "Not authenticated");
     }
     headers["Authorization"] = `Bearer ${token}`;
+
+    const workspaceId = localStorage.getItem("rs_current_workspace_id");
+    if (workspaceId) {
+      headers["X-Workspace-Id"] = workspaceId;
+    }
   }
 
   const response = await fetch(url, {

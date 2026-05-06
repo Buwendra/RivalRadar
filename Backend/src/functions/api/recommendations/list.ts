@@ -1,8 +1,12 @@
 import { z } from 'zod';
-import { apiHandler, getUserEmail, HttpError } from '../../../shared/middleware/handler';
+import { apiHandler, getUserEmail } from '../../../shared/middleware/handler';
 import { queryGSI, getItem } from '../../../shared/db/queries';
 import { validate, paginationSchema } from '../../../shared/middleware/validation';
 import { userPK, userSK } from '../../../shared/db/keys';
+import {
+  resolveTenantContext,
+  getRequestedWorkspaceId,
+} from '../../../shared/middleware/tenant';
 import type { Recommendation, RecommendationStatus, PlanTier } from '../../../shared/types';
 
 const filterSchema = paginationSchema.extend({
@@ -21,9 +25,11 @@ const VISIBLE_BY_TIER: Record<PlanTier, number> = {
 export const handler = apiHandler(async (event) => {
   const email = getUserEmail(event);
 
-  const { items: emailItems } = await queryGSI('GSI3', 'GSI3PK', email, 'USER#');
-  if (emailItems.length === 0) throw new HttpError(404, 'USER_NOT_FOUND', 'User not found');
-  const userId = (emailItems[0].GSI3SK as string).replace('USER#', '');
+  const ctx = await resolveTenantContext(
+    email,
+    getRequestedWorkspaceId(event.headers as Record<string, string | undefined>)
+  );
+  const userId = ctx.tenantUserId;
 
   const params = validate(filterSchema, event.queryStringParameters ?? {});
 

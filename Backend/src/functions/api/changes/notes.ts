@@ -38,6 +38,10 @@ import {
 import { generateId } from '../../../shared/utils/id';
 import { validate } from '../../../shared/middleware/validation';
 import { logger } from '../../../shared/utils/logger';
+import {
+  resolveTenantContext,
+  getRequestedWorkspaceId,
+} from '../../../shared/middleware/tenant';
 import type { ChangeNote, User } from '../../../shared/types';
 
 const createSchema = z.object({
@@ -49,9 +53,14 @@ export const handler = apiHandler(async (event) => {
   const changeId = event.pathParameters?.id;
   if (!changeId) throw new HttpError(400, 'MISSING_ID', 'Change id is required');
 
-  const { items: emailItems } = await queryGSI('GSI3', 'GSI3PK', email, 'USER#');
-  if (emailItems.length === 0) throw new HttpError(404, 'USER_NOT_FOUND', 'User not found');
-  const userId = (emailItems[0].GSI3SK as string).replace('USER#', '');
+  const ctx = await resolveTenantContext(
+    email,
+    getRequestedWorkspaceId(event.headers as Record<string, string | undefined>)
+  );
+  const userId = ctx.tenantUserId;
+  // The note's authorUserId records the actual caller (Phase 4a member-aware),
+  // not the workspace owner — credit goes to whoever wrote it.
+  const authorUserId = ctx.callerUserId;
 
   // Resolve the change to (a) confirm ownership and (b) get competitorId
   // for the notes PK. Same scan pattern as /changes/{id} GET.
@@ -81,10 +90,12 @@ export const handler = apiHandler(async (event) => {
   // POST — create a note
   const payload = validate(createSchema, parseBody(event));
 
-  // Load the user so we can denormalize the author name onto the note.
-  // Saves a follow-up GET on every notes-list render.
-  const user = await getItem<User & Record<string, unknown>>(userPK(userId), userSK());
-  const authorName = user?.name ?? 'Unknown';
+  // Load the actual author (callerUserId — not the tenant owner) so we
+  // denormalize their name onto the note. In a single-member workspace
+  // these are the same person; in a multi-member workspace each note
+  // shows the writer's identity, not just the owner's.
+  const author = await getItem<User & Record<string, unknown>>(userPK(authorUserId), userSK());
+  const authorName = author?.name ?? 'Unknown';
 
   const id = generateId();
   const now = new Date().toISOString();
@@ -92,7 +103,7 @@ export const handler = apiHandler(async (event) => {
     id,
     changeId,
     competitorId,
-    authorUserId: userId,
+    authorUserId,
     authorName,
     body: payload.body,
     createdAt: now,

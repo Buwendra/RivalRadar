@@ -7,6 +7,7 @@ export * from './recommendation';
 export * from './integration';
 export * from './change-note';
 export * from './cancellation';
+export * from './workspace';
 
 /** Standard API response envelope */
 export interface ApiResponse<T> {

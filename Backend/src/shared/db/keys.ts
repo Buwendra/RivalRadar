@@ -47,6 +47,26 @@ export const cancelFeedbackSK = () => 'META';
 export const ofacSdnPK = () => 'OFAC_SDN';
 export const ofacSdnSK = () => 'META';
 
+// Workspace / Membership / Invitation (Phase 4a)
+export const workspacePK = (workspaceId: string) => `WORKSPACE#${workspaceId}`;
+export const workspaceSK = () => 'PROFILE';
+
+// Per-user membership lookup — list a user's workspaces (PK already USER#<id>)
+export const membershipByUserPK = (userId: string) => `USER#${userId}`;
+export const membershipByUserSK = (workspaceId: string) =>
+  `MEMBERSHIP#${workspaceId}`;
+export const membershipByUserSKPrefix = () => 'MEMBERSHIP#';
+
+// Per-workspace member list — list a workspace's members (reverse direction)
+export const memberByWorkspacePK = (workspaceId: string) =>
+  `WORKSPACE#${workspaceId}`;
+export const memberByWorkspaceSK = (userId: string) => `MEMBER#${userId}`;
+export const memberByWorkspaceSKPrefix = () => 'MEMBER#';
+
+// Invitation — keyed by opaque ULID token (mirrors Phase 8b cancellation pattern)
+export const invitationPK = (token: string) => `INVITE#${token}`;
+export const invitationSK = () => 'META';
+
 // ─── GSI Key Builders ───
 
 // GSI1: User's changes feed (dashboard)

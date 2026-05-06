@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { WorkspaceSwitcher } from "./workspace-switcher";
 import Link from "next/link";
 
 interface DashboardHeaderProps {
@@ -39,6 +40,8 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps) {
       >
         <Menu className="h-5 w-5" />
       </Button>
+
+      <WorkspaceSwitcher />
 
       <div className="flex-1" />
 

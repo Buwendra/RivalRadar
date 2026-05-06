@@ -1,13 +1,18 @@
-import { apiHandler, getUserEmail, HttpError } from '../../../shared/middleware/handler';
-import { queryByPK, queryGSI } from '../../../shared/db/queries';
+import { apiHandler, getUserEmail } from '../../../shared/middleware/handler';
+import { queryByPK } from '../../../shared/db/queries';
 import { competitorPK } from '../../../shared/db/keys';
+import {
+  resolveTenantContext,
+  getRequestedWorkspaceId,
+} from '../../../shared/middleware/tenant';
 
 export const handler = apiHandler(async (event) => {
   const email = getUserEmail(event);
-
-  const { items: emailItems } = await queryGSI('GSI3', 'GSI3PK', email, 'USER#');
-  if (emailItems.length === 0) throw new HttpError(404, 'USER_NOT_FOUND', 'User not found');
-  const userId = (emailItems[0].GSI3SK as string).replace('USER#', '');
+  const ctx = await resolveTenantContext(
+    email,
+    getRequestedWorkspaceId(event.headers as Record<string, string | undefined>)
+  );
+  const userId = ctx.tenantUserId;
 
   const { items } = await queryByPK(competitorPK(userId), 'COMP#', { scanForward: true });
 

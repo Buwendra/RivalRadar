@@ -10,6 +10,7 @@ import { IntegrationsSection } from "@/components/settings/integrations-section"
 import { CustomCategoriesSection } from "@/components/settings/custom-categories-section";
 import { ScheduledReportsSection } from "@/components/settings/scheduled-reports-section";
 import { AccountStatusSection } from "@/components/settings/account-status-section";
+import { WorkspaceMembersSection } from "@/components/settings/workspace-members-section";
 
 export default function SettingsPage() {
   return (
@@ -19,6 +20,7 @@ export default function SettingsPage() {
       <Tabs defaultValue="profile" className="w-full">
         <TabsList className="bg-brand-800">
           <TabsTrigger value="profile">Profile</TabsTrigger>
+          <TabsTrigger value="workspace">Workspace</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="billing">Billing</TabsTrigger>
         </TabsList>
@@ -27,6 +29,10 @@ export default function SettingsPage() {
           <ProfileForm />
           <CustomCategoriesSection />
           <AccountStatusSection />
+        </TabsContent>
+
+        <TabsContent value="workspace" className="mt-6 space-y-6">
+          <WorkspaceMembersSection />
         </TabsContent>
 
         <TabsContent value="notifications" className="mt-6 space-y-6">

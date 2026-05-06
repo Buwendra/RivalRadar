@@ -1,9 +1,13 @@
 import { z } from 'zod';
 import { apiHandler, getUserEmail, HttpError, parseBody } from '../../../shared/middleware/handler';
-import { getItem, queryGSI, updateItem } from '../../../shared/db/queries';
+import { getItem, updateItem } from '../../../shared/db/queries';
 import { competitorPK, competitorSK } from '../../../shared/db/keys';
 import { validate } from '../../../shared/middleware/validation';
 import { logger } from '../../../shared/utils/logger';
+import {
+  resolveTenantContext,
+  getRequestedWorkspaceId,
+} from '../../../shared/middleware/tenant';
 import type { Competitor } from '../../../shared/types';
 
 const snoozeSchema = z.object({
@@ -36,9 +40,11 @@ export const handler = apiHandler(async (event) => {
 
   const body = validate(snoozeSchema, parseBody(event));
 
-  const { items: emailItems } = await queryGSI('GSI3', 'GSI3PK', email, 'USER#');
-  if (emailItems.length === 0) throw new HttpError(404, 'USER_NOT_FOUND', 'User not found');
-  const userId = (emailItems[0].GSI3SK as string).replace('USER#', '');
+  const ctx = await resolveTenantContext(
+    email,
+    getRequestedWorkspaceId(event.headers as Record<string, string | undefined>)
+  );
+  const userId = ctx.tenantUserId;
 
   const competitor = await getItem<Competitor & Record<string, unknown>>(
     competitorPK(userId),

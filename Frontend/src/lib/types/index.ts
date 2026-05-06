@@ -32,3 +32,10 @@ export type {
   NotificationChannelPreferences,
   NotificationPreferences,
 } from "./integration";
+export type {
+  WorkspaceRole,
+  WorkspaceSummary,
+  WorkspaceMember,
+  InvitationCreatedResponse,
+  AcceptInvitationResponse,
+} from "./workspace";

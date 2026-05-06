@@ -1,9 +1,13 @@
 import { z } from 'zod';
 import { apiHandler, getUserEmail, HttpError, parseBody } from '../../../shared/middleware/handler';
-import { queryGSI, queryByPK, updateItem } from '../../../shared/db/queries';
+import { queryByPK, updateItem } from '../../../shared/db/queries';
 import { recommendationPK } from '../../../shared/db/keys';
 import { validate } from '../../../shared/middleware/validation';
 import { logger } from '../../../shared/utils/logger';
+import {
+  resolveTenantContext,
+  getRequestedWorkspaceId,
+} from '../../../shared/middleware/tenant';
 import type { Recommendation, RecommendationStatus } from '../../../shared/types';
 
 const updateSchema = z.object({
@@ -29,9 +33,11 @@ export const handler = apiHandler(async (event) => {
 
   const body = validate(updateSchema, parseBody(event));
 
-  const { items: emailItems } = await queryGSI('GSI3', 'GSI3PK', email, 'USER#');
-  if (emailItems.length === 0) throw new HttpError(404, 'USER_NOT_FOUND', 'User not found');
-  const userId = (emailItems[0].GSI3SK as string).replace('USER#', '');
+  const ctx = await resolveTenantContext(
+    email,
+    getRequestedWorkspaceId(event.headers as Record<string, string | undefined>)
+  );
+  const userId = ctx.tenantUserId;
 
   // Locate the rec row by id (REC# SK prefix scoped to this user)
   const { items } = await queryByPK(recommendationPK(userId), 'REC#', { limit: 100 });

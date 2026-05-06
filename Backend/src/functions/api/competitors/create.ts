@@ -1,18 +1,23 @@
 import { apiHandler, getUserEmail, parseBody, HttpError } from '../../../shared/middleware/handler';
 import { validate, competitorCreateSchema } from '../../../shared/middleware/validation';
-import { putItem, queryByPK, getItem, queryGSI } from '../../../shared/db/queries';
+import { putItem, queryByPK, getItem } from '../../../shared/db/queries';
 import { userPK, userSK, competitorPK, competitorSK, gsi2ActiveCompetitorKeys } from '../../../shared/db/keys';
 import { generateId } from '../../../shared/utils/id';
 import { PLAN_LIMITS, User } from '../../../shared/types';
 import { enforceResearchEligibility } from '../../../shared/utils/research-eligibility';
+import {
+  resolveTenantContext,
+  getRequestedWorkspaceId,
+} from '../../../shared/middleware/tenant';
 
 export const handler = apiHandler(async (event) => {
   const email = getUserEmail(event);
   const body = validate(competitorCreateSchema, parseBody(event));
-
-  const { items: emailItems } = await queryGSI('GSI3', 'GSI3PK', email, 'USER#');
-  if (emailItems.length === 0) throw new HttpError(404, 'USER_NOT_FOUND', 'User not found');
-  const userId = (emailItems[0].GSI3SK as string).replace('USER#', '');
+  const ctx = await resolveTenantContext(
+    email,
+    getRequestedWorkspaceId(event.headers as Record<string, string | undefined>)
+  );
+  const userId = ctx.tenantUserId;
 
   const user = await getItem<User & Record<string, unknown>>(userPK(userId), userSK());
   if (!user) throw new HttpError(404, 'USER_NOT_FOUND', 'User not found');

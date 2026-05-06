@@ -1,5 +1,9 @@
 import { apiHandler, getUserEmail, HttpError } from '../../../shared/middleware/handler';
 import { queryGSI } from '../../../shared/db/queries';
+import {
+  resolveTenantContext,
+  getRequestedWorkspaceId,
+} from '../../../shared/middleware/tenant';
 
 export const handler = apiHandler(async (event) => {
   const email = getUserEmail(event);
@@ -7,9 +11,11 @@ export const handler = apiHandler(async (event) => {
 
   if (!changeId) throw new HttpError(400, 'MISSING_ID', 'Change ID is required');
 
-  const { items: emailItems } = await queryGSI('GSI3', 'GSI3PK', email, 'USER#');
-  if (emailItems.length === 0) throw new HttpError(404, 'USER_NOT_FOUND', 'User not found');
-  const userId = (emailItems[0].GSI3SK as string).replace('USER#', '');
+  const ctx = await resolveTenantContext(
+    email,
+    getRequestedWorkspaceId(event.headers as Record<string, string | undefined>)
+  );
+  const userId = ctx.tenantUserId;
 
   const { items } = await queryGSI('GSI1', 'GSI1PK', userId, 'CHANGE#', {
     skName: 'GSI1SK',

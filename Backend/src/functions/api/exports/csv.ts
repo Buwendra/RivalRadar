@@ -19,6 +19,10 @@ import { userPK, userSK, competitorPK, recommendationPK } from '../../../shared/
 import { hasCapability } from '../../../shared/utils/capability';
 import { validate } from '../../../shared/middleware/validation';
 import { logger } from '../../../shared/utils/logger';
+import {
+  resolveTenantContext,
+  getRequestedWorkspaceId,
+} from '../../../shared/middleware/tenant';
 import type { User, Competitor, Recommendation } from '../../../shared/types';
 
 const exportSchema = z.object({
@@ -48,9 +52,11 @@ export const handler = apiHandler(async (event) => {
   const email = getUserEmail(event);
   const body = validate(exportSchema, parseBody(event));
 
-  const { items: emailItems } = await queryGSI('GSI3', 'GSI3PK', email, 'USER#');
-  if (emailItems.length === 0) throw new HttpError(404, 'USER_NOT_FOUND', 'User not found');
-  const userId = (emailItems[0].GSI3SK as string).replace('USER#', '');
+  const ctx = await resolveTenantContext(
+    email,
+    getRequestedWorkspaceId(event.headers as Record<string, string | undefined>)
+  );
+  const userId = ctx.tenantUserId;
 
   const user = await getItem<User & Record<string, unknown>>(userPK(userId), userSK());
   if (!user) throw new HttpError(404, 'USER_NOT_FOUND', 'User not found');
