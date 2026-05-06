@@ -22,10 +22,21 @@
  * preferences (uncheck weekly digest) or as a Phase 9b addition.
  */
 
-import { apiHandler, getUserEmail, HttpError } from '../../../shared/middleware/handler';
-import { queryGSI, updateItem } from '../../../shared/db/queries';
+import {
+  apiHandler,
+  getUserEmail,
+  HttpError,
+  getSourceIp,
+  getUserAgent,
+} from '../../../shared/middleware/handler';
+import { updateItem } from '../../../shared/db/queries';
 import { userPK, userSK } from '../../../shared/db/keys';
 import { logger } from '../../../shared/utils/logger';
+import {
+  resolveTenantContext,
+  getRequestedWorkspaceId,
+} from '../../../shared/middleware/tenant';
+import { recordAuditEvent } from '../../../shared/services/audit';
 
 export const handler = apiHandler(async (event) => {
   const email = getUserEmail(event);
@@ -36,9 +47,11 @@ export const handler = apiHandler(async (event) => {
     throw new HttpError(404, 'NOT_FOUND', 'Unknown route');
   }
 
-  const { items } = await queryGSI('GSI3', 'GSI3PK', email, 'USER#');
-  if (items.length === 0) throw new HttpError(404, 'USER_NOT_FOUND', 'User not found');
-  const userId = (items[0].GSI3SK as string).replace('USER#', '');
+  const ctx = await resolveTenantContext(
+    email,
+    getRequestedWorkspaceId(event.headers as Record<string, string | undefined>)
+  );
+  const userId = ctx.callerUserId;
 
   const newStatus = wantSuspend ? 'restricted' : 'active';
   const now = new Date().toISOString();
@@ -50,6 +63,13 @@ export const handler = apiHandler(async (event) => {
   logger.info(wantSuspend ? 'account_self_suspended' : 'account_self_resumed', {
     userId,
     email,
+  });
+
+  await recordAuditEvent({
+    ctx,
+    action: wantSuspend ? 'account.suspended' : 'account.resumed',
+    sourceIp: getSourceIp(event),
+    userAgent: getUserAgent(event),
   });
 
   return {

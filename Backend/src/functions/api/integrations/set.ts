@@ -1,6 +1,12 @@
 import { z } from 'zod';
 import { randomBytes } from 'crypto';
-import { apiHandler, getUserEmail, parseBody } from '../../../shared/middleware/handler';
+import {
+  apiHandler,
+  getUserEmail,
+  parseBody,
+  getSourceIp,
+  getUserAgent,
+} from '../../../shared/middleware/handler';
 import { putItem, getItem } from '../../../shared/db/queries';
 import { integrationPK, integrationSK } from '../../../shared/db/keys';
 import { validate } from '../../../shared/middleware/validation';
@@ -8,7 +14,9 @@ import { logger } from '../../../shared/utils/logger';
 import {
   resolveTenantContext,
   getRequestedWorkspaceId,
+  assertOwner,
 } from '../../../shared/middleware/tenant';
+import { recordAuditEvent } from '../../../shared/services/audit';
 import type { IntegrationCredential, IntegrationProvider } from '../../../shared/types';
 
 const slackSchema = z.object({
@@ -50,6 +58,7 @@ export const handler = apiHandler(async (event) => {
     email,
     getRequestedWorkspaceId(event.headers as Record<string, string | undefined>)
   );
+  assertOwner(ctx, 'integrations');
   const userId = ctx.tenantUserId;
 
   const provider: IntegrationProvider = body.provider;
@@ -87,6 +96,16 @@ export const handler = apiHandler(async (event) => {
   });
 
   logger.info('integration_set', { userId, provider, replaced: !!existing });
+
+  await recordAuditEvent({
+    ctx,
+    action: 'integration.connected',
+    resourceId: provider,
+    resourceLabel: provider,
+    meta: { replaced: !!existing },
+    sourceIp: getSourceIp(event),
+    userAgent: getUserAgent(event),
+  });
 
   // Response shape: only echo the hmacSecret on webhook creation. Never echo
   // the URL — the caller knows it (they just sent it).

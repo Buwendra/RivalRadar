@@ -1,12 +1,19 @@
 import { z } from 'zod';
-import { apiHandler, getUserEmail } from '../../../shared/middleware/handler';
+import {
+  apiHandler,
+  getUserEmail,
+  getSourceIp,
+  getUserAgent,
+} from '../../../shared/middleware/handler';
 import { deleteItem } from '../../../shared/db/queries';
 import { integrationPK, integrationSK } from '../../../shared/db/keys';
 import { logger } from '../../../shared/utils/logger';
 import {
   resolveTenantContext,
   getRequestedWorkspaceId,
+  assertOwner,
 } from '../../../shared/middleware/tenant';
+import { recordAuditEvent } from '../../../shared/services/audit';
 import type { IntegrationProvider } from '../../../shared/types';
 
 const providerSchema = z.enum(['slack', 'webhook']);
@@ -27,11 +34,21 @@ export const handler = apiHandler(async (event) => {
     email,
     getRequestedWorkspaceId(event.headers as Record<string, string | undefined>)
   );
+  assertOwner(ctx, 'integrations');
   const userId = ctx.tenantUserId;
 
   await deleteItem(integrationPK(userId), integrationSK(provider));
 
   logger.info('integration_deleted', { userId, provider });
+
+  await recordAuditEvent({
+    ctx,
+    action: 'integration.disconnected',
+    resourceId: provider,
+    resourceLabel: provider,
+    sourceIp: getSourceIp(event),
+    userAgent: getUserAgent(event),
+  });
 
   return {
     statusCode: 200,

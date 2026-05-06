@@ -1,11 +1,19 @@
-import { apiHandler, getUserEmail, HttpError } from '../../../shared/middleware/handler';
+import {
+  apiHandler,
+  getUserEmail,
+  HttpError,
+  getSourceIp,
+  getUserAgent,
+} from '../../../shared/middleware/handler';
 import { getItem } from '../../../shared/db/queries';
 import { userPK, userSK } from '../../../shared/db/keys';
 import { getPaddleClient } from '../../../shared/services/paddle';
 import {
   resolveTenantContext,
   getRequestedWorkspaceId,
+  assertOwner,
 } from '../../../shared/middleware/tenant';
+import { recordAuditEvent } from '../../../shared/services/audit';
 
 export const handler = apiHandler(async (event) => {
   const email = getUserEmail(event);
@@ -13,6 +21,7 @@ export const handler = apiHandler(async (event) => {
     email,
     getRequestedWorkspaceId(event.headers as Record<string, string | undefined>)
   );
+  assertOwner(ctx, 'billing');
   const userId = ctx.tenantUserId;
 
   const user = await getItem<Record<string, unknown>>(userPK(userId), userSK());
@@ -26,6 +35,13 @@ export const handler = apiHandler(async (event) => {
     user.paddleCustomerId as string,
     []
   );
+
+  await recordAuditEvent({
+    ctx,
+    action: 'subscription.portal_opened',
+    sourceIp: getSourceIp(event),
+    userAgent: getUserAgent(event),
+  });
 
   return {
     statusCode: 200,

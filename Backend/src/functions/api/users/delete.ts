@@ -27,14 +27,20 @@ import {
   apiHandler,
   getUserEmail,
   HttpError,
+  getSourceIp,
+  getUserAgent,
 } from '../../../shared/middleware/handler';
 import {
   getItem,
   queryByPK,
-  queryGSI,
   deleteItem,
   updateItem,
 } from '../../../shared/db/queries';
+import {
+  resolveTenantContext,
+  getRequestedWorkspaceId,
+} from '../../../shared/middleware/tenant';
+import { recordAuditEvent } from '../../../shared/services/audit';
 import {
   userPK,
   userSK,
@@ -56,9 +62,11 @@ export const handler = apiHandler(async (event) => {
   const deletionId = generateId();
   const requestedAt = new Date().toISOString();
 
-  const { items: emailItems } = await queryGSI('GSI3', 'GSI3PK', email, 'USER#');
-  if (emailItems.length === 0) throw new HttpError(404, 'USER_NOT_FOUND', 'User not found');
-  const userId = (emailItems[0].GSI3SK as string).replace('USER#', '');
+  const ctx = await resolveTenantContext(
+    email,
+    getRequestedWorkspaceId(event.headers as Record<string, string | undefined>)
+  );
+  const userId = ctx.callerUserId;
 
   const user = await getItem<Record<string, unknown>>(userPK(userId), userSK());
   if (!user) throw new HttpError(404, 'USER_NOT_FOUND', 'User not found');
@@ -79,6 +87,15 @@ export const handler = apiHandler(async (event) => {
   });
 
   logger.info('user_deletion_started', { userId, deletionId, email });
+
+  // Record audit BEFORE the cascade so the row survives the User delete.
+  await recordAuditEvent({
+    ctx,
+    action: 'gdpr.deletion_requested',
+    resourceId: deletionId,
+    sourceIp: getSourceIp(event),
+    userAgent: getUserAgent(event),
+  });
 
   // 2. Best-effort Paddle cancellation
   let paddleCancelled = false;

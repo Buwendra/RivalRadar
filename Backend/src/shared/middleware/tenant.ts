@@ -131,3 +131,18 @@ export function getRequestedWorkspaceId(headers: Record<string, string | undefin
   // API Gateway lowercases header names automatically
   return headers['x-workspace-id'];
 }
+
+/**
+ * Phase 4b — guard for handlers that mutate workspace-wide state. Throws
+ * 403 FORBIDDEN if the caller isn't the workspace owner. Legacy single-seat
+ * users always pass (resolver returns role 'owner' for them).
+ */
+export function assertOwner(ctx: TenantContext, what = 'this workspace'): void {
+  if (ctx.role !== 'owner') {
+    throw new HttpError(
+      403,
+      'FORBIDDEN',
+      `Only the workspace owner can manage ${what}.`
+    );
+  }
+}

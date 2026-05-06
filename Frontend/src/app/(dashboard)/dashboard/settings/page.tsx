@@ -11,6 +11,8 @@ import { CustomCategoriesSection } from "@/components/settings/custom-categories
 import { ScheduledReportsSection } from "@/components/settings/scheduled-reports-section";
 import { AccountStatusSection } from "@/components/settings/account-status-section";
 import { WorkspaceMembersSection } from "@/components/settings/workspace-members-section";
+import { WorkspaceSettingsSection } from "@/components/settings/workspace-settings-section";
+import { ActivityLogSection } from "@/components/settings/activity-log-section";
 import { FeedPreferencesSection } from "@/components/settings/feed-preferences-section";
 
 export default function SettingsPage() {
@@ -34,6 +36,8 @@ export default function SettingsPage() {
 
         <TabsContent value="workspace" className="mt-6 space-y-6">
           <WorkspaceMembersSection />
+          <WorkspaceSettingsSection />
+          <ActivityLogSection />
         </TabsContent>
 
         <TabsContent value="notifications" className="mt-6 space-y-6">

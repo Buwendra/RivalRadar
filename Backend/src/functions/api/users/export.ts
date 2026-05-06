@@ -10,8 +10,10 @@ import {
   apiHandler,
   getUserEmail,
   HttpError,
+  getSourceIp,
+  getUserAgent,
 } from '../../../shared/middleware/handler';
-import { getItem, queryByPK, queryGSI } from '../../../shared/db/queries';
+import { getItem, queryByPK } from '../../../shared/db/queries';
 import {
   userPK,
   userSK,
@@ -21,6 +23,11 @@ import {
 } from '../../../shared/db/keys';
 import { generateId } from '../../../shared/utils/id';
 import { logger } from '../../../shared/utils/logger';
+import {
+  resolveTenantContext,
+  getRequestedWorkspaceId,
+} from '../../../shared/middleware/tenant';
+import { recordAuditEvent } from '../../../shared/services/audit';
 
 const MAX_INLINE_BYTES = 5 * 1024 * 1024; // 5 MB
 
@@ -29,9 +36,14 @@ export const handler = apiHandler(async (event) => {
   const exportId = generateId();
   const requestedAt = new Date().toISOString();
 
-  const { items: emailItems } = await queryGSI('GSI3', 'GSI3PK', email, 'USER#');
-  if (emailItems.length === 0) throw new HttpError(404, 'USER_NOT_FOUND', 'User not found');
-  const userId = (emailItems[0].GSI3SK as string).replace('USER#', '');
+  // GDPR export = the CALLER's data, not the workspace owner's. Use
+  // ctx.callerUserId for data fetches; ctx.workspaceId is only used for
+  // the audit-event row.
+  const ctx = await resolveTenantContext(
+    email,
+    getRequestedWorkspaceId(event.headers as Record<string, string | undefined>)
+  );
+  const userId = ctx.callerUserId;
 
   // Load user + subscription + all competitors in parallel
   const [user, subscription, competitorsResult] = await Promise.all([
@@ -96,6 +108,15 @@ export const handler = apiHandler(async (event) => {
     exportId,
     sizeBytes,
     competitorCount: competitors.length,
+  });
+
+  await recordAuditEvent({
+    ctx,
+    action: 'gdpr.export_requested',
+    resourceId: exportId,
+    meta: { sizeBytes, competitorCount: competitors.length },
+    sourceIp: getSourceIp(event),
+    userAgent: getUserAgent(event),
   });
 
   return {

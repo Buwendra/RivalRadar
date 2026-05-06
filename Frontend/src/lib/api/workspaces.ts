@@ -1,9 +1,11 @@
-import { apiClient } from "./client";
+import { apiClient, apiClientWithMeta } from "./client";
 import type {
   WorkspaceSummary,
   WorkspaceMember,
   InvitationCreatedResponse,
   AcceptInvitationResponse,
+  AuditEventListItem,
+  PaginationMeta,
 } from "@/lib/types";
 
 export const workspacesApi = {
@@ -28,4 +30,26 @@ export const workspacesApi = {
     apiClient<AcceptInvitationResponse>(`/invitations/${token}/accept`, {
       method: "POST",
     }),
+
+  rename: (name: string) =>
+    apiClient<{ workspaceId: string; name: string }>("/workspaces/current", {
+      method: "PATCH",
+      body: { name },
+    }),
+
+  remove: () =>
+    apiClient<{ workspaceId: string; deleted: boolean }>("/workspaces/current", {
+      method: "DELETE",
+    }),
+
+  listAuditEvents: async (params?: { cursor?: string; limit?: number }) => {
+    const response = await apiClientWithMeta<AuditEventListItem[]>(
+      "/workspaces/current/audit",
+      { params: { cursor: params?.cursor, limit: params?.limit ?? 50 } }
+    );
+    return {
+      data: response.data ?? [],
+      meta: (response.meta ?? { hasMore: false }) as PaginationMeta,
+    };
+  },
 };

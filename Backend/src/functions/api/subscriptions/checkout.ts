@@ -1,4 +1,11 @@
-import { apiHandler, getUserEmail, parseBody, HttpError } from '../../../shared/middleware/handler';
+import {
+  apiHandler,
+  getUserEmail,
+  parseBody,
+  HttpError,
+  getSourceIp,
+  getUserAgent,
+} from '../../../shared/middleware/handler';
 import { getItem, updateItem } from '../../../shared/db/queries';
 import { userPK, userSK } from '../../../shared/db/keys';
 import { validate } from '../../../shared/middleware/validation';
@@ -6,7 +13,9 @@ import { getPaddleClient } from '../../../shared/services/paddle';
 import {
   resolveTenantContext,
   getRequestedWorkspaceId,
+  assertOwner,
 } from '../../../shared/middleware/tenant';
+import { recordAuditEvent } from '../../../shared/services/audit';
 import { z } from 'zod';
 
 const checkoutSchema = z.object({
@@ -32,6 +41,7 @@ export const handler = apiHandler(async (event) => {
     email,
     getRequestedWorkspaceId(event.headers as Record<string, string | undefined>)
   );
+  assertOwner(ctx, 'billing');
   const userId = ctx.tenantUserId;
 
   const user = await getItem<Record<string, unknown>>(userPK(userId), userSK());
@@ -56,6 +66,14 @@ export const handler = apiHandler(async (event) => {
     checkout: {
       url: `${process.env.FRONTEND_URL}/dashboard?checkout=success`,
     },
+  });
+
+  await recordAuditEvent({
+    ctx,
+    action: 'subscription.checkout_started',
+    meta: { plan: body.plan },
+    sourceIp: getSourceIp(event),
+    userAgent: getUserAgent(event),
   });
 
   return {

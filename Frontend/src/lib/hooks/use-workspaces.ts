@@ -42,3 +42,27 @@ export function useAcceptInvitation() {
     mutationFn: (token: string) => workspacesApi.acceptInvitation(token),
   });
 }
+
+export function useRenameWorkspace() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (name: string) => workspacesApi.rename(name),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["workspaces"] }),
+  });
+}
+
+export function useDeleteWorkspace() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => workspacesApi.remove(),
+    onSuccess: () => qc.invalidateQueries(),
+  });
+}
+
+export function useWorkspaceAuditLog() {
+  return useQuery({
+    queryKey: ["workspaces", "audit"],
+    queryFn: () => workspacesApi.listAuditEvents(),
+    staleTime: 30_000,
+  });
+}

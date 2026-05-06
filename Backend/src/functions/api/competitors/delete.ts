@@ -1,10 +1,18 @@
-import { apiHandler, getUserEmail, HttpError } from '../../../shared/middleware/handler';
+import {
+  apiHandler,
+  getUserEmail,
+  HttpError,
+  getSourceIp,
+  getUserAgent,
+} from '../../../shared/middleware/handler';
 import { deleteItem, getItem } from '../../../shared/db/queries';
 import { competitorPK, competitorSK } from '../../../shared/db/keys';
 import {
   resolveTenantContext,
   getRequestedWorkspaceId,
+  assertOwner,
 } from '../../../shared/middleware/tenant';
+import { recordAuditEvent } from '../../../shared/services/audit';
 
 export const handler = apiHandler(async (event) => {
   const email = getUserEmail(event);
@@ -16,6 +24,7 @@ export const handler = apiHandler(async (event) => {
     email,
     getRequestedWorkspaceId(event.headers as Record<string, string | undefined>)
   );
+  assertOwner(ctx, 'competitors');
   const userId = ctx.tenantUserId;
 
   const competitor = await getItem<Record<string, unknown>>(competitorPK(userId), competitorSK(compId));
@@ -24,6 +33,15 @@ export const handler = apiHandler(async (event) => {
   }
 
   await deleteItem(competitorPK(userId), competitorSK(compId));
+
+  await recordAuditEvent({
+    ctx,
+    action: 'competitor.deleted',
+    resourceId: compId,
+    resourceLabel: typeof competitor.name === 'string' ? competitor.name : undefined,
+    sourceIp: getSourceIp(event),
+    userAgent: getUserAgent(event),
+  });
 
   return {
     statusCode: 200,

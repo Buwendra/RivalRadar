@@ -17,6 +17,8 @@ import {
   getUserEmail,
   HttpError,
   parseBody,
+  getSourceIp,
+  getUserAgent,
 } from '../../../shared/middleware/handler';
 import { resolveTenantContext, getRequestedWorkspaceId } from '../../../shared/middleware/tenant';
 import { putItem } from '../../../shared/db/queries';
@@ -25,6 +27,7 @@ import { generateId } from '../../../shared/utils/id';
 import { sendEmail } from '../../../shared/services/ses';
 import { validate } from '../../../shared/middleware/validation';
 import { logger } from '../../../shared/utils/logger';
+import { recordAuditEvent } from '../../../shared/services/audit';
 import type { WorkspaceInvitation } from '../../../shared/types';
 
 const TTL_DAYS = 14;
@@ -115,6 +118,15 @@ export const handler = apiHandler(async (event) => {
     token,
     inviterUserId: ctx.callerUserId,
     inviteeEmail: body.email,
+  });
+
+  await recordAuditEvent({
+    ctx,
+    action: 'workspace.invitation_created',
+    resourceId: token,
+    resourceLabel: body.email,
+    sourceIp: getSourceIp(event),
+    userAgent: getUserAgent(event),
   });
 
   return {

@@ -73,6 +73,13 @@ export const savedViewPK = (tenantUserId: string) => `USER#${tenantUserId}`;
 export const savedViewSK = (viewId: string) => `VIEW#${viewId}`;
 export const savedViewSKPrefix = () => 'VIEW#';
 
+// AuditEvent — workspace-scoped activity log (Phase 4b). Double-segment SK
+// lets us paginate cleanly when two events share a millisecond.
+export const auditEventPK = (workspaceId: string) => `WORKSPACE#${workspaceId}`;
+export const auditEventSK = (timestamp: string, id: string) =>
+  `AUDIT#${timestamp}#${id}`;
+export const auditEventSKPrefix = () => 'AUDIT#';
+
 // ─── GSI Key Builders ───
 
 // GSI1: User's changes feed (dashboard)

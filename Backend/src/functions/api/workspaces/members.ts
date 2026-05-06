@@ -15,6 +15,8 @@ import {
   apiHandler,
   getUserEmail,
   HttpError,
+  getSourceIp,
+  getUserAgent,
 } from '../../../shared/middleware/handler';
 import { resolveTenantContext, getRequestedWorkspaceId } from '../../../shared/middleware/tenant';
 import { queryByPK, deleteItem } from '../../../shared/db/queries';
@@ -26,6 +28,7 @@ import {
   membershipByUserSK,
 } from '../../../shared/db/keys';
 import { logger } from '../../../shared/utils/logger';
+import { recordAuditEvent } from '../../../shared/services/audit';
 
 export const handler = apiHandler(async (event) => {
   const email = getUserEmail(event);
@@ -78,6 +81,14 @@ export const handler = apiHandler(async (event) => {
       workspaceId: ctx.workspaceId,
       removedUserId: targetUserId,
       removedBy: ctx.callerUserId,
+    });
+
+    await recordAuditEvent({
+      ctx,
+      action: 'workspace.member_removed',
+      resourceId: targetUserId,
+      sourceIp: getSourceIp(event),
+      userAgent: getUserAgent(event),
     });
 
     return {

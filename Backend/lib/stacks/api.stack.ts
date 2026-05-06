@@ -141,6 +141,11 @@ export class ApiStack extends cdk.Stack {
     addRoute('WorkspaceInvite', apigatewayv2.HttpMethod.POST, '/workspaces/current/invitations', 'api/workspaces/invite.ts');
     addRoute('InvitationAccept', apigatewayv2.HttpMethod.POST, '/invitations/{token}/accept', 'api/workspaces/accept-invitation.ts');
 
+    // ─── Workspace governance (Phase 4b) ───
+    addRoute('WorkspaceUpdate', apigatewayv2.HttpMethod.PATCH, '/workspaces/current', 'api/workspaces/update.ts');
+    addRoute('WorkspaceDelete', apigatewayv2.HttpMethod.DELETE, '/workspaces/current', 'api/workspaces/delete.ts');
+    addRoute('WorkspaceAudit', apigatewayv2.HttpMethod.GET, '/workspaces/current/audit', 'api/workspaces/audit.ts');
+
     // GDPR Art. 15+20 / CCPA §1798.110 — data export
     addRoute('UserExport', apigatewayv2.HttpMethod.GET, '/users/me/export', 'api/users/export.ts');
 

@@ -88,6 +88,24 @@ export function getUserEmail(event: AuthenticatedEvent): string {
   return email.toLowerCase();
 }
 
+/**
+ * Phase 4b — caller IP for audit-event attribution. Returns 'unknown' if the
+ * proxy event omitted it. API Gateway v2 always populates this in practice.
+ */
+export function getSourceIp(event: AuthenticatedEvent | PublicEvent): string {
+  return event.requestContext.http.sourceIp ?? 'unknown';
+}
+
+/**
+ * Phase 4b — caller User-Agent for audit-event attribution. Header keys come
+ * lowercased from API Gateway v2; fall back to the title-cased form for
+ * mocked / local-test events.
+ */
+export function getUserAgent(event: AuthenticatedEvent | PublicEvent): string {
+  const headers = event.headers as Record<string, string | undefined>;
+  return headers['user-agent'] ?? headers['User-Agent'] ?? 'unknown';
+}
+
 /** Parse and validate JSON body from event */
 export function parseBody<T>(event: AuthenticatedEvent | PublicEvent): T {
   if (!event.body) {

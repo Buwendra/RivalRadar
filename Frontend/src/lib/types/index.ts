@@ -38,6 +38,8 @@ export type {
   WorkspaceMember,
   InvitationCreatedResponse,
   AcceptInvitationResponse,
+  AuditAction,
+  AuditEventListItem,
 } from "./workspace";
 export type {
   SavedView,

@@ -17,6 +17,8 @@ import {
   apiHandler,
   getUserEmail,
   HttpError,
+  getSourceIp,
+  getUserAgent,
 } from '../../../shared/middleware/handler';
 import { getItem, putItem, queryGSI, updateItem } from '../../../shared/db/queries';
 import {
@@ -28,6 +30,8 @@ import {
   memberByWorkspaceSK,
 } from '../../../shared/db/keys';
 import { logger } from '../../../shared/utils/logger';
+import { recordAuditEvent } from '../../../shared/services/audit';
+import type { TenantContext } from '../../../shared/middleware/tenant';
 import type { WorkspaceInvitation } from '../../../shared/types';
 
 export const handler = apiHandler(async (event) => {
@@ -112,6 +116,23 @@ export const handler = apiHandler(async (event) => {
     token,
     callerUserId,
     callerEmail,
+  });
+
+  // Audit event under the workspace the user just joined.
+  const acceptCtx: TenantContext = {
+    tenantUserId: invite.workspaceId, // not used by audit writer
+    callerUserId,
+    callerEmail,
+    workspaceId: invite.workspaceId,
+    workspaceName: invite.workspaceName,
+    role: 'member',
+  };
+  await recordAuditEvent({
+    ctx: acceptCtx,
+    action: 'workspace.invitation_accepted',
+    resourceId: token,
+    sourceIp: getSourceIp(event),
+    userAgent: getUserAgent(event),
   });
 
   return {
