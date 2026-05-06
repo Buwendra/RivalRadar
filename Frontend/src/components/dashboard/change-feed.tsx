@@ -8,6 +8,7 @@ import { LoadingSpinner } from "@/components/shared/loading-spinner";
 import { ErrorAlert } from "@/components/shared/error-alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useChanges } from "@/lib/hooks/use-changes";
+import { useCompetitors } from "@/lib/hooks/use-competitors";
 import type { ChangeFilters } from "@/lib/types";
 
 interface ChangeFeedProps {
@@ -15,6 +16,7 @@ interface ChangeFeedProps {
 }
 
 export function ChangeFeed({ filters = {} }: ChangeFeedProps) {
+  const { data: competitors = [] } = useCompetitors();
   const {
     data,
     isLoading,
@@ -66,11 +68,28 @@ export function ChangeFeed({ filters = {} }: ChangeFeedProps) {
   const allChanges = data?.pages.flatMap((page) => page.data) ?? [];
 
   if (allChanges.length === 0) {
+    if (competitors.length === 0) {
+      return (
+        <EmptyState
+          icon={<Activity className="h-12 w-12" />}
+          title="No competitors yet"
+          description="Add a competitor above and run research to start detecting changes."
+        />
+      );
+    }
     return (
       <EmptyState
         icon={<Activity className="h-12 w-12" />}
         title="No changes detected yet"
-        description="We're monitoring your competitors. Changes will appear here as they're detected."
+        description="Run research on a competitor to generate the initial findings + change baseline."
+        action={
+          <a
+            href={`/dashboard/competitors/${competitors[0].id}`}
+            className="inline-flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          >
+            Run research on {competitors[0].name}
+          </a>
+        }
       />
     );
   }

@@ -7,6 +7,12 @@ export interface CreateCompetitorInput {
   pagesToTrack: PageType[];
 }
 
+export interface BulkImportResponse {
+  imported: number;
+  skipped: Array<{ rowNumber: number; reason: string }>;
+  competitors: Array<Competitor & { rowNumber: number }>;
+}
+
 export const competitorsApi = {
   list: () => apiClient<Competitor[]>("/competitors"),
 
@@ -16,6 +22,12 @@ export const competitorsApi = {
     apiClient<Competitor>("/competitors", {
       method: "POST",
       body: data,
+    }),
+
+  bulkImport: (input: { csv: string; skipIneligible?: boolean }) =>
+    apiClient<BulkImportResponse>("/competitors/bulk-import", {
+      method: "POST",
+      body: input,
     }),
 
   delete: (id: string) =>

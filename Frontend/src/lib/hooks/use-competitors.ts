@@ -21,6 +21,17 @@ export function useCreateCompetitor() {
   });
 }
 
+export function useBulkImportCompetitors() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { csv: string; skipIneligible?: boolean }) =>
+      competitorsApi.bulkImport(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["competitors"] });
+    },
+  });
+}
+
 export function useDeleteCompetitor() {
   const queryClient = useQueryClient();
   return useMutation({

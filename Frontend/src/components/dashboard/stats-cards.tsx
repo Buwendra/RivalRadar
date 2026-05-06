@@ -1,15 +1,60 @@
 "use client";
 
 import { Card, CardContent } from "@/components/ui/card";
-import { Users, Activity, AlertTriangle, TrendingUp } from "lucide-react";
+import {
+  Users,
+  Activity,
+  AlertTriangle,
+  TrendingUp,
+  Plus,
+  Upload,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
 import type { Competitor, Change } from "@/lib/types";
 
 interface StatsCardsProps {
   competitors: Competitor[];
   changes: Change[];
+  onAddCompetitor?: () => void;
+  onBulkImport?: () => void;
 }
 
-export function StatsCards({ competitors, changes }: StatsCardsProps) {
+export function StatsCards({
+  competitors,
+  changes,
+  onAddCompetitor,
+  onBulkImport,
+}: StatsCardsProps) {
+  // Empty-state CTA replaces the four-zeros grid for fresh accounts.
+  if (competitors.length === 0) {
+    return (
+      <Card className="border-brand-700 bg-brand-900">
+        <CardContent className="flex flex-col items-center gap-4 py-10 text-center">
+          <Users className="h-10 w-10 text-primary" />
+          <div className="space-y-1">
+            <h3 className="text-lg font-semibold">Add your first competitor</h3>
+            <p className="max-w-md text-sm text-muted-foreground">
+              Start tracking who you&apos;re up against. Add one competitor at a
+              time, or bulk-import 10+ at once via CSV.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            {onAddCompetitor && (
+              <Button onClick={onAddCompetitor}>
+                <Plus className="mr-2 h-4 w-4" /> Add Competitor
+              </Button>
+            )}
+            {onBulkImport && (
+              <Button variant="outline" onClick={onBulkImport}>
+                <Upload className="mr-2 h-4 w-4" /> Bulk import (CSV)
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   const activeCompetitors = competitors.filter((c) => c.status === "active").length;
   const highSignificance = changes.filter((c) => c.significance >= 7).length;
   const avgSignificance = changes.length > 0

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Plus, Bookmark, X } from "lucide-react";
+import { Plus, Bookmark, X, Upload } from "lucide-react";
 import { useCompetitors } from "@/lib/hooks/use-competitors";
 import { useChanges } from "@/lib/hooks/use-changes";
 import { useSavedViews } from "@/lib/hooks/use-saved-views";
@@ -11,11 +11,13 @@ import { StatsCards } from "@/components/dashboard/stats-cards";
 import { ChangeFilters } from "@/components/dashboard/change-filters";
 import { ChangeFeed } from "@/components/dashboard/change-feed";
 import { AddCompetitorDialog } from "@/components/dashboard/add-competitor-dialog";
+import { BulkImportDialog } from "@/components/dashboard/bulk-import-dialog";
 import { CompetitorRankedStrip } from "@/components/dashboard/competitor-ranked-strip";
 import { RecommendationsCard } from "@/components/dashboard/recommendations-card";
 import { FirstRunTour } from "@/components/dashboard/first-run-tour";
 import { ExportButton } from "@/components/dashboard/export-button";
 import { SaveViewDialog } from "@/components/dashboard/save-view-dialog";
+import { OnboardingChecklistCard } from "@/components/dashboard/onboarding-checklist-card";
 import { Button } from "@/components/ui/button";
 import { useCapabilities } from "@/lib/hooks/use-capability";
 
@@ -24,6 +26,7 @@ export default function DashboardPage() {
   const searchParams = useSearchParams();
   const viewId = searchParams.get("viewId");
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [bulkImportOpen, setBulkImportOpen] = useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [competitorFilter, setCompetitorFilter] = useState<string | undefined>();
   const [significanceFilter, setSignificanceFilter] = useState<string | undefined>();
@@ -72,6 +75,10 @@ export default function DashboardPage() {
       >
         <div className="flex items-center gap-2">
           <ExportButton />
+          <Button variant="outline" onClick={() => setBulkImportOpen(true)}>
+            <Upload className="mr-2 h-4 w-4" />
+            Bulk import
+          </Button>
           <Button onClick={() => setAddDialogOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Add Competitor
@@ -88,8 +95,17 @@ export default function DashboardPage() {
       </div>
 
       <div data-tour="stats-cards">
-        <StatsCards competitors={competitors} changes={allChanges} />
+        <StatsCards
+          competitors={competitors}
+          changes={allChanges}
+          onAddCompetitor={() => setAddDialogOpen(true)}
+          onBulkImport={() => setBulkImportOpen(true)}
+        />
       </div>
+
+      <OnboardingChecklistCard
+        onAddCompetitor={() => setAddDialogOpen(true)}
+      />
 
       {activeView && (
         <div className="flex items-center gap-2 rounded-md border border-brand-700/60 bg-brand-900 px-3 py-2 text-sm">
@@ -131,6 +147,7 @@ export default function DashboardPage() {
       <ChangeFeed filters={filters} />
 
       <AddCompetitorDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} />
+      <BulkImportDialog open={bulkImportOpen} onOpenChange={setBulkImportOpen} />
 
       <SaveViewDialog
         open={saveDialogOpen}

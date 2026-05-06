@@ -81,9 +81,9 @@ export function RecommendationsCard() {
             </h3>
           </div>
           <p className="text-sm text-muted-foreground">
-            We&apos;ll generate strategic recommendations after your next
-            weekly digest, based on what your competitors did this week and
-            your own company context.
+            Recommendations appear after your weekly digest. They use this
+            week&apos;s changes plus your company context to suggest 3–7
+            strategic actions tagged by category, effort, and time horizon.
           </p>
         </CardContent>
       </Card>
