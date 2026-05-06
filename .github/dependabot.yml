@@ -1,0 +1,52 @@
+# Phase 9b — automated dependency updates.
+# Three ecosystems: backend npm, frontend npm, GitHub Actions itself.
+# All updates roll up into grouped PRs (minor + patch together) on Mondays
+# to bound noise — without grouping a typical week is 10+ separate PRs.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /Backend
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Etc/UTC
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - backend
+    groups:
+      backend-minor-and-patch:
+        patterns: ["*"]
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: npm
+    directory: /Frontend
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Etc/UTC
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - frontend
+    groups:
+      frontend-minor-and-patch:
+        patterns: ["*"]
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Etc/UTC
+    labels:
+      - dependencies
+      - ci

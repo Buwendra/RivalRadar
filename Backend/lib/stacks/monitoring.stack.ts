@@ -1,12 +1,18 @@
 import * as cdk from 'aws-cdk-lib';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as cwActions from 'aws-cdk-lib/aws-cloudwatch-actions';
+import * as cloudtrail from 'aws-cdk-lib/aws-cloudtrail';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as apigatewayv2 from 'aws-cdk-lib/aws-apigatewayv2';
+import * as events from 'aws-cdk-lib/aws-events';
+import * as targets from 'aws-cdk-lib/aws-events-targets';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as nodejs from 'aws-cdk-lib/aws-lambda-nodejs';
+import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as sns from 'aws-cdk-lib/aws-sns';
 import * as subs from 'aws-cdk-lib/aws-sns-subscriptions';
 import { Construct } from 'constructs';
+import * as path from 'path';
 
 interface CriticalLambdaSet {
   /** DeepResearch — gets a percentage-rate alarm (occasional bad inputs are normal). */
@@ -234,6 +240,98 @@ export class MonitoringStack extends cdk.Stack {
       treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
     });
     sesBounceAlarm.addAlarmAction(alarmAction);
+
+    // ─── Phase 9b: CloudTrail (audit logging for SOC 2 prep) ───
+    // Multi-region trail capturing all management-plane API calls. Logs land
+    // in a dedicated S3 bucket with object-lock + log-file-validation, so
+    // tampering produces auditable evidence. Object-lock GOVERNANCE mode
+    // (not COMPLIANCE) so a privileged role can lift retention if needed —
+    // COMPLIANCE is the right move for prod once an SOC 2 auditor signs off.
+    const auditLogBucket = new s3.Bucket(this, 'AuditLogBucket', {
+      bucketName: `${this.stackName.toLowerCase()}-audit-logs`,
+      encryption: s3.BucketEncryption.S3_MANAGED,
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      versioned: true, // required for object-lock
+      objectLockEnabled: true,
+      objectLockDefaultRetention: s3.ObjectLockRetention.governance(cdk.Duration.days(365)),
+      lifecycleRules: [
+        {
+          // Move to Glacier Instant Retrieval after 90 days — keeps audit
+          // queries cheap (millis to retrieve) but storage at ~1/4 cost.
+          transitions: [
+            {
+              storageClass: s3.StorageClass.GLACIER_INSTANT_RETRIEVAL,
+              transitionAfter: cdk.Duration.days(90),
+            },
+          ],
+          // 7-year retention covers typical SOC 2 + HIPAA + most state breach laws.
+          expiration: cdk.Duration.days(2555),
+        },
+      ],
+      removalPolicy: cdk.RemovalPolicy.RETAIN, // never auto-delete on stack destroy
+    });
+
+    const auditTrail = new cloudtrail.Trail(this, 'AuditTrail', {
+      trailName: `${this.stackName}-AuditTrail`,
+      bucket: auditLogBucket,
+      isMultiRegionTrail: true,
+      includeGlobalServiceEvents: true,
+      enableFileValidation: true, // CloudTrail signs each log file for tamper-evidence
+      managementEvents: cloudtrail.ReadWriteType.ALL,
+    });
+
+    new cdk.CfnOutput(this, 'AuditTrailArn', { value: auditTrail.trailArn });
+    new cdk.CfnOutput(this, 'AuditLogBucketName', { value: auditLogBucket.bucketName });
+
+    // ─── Phase 9b: OFAC SDN drift-detection cron ───
+    // Scheduled Lambda fetches the public OFAC SDN XML weekly, hashes it,
+    // alerts via the existing SNS topic on change. Lives in MonitoringStack
+    // (not Pipeline) because (a) it's an audit-shaped concern colocated with
+    // the alarms it depends on, and (b) it avoids a new cross-stack dep —
+    // PipelineStack would have needed to import the SNS topic ARN, which
+    // creates a circular reference with MonitoringStack consuming Pipeline's
+    // criticalLambdas.
+    const refreshOfacSdnFn = new nodejs.NodejsFunction(this, 'RefreshOfacSdn', {
+      runtime: lambda.Runtime.NODEJS_20_X,
+      architecture: lambda.Architecture.ARM_64,
+      timeout: cdk.Duration.minutes(2),
+      memorySize: 256,
+      entry: path.join(__dirname, '..', '..', 'src', 'functions', 'scheduled', 'refresh-ofac-sdn.ts'),
+      functionName: `${this.stackName}-RefreshOfacSdn`,
+      environment: {
+        TABLE_NAME: table.tableName,
+        ALERTS_TOPIC_ARN: this.alertsTopic.topicArn,
+      },
+      bundling: {
+        minify: true,
+        sourceMap: true,
+        externalModules: ['@aws-sdk/*'],
+      },
+    });
+    table.grantReadWriteData(refreshOfacSdnFn);
+    this.alertsTopic.grantPublish(refreshOfacSdnFn);
+
+    // Weekly Saturday 7am UTC — outside of any other scheduled-job window.
+    new events.Rule(this, 'OfacSdnRefreshCronRule', {
+      ruleName: `${this.stackName}-OfacSdnRefreshCron`,
+      schedule: events.Schedule.cron({ minute: '0', hour: '7', weekDay: 'SAT' }),
+      targets: [new targets.LambdaFunction(refreshOfacSdnFn)],
+    });
+
+    // Page on any error — a failing OFAC fetch means our drift detection
+    // is silently broken, which is exactly the kind of thing we want to know.
+    const ofacErrorAlarm = new cloudwatch.Alarm(this, 'RefreshOfacSdnErrorsAlarm', {
+      alarmName: `${this.stackName}-RefreshOfacSdnErrors`,
+      metric: refreshOfacSdnFn.metricErrors({
+        period: cdk.Duration.minutes(5),
+        statistic: 'Sum',
+      }),
+      threshold: 0,
+      evaluationPeriods: 1,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+    });
+    ofacErrorAlarm.addAlarmAction(alarmAction);
 
     // ─── Output ───
     new cdk.CfnOutput(this, 'AlertsTopicArn', { value: this.alertsTopic.topicArn });

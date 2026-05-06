@@ -22,6 +22,7 @@
     "@aws-sdk/client-secrets-manager": "^3.1000.0",
     "@aws-sdk/client-sesv2": "^3.1000.0",
     "@aws-sdk/client-sfn": "^3.1000.0",
+    "@aws-sdk/client-sns": "^3.1043.0",
     "@aws-sdk/lib-dynamodb": "^3.1000.0",
     "@aws-sdk/s3-request-presigner": "^3.1041.0",
     "@paddle/paddle-node-sdk": "^3.6.0",

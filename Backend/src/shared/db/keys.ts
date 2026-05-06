@@ -43,6 +43,10 @@ export const changeNoteSKPrefix = (changeId: string) => `NOTE#${changeId}#`;
 export const cancelFeedbackPK = (token: string) => `CANCEL_FEEDBACK#${token}`;
 export const cancelFeedbackSK = () => 'META';
 
+// OFAC SDN drift tracker — single row holds the last-fetched hash (Phase 9b)
+export const ofacSdnPK = () => 'OFAC_SDN';
+export const ofacSdnSK = () => 'META';
+
 // ─── GSI Key Builders ───
 
 // GSI1: User's changes feed (dashboard)

@@ -1,0 +1,53 @@
+# Phase 9b — npm audit on PRs + weekly scheduled scan.
+# Fails on high/critical vulns only; moderate noise on transitive devDeps
+# would be too disruptive without value.
+name: npm audit
+
+on:
+  pull_request:
+    paths:
+      - "Backend/package.json"
+      - "Backend/package-lock.json"
+      - "Frontend/package.json"
+      - "Frontend/package-lock.json"
+      - ".github/workflows/npm-audit.yml"
+  schedule:
+    # Weekly Sunday 6am UTC — catches vulns that land via Dependabot's
+    # Monday-morning grouped PRs *before* we merge them.
+    - cron: "0 6 * * 0"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        dir: [Backend, Frontend]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: ${{ matrix.dir }}/package-lock.json
+
+      - name: Install (${{ matrix.dir }})
+        working-directory: ${{ matrix.dir }}
+        # --no-audit: don't run audit during install (separate explicit step).
+        # --ignore-scripts: skip postinstall hooks — defense against malicious
+        #   transitive packages running arbitrary code on CI.
+        run: npm ci --no-audit --ignore-scripts
+
+      - name: Audit production deps (${{ matrix.dir }})
+        working-directory: ${{ matrix.dir }}
+        # --production filters out devDependencies. --audit-level=high fails
+        # only on high/critical CVEs, ignoring the noise floor of moderate
+        # advisories on transitive devDeps.
+        run: npm audit --audit-level=high --production
