@@ -10,6 +10,7 @@ export * from './cancellation';
 export * from './workspace';
 export * from './saved-view';
 export * from './audit-event';
+export * from './api-key';
 
 /** Standard API response envelope */
 export interface ApiResponse<T> {

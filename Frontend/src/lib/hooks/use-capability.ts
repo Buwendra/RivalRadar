@@ -29,6 +29,7 @@ export function useCapability(
     | "predictedMoves"
     | "customRecommendationCategories"
     | "scheduledReports"
+    | "apiAccess"
 ): boolean {
   const caps = useCapabilities();
   return caps[capability] === true;

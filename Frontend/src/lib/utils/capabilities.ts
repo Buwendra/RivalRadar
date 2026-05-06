@@ -18,6 +18,8 @@ export interface Capabilities {
   scheduledReports: boolean;
   seats: { max: number };
   savedViews: { max: number };
+  apiAccess: boolean;
+  apiKeys: { max: number };
 }
 
 export const CAPABILITIES: Record<PlanTier, Capabilities> = {
@@ -32,6 +34,8 @@ export const CAPABILITIES: Record<PlanTier, Capabilities> = {
     scheduledReports: false,
     seats: { max: 1 },
     savedViews: { max: 0 },
+    apiAccess: false,
+    apiKeys: { max: 0 },
   },
   strategist: {
     pdfExports: true,
@@ -44,6 +48,8 @@ export const CAPABILITIES: Record<PlanTier, Capabilities> = {
     scheduledReports: false,
     seats: { max: 5 },
     savedViews: { max: 5 },
+    apiAccess: true,
+    apiKeys: { max: 5 },
   },
   command: {
     pdfExports: true,
@@ -56,6 +62,8 @@ export const CAPABILITIES: Record<PlanTier, Capabilities> = {
     scheduledReports: true,
     seats: { max: 25 },
     savedViews: { max: 25 },
+    apiAccess: true,
+    apiKeys: { max: 25 },
   },
 };
 

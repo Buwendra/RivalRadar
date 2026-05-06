@@ -47,3 +47,4 @@ export type {
   SearchResult,
   SearchResponse,
 } from "./saved-view";
+export type { ApiKeyListItem, ApiKeyCreated } from "./api-key";

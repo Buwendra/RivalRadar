@@ -48,6 +48,12 @@ export interface Capabilities {
   savedViews: {
     max: number;
   };
+  /** Public API access (Phase 11). False = no /v1/* requests, no key minting. */
+  apiAccess: boolean;
+  /** Maximum concurrent API keys per workspace (Phase 11). 0 = locked. */
+  apiKeys: {
+    max: number;
+  };
 }
 
 export const CAPABILITIES: Record<PlanTier, Capabilities> = {
@@ -62,6 +68,8 @@ export const CAPABILITIES: Record<PlanTier, Capabilities> = {
     scheduledReports: false,
     seats: { max: 1 },
     savedViews: { max: 0 },
+    apiAccess: false,
+    apiKeys: { max: 0 },
   },
   strategist: {
     pdfExports: true,
@@ -74,6 +82,8 @@ export const CAPABILITIES: Record<PlanTier, Capabilities> = {
     scheduledReports: false,
     seats: { max: 5 },
     savedViews: { max: 5 },
+    apiAccess: true,
+    apiKeys: { max: 5 },
   },
   command: {
     pdfExports: true,
@@ -86,5 +96,7 @@ export const CAPABILITIES: Record<PlanTier, Capabilities> = {
     scheduledReports: true,
     seats: { max: 25 },
     savedViews: { max: 25 },
+    apiAccess: true,
+    apiKeys: { max: 25 },
   },
 };

@@ -29,7 +29,9 @@ export type AuditAction =
   | 'gdpr.export_requested'
   | 'gdpr.deletion_requested'
   | 'account.suspended'
-  | 'account.resumed';
+  | 'account.resumed'
+  | 'api_key.created'
+  | 'api_key.revoked';
 
 export interface AuditEvent {
   id: string;

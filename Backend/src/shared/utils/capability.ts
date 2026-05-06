@@ -28,6 +28,7 @@ export function hasCapability(
     | 'predictedMoves'
     | 'customRecommendationCategories'
     | 'scheduledReports'
+    | 'apiAccess'
 ): boolean {
   const caps = capabilitiesFor(user);
   return caps[capability] === true;

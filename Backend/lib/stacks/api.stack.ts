@@ -47,7 +47,7 @@ export class ApiStack extends cdk.Stack {
           apigatewayv2.CorsHttpMethod.DELETE,
           apigatewayv2.CorsHttpMethod.OPTIONS,
         ],
-        allowHeaders: ['Content-Type', 'Authorization', 'X-Idempotency-Key', 'X-Workspace-Id'],
+        allowHeaders: ['Content-Type', 'Authorization', 'X-Idempotency-Key', 'X-Workspace-Id', 'X-Api-Key'],
         allowCredentials: true,
         maxAge: cdk.Duration.hours(1),
       },
@@ -148,6 +148,16 @@ export class ApiStack extends cdk.Stack {
 
     // ─── Ownership transfer (Phase 4c) ───
     addRoute('WorkspaceTransfer', apigatewayv2.HttpMethod.POST, '/workspaces/current/transfer-ownership', 'api/workspaces/transfer-ownership.ts');
+
+    // ─── API Keys management (Phase 11) ───
+    addRoute('ApiKeysCreate', apigatewayv2.HttpMethod.POST, '/workspaces/current/api-keys', 'api/api-keys/create.ts');
+    addRoute('ApiKeysList', apigatewayv2.HttpMethod.GET, '/workspaces/current/api-keys', 'api/api-keys/list.ts');
+    addRoute('ApiKeysDelete', apigatewayv2.HttpMethod.DELETE, '/workspaces/current/api-keys/{id}', 'api/api-keys/delete.ts');
+
+    // ─── Public read API (Phase 11) — auth via X-API-Key, NOT Cognito ───
+    addRoute('ApiV1CompetitorsList', apigatewayv2.HttpMethod.GET, '/v1/competitors', 'api/v1/competitors.ts', false);
+    addRoute('ApiV1ChangesList', apigatewayv2.HttpMethod.GET, '/v1/changes', 'api/v1/changes.ts', false);
+    addRoute('ApiV1RecommendationsList', apigatewayv2.HttpMethod.GET, '/v1/recommendations', 'api/v1/recommendations.ts', false);
 
     // GDPR Art. 15+20 / CCPA §1798.110 — data export
     addRoute('UserExport', apigatewayv2.HttpMethod.GET, '/users/me/export', 'api/users/export.ts');

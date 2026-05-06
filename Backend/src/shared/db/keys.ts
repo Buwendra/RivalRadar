@@ -80,6 +80,16 @@ export const auditEventSK = (timestamp: string, id: string) =>
   `AUDIT#${timestamp}#${id}`;
 export const auditEventSKPrefix = () => 'AUDIT#';
 
+// ApiKey — public-API credential, double-write (Phase 11). The auth-lookup
+// row is hashed (no plaintext at rest); the workspace mirror enables the
+// owner-facing list endpoint.
+export const apiKeyByHashPK = (keyHash: string) => `APIKEY#${keyHash}`;
+export const apiKeyByHashSK = () => 'META';
+export const apiKeyByWorkspacePK = (workspaceId: string) =>
+  `WORKSPACE#${workspaceId}`;
+export const apiKeyByWorkspaceSK = (id: string) => `APIKEY#${id}`;
+export const apiKeyByWorkspaceSKPrefix = () => 'APIKEY#';
+
 // ─── GSI Key Builders ───
 
 // GSI1: User's changes feed (dashboard)

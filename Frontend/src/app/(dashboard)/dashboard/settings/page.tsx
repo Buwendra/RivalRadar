@@ -12,6 +12,7 @@ import { ScheduledReportsSection } from "@/components/settings/scheduled-reports
 import { AccountStatusSection } from "@/components/settings/account-status-section";
 import { WorkspaceMembersSection } from "@/components/settings/workspace-members-section";
 import { WorkspaceSettingsSection } from "@/components/settings/workspace-settings-section";
+import { ApiKeysSection } from "@/components/settings/api-keys-section";
 import { ActivityLogSection } from "@/components/settings/activity-log-section";
 import { FeedPreferencesSection } from "@/components/settings/feed-preferences-section";
 
@@ -37,6 +38,7 @@ export default function SettingsPage() {
         <TabsContent value="workspace" className="mt-6 space-y-6">
           <WorkspaceMembersSection />
           <WorkspaceSettingsSection />
+          <ApiKeysSection />
           <ActivityLogSection />
         </TabsContent>
 
