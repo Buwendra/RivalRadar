@@ -181,6 +181,15 @@ export class ApiStack extends cdk.Stack {
     addRoute('RecommendationsList', apigatewayv2.HttpMethod.GET, '/recommendations', 'api/recommendations/list.ts');
     addRoute('RecommendationsUpdate', apigatewayv2.HttpMethod.PATCH, '/recommendations/{id}', 'api/recommendations/update-status.ts');
 
+    // ─── Saved Views (Phase 7b) ───
+    addRoute('SavedViewsList', apigatewayv2.HttpMethod.GET, '/saved-views', 'api/saved-views/list.ts');
+    addRoute('SavedViewsCreate', apigatewayv2.HttpMethod.POST, '/saved-views', 'api/saved-views/create.ts');
+    addRoute('SavedViewsUpdate', apigatewayv2.HttpMethod.PATCH, '/saved-views/{id}', 'api/saved-views/update.ts');
+    addRoute('SavedViewsDelete', apigatewayv2.HttpMethod.DELETE, '/saved-views/{id}', 'api/saved-views/delete.ts');
+
+    // ─── Search (Phase 7b) ───
+    addRoute('Search', apigatewayv2.HttpMethod.GET, '/search', 'api/search/search.ts');
+
     // ─── Onboarding Routes (Phase 5) ───
     addRoute('OnboardingSuggestCompetitors', apigatewayv2.HttpMethod.POST, '/onboarding/suggest-competitors', 'api/onboarding/suggest-competitors.ts');
 

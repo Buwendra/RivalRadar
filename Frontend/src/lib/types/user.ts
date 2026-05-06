@@ -17,4 +17,6 @@ export interface User {
   privacyVersion?: string;
   /** Phase 9a — 'restricted' = self-suspended; 'pending-deletion' = mid-deletion. */
   status?: "active" | "restricted" | "pending-deletion";
+  /** Phase 7b — workspace-shared feed threshold. 0 = no filter. */
+  feedSignificanceThreshold?: number;
 }

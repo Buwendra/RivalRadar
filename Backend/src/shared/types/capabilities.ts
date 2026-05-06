@@ -44,6 +44,10 @@ export interface Capabilities {
     /** -1 = unlimited */
     max: number;
   };
+  /** Saved filter views (Phase 7b). 0 = feature locked. */
+  savedViews: {
+    max: number;
+  };
 }
 
 export const CAPABILITIES: Record<PlanTier, Capabilities> = {
@@ -57,6 +61,7 @@ export const CAPABILITIES: Record<PlanTier, Capabilities> = {
     customRecommendationCategories: false,
     scheduledReports: false,
     seats: { max: 1 },
+    savedViews: { max: 0 },
   },
   strategist: {
     pdfExports: true,
@@ -68,6 +73,7 @@ export const CAPABILITIES: Record<PlanTier, Capabilities> = {
     customRecommendationCategories: false,
     scheduledReports: false,
     seats: { max: 5 },
+    savedViews: { max: 5 },
   },
   command: {
     pdfExports: true,
@@ -79,5 +85,6 @@ export const CAPABILITIES: Record<PlanTier, Capabilities> = {
     customRecommendationCategories: true,
     scheduledReports: true,
     seats: { max: 25 },
+    savedViews: { max: 25 },
   },
 };

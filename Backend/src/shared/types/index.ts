@@ -8,6 +8,7 @@ export * from './integration';
 export * from './change-note';
 export * from './cancellation';
 export * from './workspace';
+export * from './saved-view';
 
 /** Standard API response envelope */
 export interface ApiResponse<T> {

@@ -63,6 +63,12 @@ export interface User {
   // as a 90-day cooldown to prevent nudge fatigue.
   lastLoginAt?: string;
   lastRetentionNudgeAt?: string;
+
+  // Workspace-shared feed threshold (Phase 7b). Stored on the tenant owner's
+  // User row so all workspace members see the same filtered feed. Applied to
+  // GET /changes + the weekly digest aggregator. Critical alerts (significance
+  // >= 8) bypass it. 0 = unfiltered (default).
+  feedSignificanceThreshold?: number;
 }
 
 /**

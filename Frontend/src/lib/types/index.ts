@@ -39,3 +39,9 @@ export type {
   InvitationCreatedResponse,
   AcceptInvitationResponse,
 } from "./workspace";
+export type {
+  SavedView,
+  SavedViewFilters,
+  SearchResult,
+  SearchResponse,
+} from "./saved-view";

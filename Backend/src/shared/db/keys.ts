@@ -67,6 +67,12 @@ export const memberByWorkspaceSKPrefix = () => 'MEMBER#';
 export const invitationPK = (token: string) => `INVITE#${token}`;
 export const invitationSK = () => 'META';
 
+// SavedView — named filter combinations on the change feed (Phase 7b).
+// Keyed under the tenant owner's user row so all workspace members share them.
+export const savedViewPK = (tenantUserId: string) => `USER#${tenantUserId}`;
+export const savedViewSK = (viewId: string) => `VIEW#${viewId}`;
+export const savedViewSKPrefix = () => 'VIEW#';
+
 // ─── GSI Key Builders ───
 
 // GSI1: User's changes feed (dashboard)

@@ -39,6 +39,11 @@ const updateSchema = z.object({
       monthly: z.boolean().optional(),
     })
     .optional(),
+  /**
+   * Phase 7b — workspace-shared feed threshold. Stored on the tenant owner's
+   * User row; all members see the same filtered feed. Critical alerts bypass.
+   */
+  feedSignificanceThreshold: z.number().int().min(0).max(10).optional(),
 });
 
 export const handler = apiHandler(async (event) => {
@@ -71,6 +76,7 @@ export const handler = apiHandler(async (event) => {
           notificationPreferences: user.notificationPreferences,
           customRecommendationCategories: user.customRecommendationCategories,
           scheduledReports: user.scheduledReports,
+          feedSignificanceThreshold: user.feedSignificanceThreshold ?? 0,
           // Phase 9a — frontend re-consent banner reads these to detect drift
           // against the current TOS_VERSION / PRIVACY_VERSION constants.
           tosVersion: user.tosVersion,
@@ -88,6 +94,9 @@ export const handler = apiHandler(async (event) => {
   const updates: Record<string, unknown> = { updatedAt: new Date().toISOString() };
   if (body.name) updates.name = body.name;
   if (body.notificationPreferences) updates.notificationPreferences = body.notificationPreferences;
+  if (body.feedSignificanceThreshold !== undefined) {
+    updates.feedSignificanceThreshold = body.feedSignificanceThreshold;
+  }
 
   // Custom categories + scheduled reports are tier-gated (Command only). Lower
   // tiers attempting to set them get a 403 — backend is the source of truth

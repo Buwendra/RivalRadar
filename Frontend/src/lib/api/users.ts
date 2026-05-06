@@ -26,6 +26,7 @@ export const usersApi = {
     notificationPreferences?: NotificationPreferences;
     customRecommendationCategories?: string[];
     scheduledReports?: { monthly?: boolean };
+    feedSignificanceThreshold?: number;
   }) =>
     apiClient<{ message: string }>("/users/me", {
       method: "PUT",

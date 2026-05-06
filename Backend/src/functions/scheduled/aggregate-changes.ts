@@ -1,7 +1,8 @@
-import { queryGSI, queryByPK } from '../../shared/db/queries';
-import { competitorPK } from '../../shared/db/keys';
+import { getItem, queryGSI, queryByPK } from '../../shared/db/queries';
+import { competitorPK, userPK, userSK } from '../../shared/db/keys';
 import { logger } from '../../shared/utils/logger';
 import { isSnoozed } from '../../shared/utils/snooze';
+import type { User } from '../../shared/types';
 
 interface Event {
   userId: string;
@@ -43,15 +44,19 @@ export const handler = async (
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
   // Query in parallel: user's top changes (last 7d) + all of their competitors
-  // (with current enrichment fields for cross-portfolio context).
-  const [changesResult, competitorsResult] = await Promise.all([
+  // (with current enrichment fields for cross-portfolio context) + user record
+  // (for the Phase 7b feed threshold).
+  const [changesResult, competitorsResult, tenantUser] = await Promise.all([
     queryGSI('GSI1', 'GSI1PK', event.userId, `CHANGE#${sevenDaysAgo}`, {
       skName: 'GSI1SK',
       limit: 50,
       scanForward: false,
     }),
     queryByPK(competitorPK(event.userId), 'COMP#', { scanForward: true }),
+    getItem<User & Record<string, unknown>>(userPK(event.userId), userSK()),
   ]);
+
+  const feedThreshold = tenantUser?.feedSignificanceThreshold ?? 0;
 
   // Build a snooze map by competitor name so we can drop changes from
   // currently-snoozed competitors before they leak into the digest. Keying
@@ -64,7 +69,8 @@ export const handler = async (
       .map((c) => c.name as string)
   );
 
-  // Map and sort changes by significance, filtering out snoozed competitors
+  // Map, filter, and sort: drop snoozed competitors, drop changes below the
+  // workspace's feed threshold (Phase 7b), then top-10 by significance.
   const changes: AggregatedChange[] = changesResult.items
     .filter((item) => !snoozedNames.has(item.competitorName as string))
     .map((item) => {
@@ -78,6 +84,7 @@ export const handler = async (
         detectedAt: item.detectedAt as string,
       };
     })
+    .filter((c) => c.significanceScore >= feedThreshold)
     .sort((a, b) => b.significanceScore - a.significanceScore)
     .slice(0, 10); // Top 10 for the summary
 

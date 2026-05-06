@@ -12,6 +12,7 @@ import { useCompetitors } from "@/lib/hooks/use-competitors";
 import { useAuth } from "@/lib/auth/use-auth";
 import { cn } from "@/lib/utils";
 import type { Momentum, ThreatLevel } from "@/lib/types";
+import { SavedViewsSection } from "./saved-views-section";
 
 interface DashboardSidebarProps {
   onAddCompetitor?: () => void;
@@ -85,6 +86,8 @@ export function DashboardSidebar({ onAddCompetitor }: DashboardSidebarProps) {
       </nav>
 
       <Separator className="bg-brand-700" />
+
+      <SavedViewsSection />
 
       <div className="flex items-center justify-between px-4 py-3">
         <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">

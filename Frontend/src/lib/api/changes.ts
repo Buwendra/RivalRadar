@@ -21,6 +21,8 @@ export const changesApi = {
         limit: filters.limit ?? 20,
         minSignificance: filters.minSignificance,
         competitorId: filters.competitorId,
+        changeTypes: filters.changeTypes?.join(","),
+        sinceDays: filters.sinceDays,
       },
     });
     return {

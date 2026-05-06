@@ -33,4 +33,6 @@ export interface ChangeFilters {
   limit?: number;
   minSignificance?: number;
   competitorId?: string;
+  changeTypes?: ChangeType[];
+  sinceDays?: number;
 }
