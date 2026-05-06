@@ -8,6 +8,7 @@ import { ApiStack } from '../lib/stacks/api.stack';
 import { PipelineStack } from '../lib/stacks/pipeline.stack';
 import { EmailStack } from '../lib/stacks/email.stack';
 import { MonitoringStack } from '../lib/stacks/monitoring.stack';
+import { StatusPageStack } from '../lib/stacks/status-page.stack';
 
 if (!process.env.CDK_DEFAULT_ACCOUNT) {
   throw new Error('CDK_DEFAULT_ACCOUNT is not set. Run: export CDK_DEFAULT_ACCOUNT=$(aws sts get-caller-identity --query Account --output text)');
@@ -48,7 +49,7 @@ const apiStack = new ApiStack(app, `${prefix}-Api`, {
   researchStateMachine: pipelineStack.researchStateMachine,
 });
 
-new MonitoringStack(app, `${prefix}-Monitoring`, {
+const monitoringStack = new MonitoringStack(app, `${prefix}-Monitoring`, {
   env,
   table: databaseStack.table,
   api: apiStack.httpApi,
@@ -64,6 +65,15 @@ new MonitoringStack(app, `${prefix}-Monitoring`, {
     sendRetentionNudges: pipelineStack.sendRetentionNudgesFn,
   },
   alertEmail: process.env.ALERT_EMAIL,
+});
+
+// Phase 8c — public status page. Subscribes to MonitoringStack's alerts
+// topic + reads CloudWatch alarms (filtered by stack-name prefix) to render
+// a public CloudFront-fronted HTML page on every alarm-state change.
+new StatusPageStack(app, `${prefix}-StatusPage`, {
+  env,
+  alertsTopic: monitoringStack.alertsTopic,
+  alarmNamePrefix: `${prefix}-`,
 });
 
 app.synth();
