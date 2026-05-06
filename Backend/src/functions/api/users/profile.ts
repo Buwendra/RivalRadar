@@ -71,6 +71,13 @@ export const handler = apiHandler(async (event) => {
           notificationPreferences: user.notificationPreferences,
           customRecommendationCategories: user.customRecommendationCategories,
           scheduledReports: user.scheduledReports,
+          // Phase 9a — frontend re-consent banner reads these to detect drift
+          // against the current TOS_VERSION / PRIVACY_VERSION constants.
+          tosVersion: user.tosVersion,
+          privacyVersion: user.privacyVersion,
+          // Phase 9a self-suspend — frontend renders the suspend/resume button
+          // based on this. Default 'active' if absent (existing accounts).
+          status: user.status ?? 'active',
         },
       },
     };

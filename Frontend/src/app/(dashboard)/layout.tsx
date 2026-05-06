@@ -5,6 +5,7 @@ import { AuthGuard } from "@/components/layout/auth-guard";
 import { DashboardSidebar } from "@/components/layout/dashboard-sidebar";
 import { DashboardHeader } from "@/components/layout/dashboard-header";
 import { MobileSidebar } from "@/components/layout/mobile-sidebar";
+import { ReconsentBanner } from "@/components/shared/reconsent-banner";
 import { usersApi } from "@/lib/api/users";
 
 const PING_SESSION_KEY = "rs_pinged_this_session";
@@ -46,6 +47,7 @@ export default function DashboardLayout({
         {/* Main content */}
         <div className="flex flex-1 flex-col overflow-hidden">
           <DashboardHeader onMenuClick={() => setMobileSidebarOpen(true)} />
+          <ReconsentBanner />
           <main className="flex-1 overflow-y-auto p-4 lg:p-6">
             {children}
           </main>

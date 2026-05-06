@@ -12,4 +12,9 @@ export interface User {
   notificationPreferences?: NotificationPreferences;
   customRecommendationCategories?: string[];
   scheduledReports?: { monthly?: boolean };
+  /** Phase 9a — re-consent banner reads these to detect policy-version drift. */
+  tosVersion?: string;
+  privacyVersion?: string;
+  /** Phase 9a — 'restricted' = self-suspended; 'pending-deletion' = mid-deletion. */
+  status?: "active" | "restricted" | "pending-deletion";
 }

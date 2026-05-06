@@ -9,6 +9,7 @@ import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
+import * as wafv2 from 'aws-cdk-lib/aws-wafv2';
 import { Construct } from 'constructs';
 import * as path from 'path';
 
@@ -126,6 +127,10 @@ export class ApiStack extends cdk.Stack {
     addRoute('UserUpdate', apigatewayv2.HttpMethod.PUT, '/users/me', 'api/users/profile.ts');
     // Phase 8a — once-per-session login ping for the retention-nudge cron
     addRoute('UserPing', apigatewayv2.HttpMethod.POST, '/users/me/ping', 'api/users/ping.ts');
+    // Phase 9a — GDPR Art. 18 self-suspend + re-consent
+    addRoute('UserSuspend', apigatewayv2.HttpMethod.POST, '/users/me/suspend', 'api/users/suspend.ts');
+    addRoute('UserResume', apigatewayv2.HttpMethod.POST, '/users/me/resume', 'api/users/suspend.ts');
+    addRoute('UserAcceptTos', apigatewayv2.HttpMethod.POST, '/users/me/accept-tos', 'api/users/accept-tos.ts');
     const onboardFn = addRoute('UserOnboard', apigatewayv2.HttpMethod.POST, '/users/onboard', 'api/users/onboard.ts', true, pipelineEnv);
     researchStateMachine.grantStartExecution(onboardFn);
 
@@ -250,7 +255,121 @@ export class ApiStack extends cdk.Stack {
       { ADMIN_EMAILS: process.env.ADMIN_EMAILS ?? '' }
     );
 
+    // ─── Phase 9a: API Gateway Throttling ───
+    // Default loose limit (100 req/s, 200 burst) catches runaway client loops
+    // without affecting normal usage. Per-route tight limits on auth endpoints
+    // (5 req/s, 10 burst) blunt credential-stuffing + signup-spam attacks.
+    // Phase 9b will add full AWS WAF rate-based rules; this is the API-level
+    // first line of defense.
+    const defaultStage = this.httpApi.defaultStage!.node.defaultChild as apigatewayv2.CfnStage;
+    defaultStage.defaultRouteSettings = {
+      throttlingBurstLimit: 200,
+      throttlingRateLimit: 100,
+    };
+    defaultStage.routeSettings = [
+      { routeKey: 'POST /auth/signup', throttlingBurstLimit: 10, throttlingRateLimit: 5 },
+      { routeKey: 'POST /auth/signin', throttlingBurstLimit: 10, throttlingRateLimit: 5 },
+      {
+        routeKey: 'POST /auth/resend-verification',
+        throttlingBurstLimit: 5,
+        throttlingRateLimit: 2,
+      },
+    ];
+
+    // ─── Phase 9a: AWS WAF v2 ───
+    // Three managed rule sets covering OWASP Top 10 + known-bad inputs +
+    // anonymous IP / IP reputation. Plus a custom rate-based rule capping
+    // any single IP at 2000 requests / 5 min (≈ 400 req/min). Action defaults
+    // to BLOCK except for managed rules where we trust AWS's defaults.
+    const webAcl = new wafv2.CfnWebACL(this, 'WebAcl', {
+      name: `${this.stackName}-WebAcl`,
+      scope: 'REGIONAL',
+      defaultAction: { allow: {} },
+      visibilityConfig: {
+        cloudWatchMetricsEnabled: true,
+        metricName: `${this.stackName}-WebAcl`,
+        sampledRequestsEnabled: true,
+      },
+      rules: [
+        {
+          name: 'AWSManagedRulesCommonRuleSet',
+          priority: 1,
+          overrideAction: { none: {} },
+          statement: {
+            managedRuleGroupStatement: {
+              vendorName: 'AWS',
+              name: 'AWSManagedRulesCommonRuleSet',
+            },
+          },
+          visibilityConfig: {
+            cloudWatchMetricsEnabled: true,
+            metricName: 'AWSManagedRulesCommonRuleSet',
+            sampledRequestsEnabled: true,
+          },
+        },
+        {
+          name: 'AWSManagedRulesKnownBadInputsRuleSet',
+          priority: 2,
+          overrideAction: { none: {} },
+          statement: {
+            managedRuleGroupStatement: {
+              vendorName: 'AWS',
+              name: 'AWSManagedRulesKnownBadInputsRuleSet',
+            },
+          },
+          visibilityConfig: {
+            cloudWatchMetricsEnabled: true,
+            metricName: 'AWSManagedRulesKnownBadInputsRuleSet',
+            sampledRequestsEnabled: true,
+          },
+        },
+        {
+          name: 'AWSManagedRulesAmazonIpReputationList',
+          priority: 3,
+          overrideAction: { none: {} },
+          statement: {
+            managedRuleGroupStatement: {
+              vendorName: 'AWS',
+              name: 'AWSManagedRulesAmazonIpReputationList',
+            },
+          },
+          visibilityConfig: {
+            cloudWatchMetricsEnabled: true,
+            metricName: 'AWSManagedRulesAmazonIpReputationList',
+            sampledRequestsEnabled: true,
+          },
+        },
+        {
+          name: 'RateLimitPerIp',
+          priority: 10,
+          action: { block: {} },
+          statement: {
+            rateBasedStatement: {
+              limit: 2000, // 2000 requests per 5 min = ~400 req/min sustained
+              aggregateKeyType: 'IP',
+            },
+          },
+          visibilityConfig: {
+            cloudWatchMetricsEnabled: true,
+            metricName: 'RateLimitPerIp',
+            sampledRequestsEnabled: true,
+          },
+        },
+      ],
+    });
+
+    // Associate the WebACL with the HTTP API's default stage. The ResourceArn
+    // for an HTTP API stage uses the apigateway service prefix, NOT apigatewayv2.
+    const region = cdk.Stack.of(this).region;
+    const apiId = this.httpApi.apiId;
+    const stageArn = `arn:aws:apigateway:${region}::/apis/${apiId}/stages/$default`;
+    new wafv2.CfnWebACLAssociation(this, 'WebAclAssociation', {
+      resourceArn: stageArn,
+      webAclArn: webAcl.attrArn,
+    });
+
     // ─── Outputs ───
     new cdk.CfnOutput(this, 'ApiUrl', { value: this.httpApi.apiEndpoint });
+    new cdk.CfnOutput(this, 'WebAclArn', { value: webAcl.attrArn });
   }
 }

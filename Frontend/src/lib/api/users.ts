@@ -48,4 +48,23 @@ export const usersApi = {
       method: "POST",
       body: {},
     }),
+
+  /** Phase 9a — GDPR Art. 18 self-suspend / resume. */
+  suspend: () =>
+    apiClient<{ status: string }>("/users/me/suspend", {
+      method: "POST",
+      body: {},
+    }),
+  resume: () =>
+    apiClient<{ status: string }>("/users/me/resume", {
+      method: "POST",
+      body: {},
+    }),
+
+  /** Phase 9a — re-consent handshake (echoes current versions back). */
+  acceptTos: (versions: { tosVersion: string; privacyVersion: string }) =>
+    apiClient<{ tosVersion: string; privacyVersion: string; acceptedAt: string }>(
+      "/users/me/accept-tos",
+      { method: "POST", body: versions }
+    ),
 };
