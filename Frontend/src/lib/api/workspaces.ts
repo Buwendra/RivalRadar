@@ -37,6 +37,12 @@ export const workspacesApi = {
       body: { name },
     }),
 
+  transferOwnership: (newOwnerUserId: string) =>
+    apiClient<{ workspaceId: string; ownerUserId: string }>(
+      "/workspaces/current/transfer-ownership",
+      { method: "POST", body: { newOwnerUserId } }
+    ),
+
   remove: () =>
     apiClient<{ workspaceId: string; deleted: boolean }>("/workspaces/current", {
       method: "DELETE",

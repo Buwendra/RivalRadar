@@ -17,6 +17,7 @@
 export type AuditAction =
   | 'workspace.renamed'
   | 'workspace.deleted'
+  | 'workspace.ownership_transferred'
   | 'workspace.invitation_created'
   | 'workspace.invitation_accepted'
   | 'workspace.member_removed'

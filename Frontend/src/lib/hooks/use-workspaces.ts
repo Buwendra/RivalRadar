@@ -59,6 +59,15 @@ export function useDeleteWorkspace() {
   });
 }
 
+export function useTransferOwnership() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (newOwnerUserId: string) =>
+      workspacesApi.transferOwnership(newOwnerUserId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["workspaces"] }),
+  });
+}
+
 export function useWorkspaceAuditLog() {
   return useQuery({
     queryKey: ["workspaces", "audit"],

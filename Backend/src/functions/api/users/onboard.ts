@@ -104,6 +104,10 @@ export const handler = apiHandler(async (event) => {
       id: workspaceId,
       name: workspaceName,
       ownerUserId: userId,
+      // Phase 4c — immutable data-tenancy key. Stays put across ownership
+      // transfers so existing competitor / change / subscription rows never
+      // need re-keying.
+      tenantUserId: userId,
       createdAt: now,
       updatedAt: now,
     });

@@ -146,6 +146,9 @@ export class ApiStack extends cdk.Stack {
     addRoute('WorkspaceDelete', apigatewayv2.HttpMethod.DELETE, '/workspaces/current', 'api/workspaces/delete.ts');
     addRoute('WorkspaceAudit', apigatewayv2.HttpMethod.GET, '/workspaces/current/audit', 'api/workspaces/audit.ts');
 
+    // ─── Ownership transfer (Phase 4c) ───
+    addRoute('WorkspaceTransfer', apigatewayv2.HttpMethod.POST, '/workspaces/current/transfer-ownership', 'api/workspaces/transfer-ownership.ts');
+
     // GDPR Art. 15+20 / CCPA §1798.110 — data export
     addRoute('UserExport', apigatewayv2.HttpMethod.GET, '/users/me/export', 'api/users/export.ts');
 

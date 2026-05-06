@@ -17,6 +17,7 @@ import type { AuditAction, AuditEventListItem } from "@/lib/types";
 const ACTION_LABEL: Record<AuditAction, string> = {
   "workspace.renamed": "Renamed workspace",
   "workspace.deleted": "Deleted workspace",
+  "workspace.ownership_transferred": "Transferred ownership",
   "workspace.invitation_created": "Invited member",
   "workspace.invitation_accepted": "Accepted invitation",
   "workspace.member_removed": "Removed member",

@@ -1,17 +1,18 @@
 /**
- * Workspace + Membership + Invitation entities (Phase 4a).
+ * Workspace + Membership + Invitation entities (Phase 4a + 4c).
  *
- * The pragmatic Phase 4a shape: a Workspace is a thin layer where the
- * `ownerUserId` is the canonical "tenant" key. All existing entities
- * (Competitor, Subscription, IntegrationCredential, etc.) STAY keyed
- * under `USER#<id>` where `id` is the workspace owner. Members of the
- * workspace see the same data because the auth middleware resolves
- * any signed-in user's email to the workspace owner's userId.
+ * Phase 4a established "Workspace" as a sharing abstraction where data
+ * (Competitor, Subscription, IntegrationCredential, etc.) is keyed under
+ * the owner's `USER#<id>`. Phase 4c added ownership transfer by splitting
+ * one mutable field into two:
  *
- * Trade-off: the workspace owner is special — they can't be replaced
- * without a data migration. Phase 4b will rekey to `WORKSPACE#<wsId>`
- * for true ownership-independence; for now, "workspace" is a sharing
- * abstraction.
+ *   - `tenantUserId` (immutable) — whose `USER#<id>` row holds the data.
+ *     Set once at workspace creation = the original `ownerUserId`. Never
+ *     changes. This is what `resolveTenantContext` returns as the data
+ *     tenant key. Optional in the type to support lazy backfill of
+ *     pre-Phase-4c rows.
+ *   - `ownerUserId` (mutable) — who has admin authority. Changes on
+ *     transfer; drives role assignment in `resolveTenantContext`.
  *
  * Storage layout:
  *   Workspace        — PK=WORKSPACE#<wsId>, SK=PROFILE
@@ -25,7 +26,14 @@ export type MembershipRole = 'owner' | 'member';
 export interface Workspace {
   id: string;
   name: string;
+  /** Mutable — admin authority. Updated on ownership transfer. */
   ownerUserId: string;
+  /**
+   * Immutable — whose USER#<id> row holds the workspace's data. Optional
+   * during the lazy-backfill window for rows created before Phase 4c.
+   * Resolver falls back to `ownerUserId` when absent.
+   */
+  tenantUserId?: string;
   createdAt: string;
   updatedAt: string;
 }

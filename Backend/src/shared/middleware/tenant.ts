@@ -113,8 +113,11 @@ export async function resolveTenantContext(
     };
   }
 
+  // Phase 4c — `tenantUserId` is the immutable data-tenancy key (set at
+  // workspace creation). Falls back to `ownerUserId` for pre-4c rows that
+  // haven't been touched since the upgrade.
   return {
-    tenantUserId: workspace.ownerUserId,
+    tenantUserId: workspace.tenantUserId ?? workspace.ownerUserId,
     callerUserId,
     callerEmail: email,
     workspaceId: workspace.id,
