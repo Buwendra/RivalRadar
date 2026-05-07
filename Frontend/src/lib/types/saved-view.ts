@@ -14,6 +14,8 @@ export interface SavedView {
   createdByUserId: string;
   createdAt: string;
   updatedAt: string;
+  /** Phase 15 — caller's per-user subscription state for this view. */
+  subscribed?: boolean;
 }
 
 export interface SearchResult {

@@ -321,6 +321,28 @@ export class PipelineStack extends cdk.Stack {
       targets: [new targets.LambdaFunction(this.sendRetentionNudgesFn)],
     });
 
+    // ─── Send Saved-View Digests Lambda (Phase 15) ───
+    // Weekly Mon 9am UTC (1h after the regular weekly digest at 8am).
+    // Walks SavedViewSubscription rows via Scan, groups by (workspaceId,
+    // viewId), renders per-view digests, fans out emails to each
+    // subscriber. Direct EventBridge → Lambda (no state machine — fan-out
+    // is small at v1 volume).
+    const sendSavedViewDigestsFn = createPipelineFn(
+      'SendSavedViewDigests',
+      'scheduled/send-saved-view-digests.ts'
+    );
+    sendSavedViewDigestsFn.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ['ses:SendEmail', 'ses:SendRawEmail'],
+        resources: ['*'],
+      })
+    );
+    new events.Rule(this, 'SavedViewDigestsCronRule', {
+      ruleName: `${this.stackName}-SavedViewDigestsCron`,
+      schedule: events.Schedule.cron({ minute: '0', hour: '9', weekDay: 'MON' }),
+      targets: [new targets.LambdaFunction(sendSavedViewDigestsFn)],
+    });
+
     // ─── Outputs ───
     new cdk.CfnOutput(this, 'WeeklyDigestArn', { value: this.weeklyStateMachine.stateMachineArn });
     new cdk.CfnOutput(this, 'ResearchPipelineArn', { value: this.researchStateMachine.stateMachineArn });

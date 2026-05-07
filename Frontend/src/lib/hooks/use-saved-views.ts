@@ -45,3 +45,19 @@ export function useDeleteSavedView() {
     onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
   });
 }
+
+export function useSubscribeSavedView() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => savedViewsApi.subscribe(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
+  });
+}
+
+export function useUnsubscribeSavedView() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => savedViewsApi.unsubscribe(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
+  });
+}

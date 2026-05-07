@@ -29,3 +29,25 @@ export interface SavedView {
   createdAt: string;
   updatedAt: string;
 }
+
+/**
+ * SavedViewSubscription (Phase 15) — per-caller weekly email digest of a
+ * saved view's matching changes. Stored under the SUBSCRIBER's USER# row
+ * (not the tenant owner's): each member subscribes independently.
+ *
+ *   PK = USER#<subscriberUserId>
+ *   SK = VIEW_SUB#<workspaceId>#<viewId>
+ *
+ * v1 is weekly + email only. Slack/webhook fan-out + daily cadence are
+ * deferred to follow-up phases.
+ */
+export interface SavedViewSubscription {
+  subscriberUserId: string;
+  subscriberEmail: string;
+  workspaceId: string;
+  viewId: string;
+  cadence: 'weekly';
+  createdAt: string;
+  /** Bumped after each successful digest send. Best-effort. */
+  lastSentAt?: string;
+}

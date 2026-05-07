@@ -73,6 +73,15 @@ export const savedViewPK = (tenantUserId: string) => `USER#${tenantUserId}`;
 export const savedViewSK = (viewId: string) => `VIEW#${viewId}`;
 export const savedViewSKPrefix = () => 'VIEW#';
 
+// SavedViewSubscription — per-caller weekly email subscription (Phase 15).
+// Keyed under the SUBSCRIBER's user row (not the tenant owner's): each
+// member subscribes independently.
+export const savedViewSubscriptionPK = (subscriberUserId: string) =>
+  `USER#${subscriberUserId}`;
+export const savedViewSubscriptionSK = (workspaceId: string, viewId: string) =>
+  `VIEW_SUB#${workspaceId}#${viewId}`;
+export const savedViewSubscriptionSKPrefix = () => 'VIEW_SUB#';
+
 // AuditEvent — workspace-scoped activity log (Phase 4b). Double-segment SK
 // lets us paginate cleanly when two events share a millisecond.
 export const auditEventPK = (workspaceId: string) => `WORKSPACE#${workspaceId}`;

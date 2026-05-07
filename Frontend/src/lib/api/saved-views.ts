@@ -17,4 +17,16 @@ export const savedViewsApi = {
     apiClient<{ id: string; deleted: boolean }>(`/saved-views/${id}`, {
       method: "DELETE",
     }),
+
+  subscribe: (id: string) =>
+    apiClient<{ viewId: string; subscribed: boolean }>(
+      `/saved-views/${id}/subscribe`,
+      { method: "POST" }
+    ),
+
+  unsubscribe: (id: string) =>
+    apiClient<{ viewId: string; subscribed: boolean }>(
+      `/saved-views/${id}/subscribe`,
+      { method: "DELETE" }
+    ),
 };

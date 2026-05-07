@@ -213,6 +213,9 @@ export class ApiStack extends cdk.Stack {
     addRoute('SavedViewsCreate', apigatewayv2.HttpMethod.POST, '/saved-views', 'api/saved-views/create.ts');
     addRoute('SavedViewsUpdate', apigatewayv2.HttpMethod.PATCH, '/saved-views/{id}', 'api/saved-views/update.ts');
     addRoute('SavedViewsDelete', apigatewayv2.HttpMethod.DELETE, '/saved-views/{id}', 'api/saved-views/delete.ts');
+    // Phase 15 — saved-view email subscriptions (per-caller, weekly cadence)
+    addRoute('SavedViewsSubscribe', apigatewayv2.HttpMethod.POST, '/saved-views/{id}/subscribe', 'api/saved-views/subscribe.ts');
+    addRoute('SavedViewsUnsubscribe', apigatewayv2.HttpMethod.DELETE, '/saved-views/{id}/subscribe', 'api/saved-views/unsubscribe.ts');
 
     // ─── Search (Phase 7b) ───
     addRoute('Search', apigatewayv2.HttpMethod.GET, '/search', 'api/search/search.ts');
