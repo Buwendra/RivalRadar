@@ -26,11 +26,11 @@ EventBridge (Mon 8am UTC) → WeeklyDigest SFN    → [Aggregate → Sonnet Summ
 Onboard / manual click    → ResearchPipeline SFN → [DeepResearch (web_search) → SendAlert]
 ```
 
-**7 CDK stacks** wired in `bin/app.ts` with explicit cross-stack dependencies:
-Database → Storage → Auth → Email → Pipeline → API (receives `researchStateMachine` ARN) → Monitoring.
+**8 CDK stacks** wired in `bin/app.ts` with explicit cross-stack dependencies:
+Database → Storage → Auth → Email → Pipeline → API (receives `researchStateMachine` ARN) → Monitoring → StatusPage (Phase 8c — public S3+CloudFront `/status` site with auto-updater Lambda).
 Stack naming: `RivalScan-${stage}-${StackType}` (stage from env context: dev/staging/prod).
 
-The current product roadmap and design rationale lives in [ROADMAP.md](ROADMAP.md) and [PREDICTIONS_AND_TAGS.md](PREDICTIONS_AND_TAGS.md) at the project root. Treat those as the source of truth for what's shipped vs. what's planned.
+The current product roadmap and design rationale lives in [ROADMAP.md](ROADMAP.md), [PRODUCT_GAPS_ROADMAP.md](PRODUCT_GAPS_ROADMAP.md), [COMPLIANCE_ROADMAP.md](COMPLIANCE_ROADMAP.md), and [PREDICTIONS_AND_TAGS.md](PREDICTIONS_AND_TAGS.md) at the project root. Treat those as the source of truth for what's shipped vs. what's planned.
 
 ## Commands
 
@@ -65,17 +65,22 @@ npm run lint             # ESLint
 All API Lambda handlers use the `apiHandler()` wrapper from `shared/middleware/`. This provides automatic CORS headers, JSON parsing, OPTIONS handling, request logging, and error catching. Handlers receive either `AuthenticatedEvent` (Cognito JWT) or `PublicEvent`.
 
 ```typescript
-// Standard handler skeleton
+// Standard handler skeleton (post-Phase 4a tenancy)
 export const handler = apiHandler(async (event) => {
-  const email = getUserEmail(event);           // Extract from JWT claims
-  const body = validate(schema, parseBody(event)); // Zod validation
-  // GSI3 lookup: email → userId (every authenticated route does this)
-  const { items } = await queryGSI('GSI3', 'GSI3PK', email, 'USER#');
-  const userId = (items[0].GSI3SK as string).replace('USER#', '');
-  // ... business logic ...
+  const email = getUserEmail(event);
+  const body = validate(schema, parseBody(event));
+  const ctx = await resolveTenantContext(
+    email,
+    getRequestedWorkspaceId(event.headers as Record<string, string | undefined>)
+  );
+  // ctx.tenantUserId — workspace owner, key entities under this
+  // ctx.callerUserId — actual signed-in user (use for audit attribution)
+  // ctx.workspaceId / ctx.workspaceName / ctx.role
   return { statusCode: 200, body: { data: result } };
 });
 ```
+
+**Public routes that need to emit non-JSON responses (e.g. `Location:` header for a 302 redirect)** must bypass `apiHandler` — the wrapper hardcodes `Content-Type: application/json`. See `api/public/battlecard.ts` for the pattern.
 
 ### Backend Path Aliases (tsconfig)
 
@@ -110,6 +115,37 @@ Auth tokens stored in localStorage with `rs_` prefix. `apiClient` auto-injects B
 
 Cognito JWT → tokens in localStorage → `AuthProvider` hydrates on mount, checks token expiry every 60s → `AuthGuard` component wraps protected routes and enforces onboarding completion.
 
+### Workspaces & Tenancy (Phase 4a/b/c)
+
+Every authenticated handler resolves a **TenantContext** before doing any work — `resolveTenantContext(email, requestedWorkspaceId?)` in `shared/middleware/tenant.ts` translates the JWT email into:
+- **`tenantUserId`** — the workspace owner's userId; all shared entities (Competitor, Subscription, Recommendation, SavedView, Battlecard, etc.) are keyed under `USER#<tenantUserId>` so every member of the workspace sees the same data.
+- **`callerUserId`** — the actual signed-in user. Use for audit attribution + caller-scoped entities (Notification, AuditEvent actor, ApiKey creator).
+- **`workspaceId`, `workspaceName`, `role`** — workspace identity + the caller's role.
+
+Resolution order: email → `callerUserId` (GSI3) → memberships under `USER#<callerUserId>` / SK `MEMBERSHIP#`. If the caller has multiple workspaces, the **`X-Workspace-Id`** header (sent by the frontend from `localStorage.rs_current_workspace_id`) picks the active one; otherwise the resolver falls back to the caller's own workspace. Legacy users with no memberships return `tenantUserId === callerUserId`.
+
+**Three-role hierarchy (Phase 14):** `owner > admin > member`. Owners can do anything; admins can invite/remove members and edit content; members are read-only-ish. Role gates live in handlers — search for `requireOwner` / `requireAdminOrOwner`. Admins **cannot invite other admins** — that's gated to owners only to prevent admin-as-second-owner attacks.
+
+**Ownership transfer (Phase 4c):** uses `tenantUserId` (immutable, the original creator) vs `ownerUserId` (mutable, current owner) split with a lazy resolver fallback — no data migration needed.
+
+### Capability Gating (Phase 6 / Phase 19 / Phase 20)
+
+Tier-gated features go through `hasCapability(user, 'pdfExports')` from `shared/utils/capability.ts`, fed by the `CAPABILITIES` matrix in `shared/types/capabilities.ts`. The frontend mirrors this manually in `Frontend/src/lib/utils/capabilities.ts` + `lib/hooks/use-capability.ts` — when adding a new capability flag, update **both files** plus the union type on `hasCapability`'s parameter and the `useCapability` hook. Backend remains the enforcement source of truth; frontend uses the mirror only for UI gating (showing/hiding upgrade prompts, disabling buttons).
+
+Current capability flags: `pdfExports`, `csvExports`, `slackIntegration`, `webhookIntegration`, `predictedMoves`, `customRecommendationCategories`, `scheduledReports`, `apiAccess`, `comparatorMatrix`. Numeric capacity flags (`recommendations.maxVisible`, `seats.max`, `savedViews.max`, `apiKeys.max`) are read directly from `capabilitiesFor(user)` rather than via the boolean check.
+
+### Public API (Phase 11/13)
+
+**`/v1/*` routes are X-API-Key authenticated, NOT Cognito.** Routes registered in `api.stack.ts` with `auth: false` and a separate middleware `resolveApiKeyContext()` that hashes the incoming key (SHA-256), looks up the row by `APIKEY#<hash>` PK, and returns the workspace + scope. Keys have a `scope` enum (`'read'` default / `'write'`) — write-scope routes (`POST /v1/competitors`, `PATCH /v1/recommendations/{id}`) reject read-only keys at the handler. Pre-Phase-13 keys default to `'read'` via `keyRow.scope ?? 'read'` so nothing breaks.
+
+### Public token-share routes
+
+Several public routes are token-validated rather than auth'd: invitations (`/invitations/{token}/accept`), cancellation feedback (`/cancellation-feedback/{token}`), public battlecards (`/public/battlecards/{token}`). Pattern: ULID token in the URL path, looked up via either a dedicated PK (`INVITE#<token>`, `CANCEL_FEEDBACK#<token>`) or a GSI3 reverse-index (`BATTLECARD_TOKEN#<token>`). Validate `expiresAt` (epoch seconds) explicitly even though DDB TTL is set — TTL has up to 48h delay.
+
+### In-app notifications (Phase 18)
+
+Per-user, polling-based feed. Fire-and-forget `enqueueNotification()` in `shared/services/notifications.ts` mirrors `recordAuditEvent` — write failures log + continue, never roll back the underlying mutation. Storage: `USER#<recipientUserId>` / `NOTIF#<ts>#<ulid>`, 90-day TTL. Notification kinds: `invitation.accepted`, `workspace.member_removed`, `workspace.role_changed`, `workspace.ownership_received`, `workspace.ownership_handed_off`. Frontend polls every 60s via `useNotifications()`.
+
 ### ID Generation
 
 Uses ULID (`generateId()` in `shared/utils/id.ts`) — time-sortable, conflict-free.
@@ -126,9 +162,14 @@ All Anthropic calls go through `callAnthropic()` in `shared/services/anthropic.t
   - `deepResearch()` — research with native `web_search_20250305` tool, max 8 uses/run, max_tokens 4096
   - `detectResearchDeltas()` — compares prior vs current `ResearchFinding`, max_tokens **16384** (large because it generates detailed deltas + impact analysis). Has a `parseDeltasJson()` helper that does **partial JSON recovery** if Claude truncates mid-array — salvages every complete delta object before the cut-off rather than discarding the whole response.
   - `generateWeeklySummary()` — strategic briefing prose for the digest email
+  - `predictNextMoves()` — forward-looking 30/60/90-day predictions per competitor (~$0.02)
 - **Claude Haiku 4.5** (`claude-haiku-4-5-20251001`):
   - `scoreCompetitorThreat()` — 1-2 sentence threat rationale + level (~$0.002/call)
+  - `suggestWinAgainstTactics()` — 3-5 sales-enablement tactics for the battlecard (Phase 21, ~$0.005/call); cached on the Competitor record keyed by `winAgainstTacticsResearchId` so regenerating the same battlecard within one research cycle skips the call.
+  - `classifyResearchTarget()` — pre-research input classifier rejecting person names / sanctioned entities (Compliance Phase 1)
   - `analyzeChange()` (legacy, unused after the deep-research refactor — kept for reference)
+
+All AI surfaces (dashboard cards, weekly digest email, battlecard PDF) carry an AI disclaimer footer — see `Frontend/src/components/dashboard/ai-disclaimer.tsx` and the footer line in the PDF renderers.
 
 **Do not pin Sonnet to a dated snapshot without confirming it exists.** A bad snapshot ID (`claude-sonnet-4-5-20241022`, which is actually a 3.5 Sonnet date) shipped once and caused silent 404s. The alias `claude-sonnet-4-5` is the safe default.
 
@@ -158,22 +199,41 @@ Funnel events are emitted as structured JSON via `logger.info(eventName, metadat
 
 ## DynamoDB Single-Table Design
 
-| Entity | PK | SK |
-|--------|----|----|
-| User | `USER#<id>` | `PROFILE` |
-| Subscription | `USER#<id>` | `SUB` |
-| Competitor | `USER#<id>` | `COMP#<id>` |
-| Change | `COMP#<id>` | `CHANGE#<timestamp>` |
-| ResearchFinding | `COMP#<id>` | `RESEARCH#<timestamp>` |
+| Entity | PK | SK | Notes |
+|--------|----|----|----|
+| User | `USER#<id>` | `PROFILE` | |
+| Subscription | `USER#<id>` | `SUB` | |
+| Competitor | `USER#<tenantUserId>` | `COMP#<id>` | shared across workspace |
+| Change | `COMP#<id>` | `CHANGE#<timestamp>` | |
+| ResearchFinding | `COMP#<id>` | `RESEARCH#<timestamp>` | carries `derivedState` |
+| Recommendation | `USER#<tenantUserId>` | `REC#<timestamp>` | Phase 2 |
+| ChangeNote | `COMP#<id>` | `NOTE#<changeId>#<ts>` | Phase 7a analyst notes |
+| IntegrationCredential | `USER#<tenantUserId>` | `INTEGRATION#<provider>` | Phase 3 |
+| CostDay | `USER#<id>` | `COST#<YYYY-MM-DD>` | Phase 1 cost rollup |
+| Workspace | `WORKSPACE#<id>` | `PROFILE` | Phase 4a |
+| Membership (per-user) | `USER#<userId>` | `MEMBERSHIP#<workspaceId>` | Phase 4a |
+| Member (per-workspace) | `WORKSPACE#<id>` | `MEMBER#<userId>` | Phase 4a |
+| Invitation | `INVITE#<token>` | `META` | token-share, Phase 4a |
+| AuditEvent | `WORKSPACE#<id>` | `AUDIT#<ts>#<id>` | Phase 4b |
+| SavedView | `USER#<tenantUserId>` | `VIEW#<id>` | Phase 7b |
+| SavedViewSubscription | `USER#<subscriberUserId>` | `VIEW_SUB#<workspaceId>#<viewId>` | Phase 15 |
+| ApiKey (auth lookup) | `APIKEY#<sha256(key)>` | `META` | Phase 11, hashed |
+| ApiKey (workspace mirror) | `WORKSPACE#<id>` | `APIKEY#<id>` | for the list endpoint |
+| Notification | `USER#<recipientUserId>` | `NOTIF#<ts>#<id>` | Phase 18, 90-day TTL |
+| Battlecard | `USER#<tenantUserId>` | `BATTLECARD#<ts>#<id>` | Phase 20, 30-day TTL, GSI3 token lookup |
+| CancellationFeedback | `CANCEL_FEEDBACK#<token>` | `META` | Phase 8b, token-share |
+| OFAC SDN drift tracker | `OFAC_SDN` | `META` | Compliance Phase 1, drift cron |
 
 The `Snapshot` entity from the original Firecrawl pipeline is no longer written. Old snapshot rows from before the deep-research refactor still exist (and the SK prefix `SNAP#` is reserved) but no code path reads them today.
 
 **GSIs**:
-- **GSI1** — user's combined feed; stores both `CHANGE#<ts>` and `RESEARCH#<ts>` SK prefixes (filter with `begins_with`)
+- **GSI1** — user's combined feed; stores `CHANGE#<ts>`, `RESEARCH#<ts>`, and `REC#<ts>` SK prefixes (filter with `begins_with`)
 - **GSI2** — all active competitors (PK=`ACTIVE`); originally for the daily cron, still used by Step Function input collectors
-- **GSI3** — user by email (PK=email lowercased) — used by every authenticated route to translate `email` claim → `userId`
+- **GSI3** — multi-purpose reverse index keyed by `GSI3PK`:
+  - `<email-lowercased>` → user by email (every authenticated route's first step)
+  - `BATTLECARD_TOKEN#<token>` → public battlecard share-token lookup (Phase 20)
 
-The **Competitor** record carries derived intelligence written by the enrichment block: `momentum`, `momentumChangePercent`, `momentumAsOf`, `threatLevel`, `threatReasoning`, `threatAsOf`, `derivedTags`, `derivedTagsAsOf`. These are read directly by the list endpoint without recomputation.
+The **Competitor** record carries derived intelligence written by the enrichment block: `momentum`, `momentumChangePercent`, `momentumAsOf`, `threatLevel`, `threatReasoning`, `threatAsOf`, `derivedTags`, `derivedTagsAsOf`, `predictedMoves`, `predictionHistory`. Plus the lazy-populated `winAgainstTactics` cache (Phase 21) keyed by `winAgainstTacticsResearchId` so battlecard regeneration within one research cycle skips the Claude call. All read directly by the list/detail endpoints without recomputation.
 
 Key builders in `shared/db/keys.ts`. Query helpers (`getItem`, `putItem`, `queryByPK`, `queryGSI`, `updateItem`) in `shared/db/queries.ts`. Pure-function metrics (`computeMomentum`, `buildChangesByDay`, `deriveTagsFromState`) live in `shared/utils/competitor-metrics.ts`.
 
@@ -230,3 +290,12 @@ Defined in `PLAN_LIMITS` from `shared/types/index.ts`. Enforced in `competitors/
 - **Backend** deploys via `cdk deploy --all` from `Backend/` after sourcing `.env`. Individual stacks: `cdk deploy RivalScan-dev-Pipeline RivalScan-dev-Api`.
 - **Frontend** deploys automatically on push to `main` (Amplify tracks the GitHub repo). Manual: `aws amplify start-job --app-id d1zrq9gf129s9u --branch-name main --job-type RELEASE`.
 - AWS region is **us-east-1**. Paths with leading `/` (CloudWatch log group names, IAM ARNs) passed to `aws` CLI from Git Bash on Windows get mangled — prefix with `MSYS_NO_PATHCONV=1`.
+- `cdk synth` requires `FRONTEND_URL` and `CDK_DEFAULT_ACCOUNT` set or `bin/app.ts` throws at parse time — handy when scripting verification.
+
+## PDF generation lambdas (Phase 6b / Phase 20)
+
+Two PDF surfaces exist: the weekly briefing (`api/exports/pdf.ts` → `shared/utils/pdf-renderer.ts`) and the per-competitor battlecard (`api/competitors/battlecard.ts` → `shared/services/battlecard-pdf.ts`). Both use **PDFKit** + **S3** + **presigned URLs** (no Puppeteer).
+
+Each PDF lambda is wired in `api.stack.ts` outside `addRoute()` because it needs the same memory/timeout override **and** a custom `commandHooks.afterBundling` that copies PDFKit's `.afm` font metric files into the lambda bundle — esbuild treats them as binary assets and won't bundle them automatically. **If you add a third PDF lambda, copy this hook verbatim** — without the .afm files, PDFKit cold-starts throw `Cannot find module ... data/Helvetica.afm`. Memory: 1024 MB. Timeout: 60s.
+
+The battlecard route serves PDFs through `GET /public/battlecards/{token}` (no auth) which **bypasses `apiHandler`** to emit a `Location:` header for a 302 redirect to a fresh 1-hour S3 presigned URL. Mirror that pattern if you add other public-share endpoints that return non-JSON.
