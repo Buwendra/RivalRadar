@@ -30,6 +30,9 @@ import {
   RecommendationCategory,
   RecommendationEffortLevel,
   RecommendationTimeHorizon,
+  WinAgainstTactic,
+  WinAgainstDifficulty,
+  WinAgainstImpact,
 } from '../types';
 import { logger } from '../utils/logger';
 
@@ -1984,4 +1987,143 @@ REJECT — individual person:
     reason: String(parsed.reason ?? '').slice(0, 400),
     rejectionCategory,
   };
+}
+
+/**
+ * Generate 3-5 concrete "win-against this competitor" tactics for the user's
+ * sales/PM team (Phase 21). Tactics are positioning levers tied to the
+ * competitor's `derivedState` — not assertions about the user's product
+ * (which Claude has no knowledge of). The PDF battlecard renders these in
+ * a dedicated section; the dashboard card surfaces them too.
+ *
+ * Single Haiku call (~$0.005). Returns `[]` on parse failure rather than
+ * throwing — battlecard generation continues without the section.
+ */
+export async function suggestWinAgainstTactics(input: {
+  competitorName: string;
+  userId?: string;
+  userCompanyName?: string;
+  userIndustry?: string;
+  derivedState?: DerivedState;
+  momentum?: Momentum;
+  threatLevel?: ThreatLevel;
+  recentChanges: Array<{ summary: string; significance: number }>;
+}): Promise<WinAgainstTactic[]> {
+  const secrets = await getSecret('rivalscan/api-keys');
+
+  const compactChanges = input.recentChanges
+    .filter((c) => c.significance >= 5)
+    .slice(0, 6)
+    .map((c) => `[${c.significance}/10] ${c.summary}`);
+
+  const userContext =
+    input.userCompanyName || input.userIndustry
+      ? `User's company: ${input.userCompanyName ?? 'unknown'} (industry: ${input.userIndustry ?? 'unknown'}).`
+      : `User context: not provided. Frame tactics generically — "if you have X" / "lean into Y if it applies".`;
+
+  const prompt = `You are a competitive sales-enablement strategist. Generate 3-5 concrete tactics the user's team can use when competing against "${input.competitorName}".
+
+${userContext}
+
+Crucial rules:
+- DO NOT assert the user's product has any specific feature you can't verify. Frame tactics as positioning levers ("Lead pricing conversations with annual discounts if you offer them") rather than claims ("Our shorter onboarding wins this").
+- Each tactic must be tied to a specific signal from the competitor's state below — funding posture, hiring posture, strategic direction, recent changes, or momentum.
+- Prefer concrete, repeatable moves an AE/CSM/PM can execute in the next call: discovery questions to ask, objections to anticipate, narratives to lead with.
+- Avoid generic advice ("be customer-focused"). Every tactic should be something the user wouldn't have done without knowing this competitor's specific posture.
+
+Competitor state:
+- Threat level: ${input.threatLevel ?? 'unscored'}
+- Momentum: ${input.momentum ?? 'unknown'}
+- Derived state: ${input.derivedState ? JSON.stringify(input.derivedState) : '(no recent research)'}
+
+Recent significant changes (last 30 days, significance >= 5):
+${compactChanges.length > 0 ? compactChanges.map((s) => `- ${s}`).join('\n') : '(none)'}
+
+Respond with ONLY valid JSON — no prose, no code fences:
+{
+  "tactics": [
+    {
+      "tactic": "imperative one-liner the rep can act on",
+      "reasoning": "1-2 sentences citing the specific competitor signal that makes this work",
+      "difficulty": "easy" | "moderate" | "hard",
+      "impact": "low" | "medium" | "high"
+    }
+  ]
+}
+
+Return 3-5 tactics. Order by impact descending.`;
+
+  let response: Response;
+  try {
+    response = await callAnthropic(
+      secrets.ANTHROPIC_API_KEY,
+      {
+        model: HAIKU_MODEL,
+        max_tokens: 800,
+        messages: [{ role: 'user', content: prompt }],
+      },
+      'suggestWinAgainstTactics',
+      { userId: input.userId ?? null }
+    );
+  } catch (err) {
+    logger.warn('suggestWinAgainstTactics_call_failed', {
+      err: err instanceof Error ? err.message : String(err),
+    });
+    return [];
+  }
+
+  if (!response.ok) {
+    const errBody = await response.text().catch(() => '');
+    logger.warn('suggestWinAgainstTactics_api_error', {
+      status: response.status,
+      body: errBody.slice(0, 400),
+    });
+    return [];
+  }
+
+  const data = (await response.json()) as {
+    content: Array<{ type: string; text: string }>;
+  };
+  const text = (data.content.find((b) => b.type === 'text')?.text ?? '').trim();
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    logger.warn('suggestWinAgainstTactics_no_json', {
+      text: text.slice(0, 400),
+    });
+    return [];
+  }
+
+  let parsed: { tactics?: unknown };
+  try {
+    parsed = JSON.parse(jsonMatch[0]) as { tactics?: unknown };
+  } catch (err) {
+    logger.warn('suggestWinAgainstTactics_parse_failed', {
+      err: err instanceof Error ? err.message : String(err),
+    });
+    return [];
+  }
+
+  const rawTactics = Array.isArray(parsed.tactics) ? parsed.tactics : [];
+  const validDifficulty: WinAgainstDifficulty[] = ['easy', 'moderate', 'hard'];
+  const validImpact: WinAgainstImpact[] = ['low', 'medium', 'high'];
+
+  const tactics: WinAgainstTactic[] = rawTactics
+    .map((raw): WinAgainstTactic | null => {
+      if (!raw || typeof raw !== 'object') return null;
+      const r = raw as Record<string, unknown>;
+      const tactic = String(r.tactic ?? '').trim().slice(0, 200);
+      const reasoning = String(r.reasoning ?? '').trim().slice(0, 400);
+      if (!tactic || !reasoning) return null;
+      const difficulty = validDifficulty.includes(r.difficulty as WinAgainstDifficulty)
+        ? (r.difficulty as WinAgainstDifficulty)
+        : 'moderate';
+      const impact = validImpact.includes(r.impact as WinAgainstImpact)
+        ? (r.impact as WinAgainstImpact)
+        : 'medium';
+      return { tactic, reasoning, difficulty, impact };
+    })
+    .filter((t): t is WinAgainstTactic => t !== null)
+    .slice(0, 5);
+
+  return tactics;
 }

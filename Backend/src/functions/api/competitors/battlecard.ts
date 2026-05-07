@@ -12,7 +12,12 @@ import {
   getUserEmail,
   HttpError,
 } from '../../../shared/middleware/handler';
-import { getItem, putItem, queryByPK } from '../../../shared/db/queries';
+import {
+  getItem,
+  putItem,
+  queryByPK,
+  updateItem,
+} from '../../../shared/db/queries';
 import {
   battlecardPK,
   battlecardSK,
@@ -25,6 +30,7 @@ import {
 import { generateId } from '../../../shared/utils/id';
 import { hasCapability } from '../../../shared/utils/capability';
 import { renderBattlecardPdf } from '../../../shared/services/battlecard-pdf';
+import { suggestWinAgainstTactics } from '../../../shared/services/anthropic';
 import { logger } from '../../../shared/utils/logger';
 import {
   resolveTenantContext,
@@ -35,6 +41,7 @@ import type {
   Competitor,
   ResearchFinding,
   User,
+  WinAgainstTactic,
 } from '../../../shared/types';
 
 const s3 = new S3Client({});
@@ -89,6 +96,62 @@ export const handler = apiHandler(async (event) => {
 
   const latestResearch = research[0] as unknown as ResearchFinding | undefined;
 
+  // Phase 21 — resolve win-against tactics. Cache hits when the cached
+  // research id still matches the latest finding. Best-effort: a Claude
+  // failure logs and continues with empty tactics so the battlecard still
+  // generates.
+  let winAgainstTactics: WinAgainstTactic[] = competitor.winAgainstTactics ?? [];
+  const cacheValid =
+    !!latestResearch &&
+    competitor.winAgainstTacticsResearchId === latestResearch.id &&
+    winAgainstTactics.length > 0;
+  if (!cacheValid && latestResearch) {
+    try {
+      const fresh = await suggestWinAgainstTactics({
+        competitorName: competitor.name,
+        userId: tenantUserId,
+        userCompanyName: user.companyName,
+        userIndustry: user.industry,
+        derivedState: latestResearch.derivedState,
+        momentum: competitor.momentum,
+        threatLevel: competitor.threatLevel,
+        recentChanges: changes.slice(0, 10).map((c) => {
+          const a = (c.aiAnalysis as Record<string, unknown> | undefined) ?? {};
+          return {
+            summary: (a.summary as string | undefined) ?? '',
+            significance: (c.significance as number) ?? 0,
+          };
+        }),
+      });
+      if (fresh.length > 0) {
+        winAgainstTactics = fresh;
+        await updateItem(
+          competitorPK(tenantUserId),
+          competitorSK(competitorId),
+          {
+            winAgainstTactics: fresh,
+            winAgainstTacticsAsOf: new Date().toISOString(),
+            winAgainstTacticsResearchId: latestResearch.id,
+          }
+        );
+        logger.info('battlecard_tactics_generated', {
+          competitorId,
+          tenantUserId,
+          tacticCount: fresh.length,
+          researchId: latestResearch.id,
+        });
+      }
+    } catch (err) {
+      logger.warn('battlecard_tactics_failed', {
+        competitorId,
+        tenantUserId,
+        err: err instanceof Error ? err.message : String(err),
+      });
+      // Fall through with cached (possibly empty) tactics — battlecard
+      // generation must still produce a PDF.
+    }
+  }
+
   const pdfBuffer = await renderBattlecardPdf({
     competitor: {
       name: competitor.name,
@@ -99,6 +162,7 @@ export const handler = apiHandler(async (event) => {
       momentumChangePercent: competitor.momentumChangePercent,
       derivedTags: competitor.derivedTags,
       predictedMoves: competitor.predictedMoves,
+      winAgainstTactics,
     },
     recentChanges: changes.map((c) => {
       const a = (c.aiAnalysis as Record<string, unknown> | undefined) ?? {};

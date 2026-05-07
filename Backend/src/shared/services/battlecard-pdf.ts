@@ -14,6 +14,8 @@ import type {
   ThreatLevel,
   DerivedState,
   PredictedMove,
+  WinAgainstTactic,
+  WinAgainstImpact,
 } from '../types';
 
 interface BattlecardChange {
@@ -39,6 +41,7 @@ export interface RenderBattlecardInput {
     momentumChangePercent?: number;
     derivedTags?: string[];
     predictedMoves?: PredictedMove[];
+    winAgainstTactics?: WinAgainstTactic[];
   };
   recentChanges: BattlecardChange[];
   derivedState?: DerivedState;
@@ -79,6 +82,12 @@ function significanceColor(score: number): string {
   if (score >= 8) return COLOR.significanceHigh;
   if (score >= 5) return COLOR.significanceMid;
   return COLOR.significanceLow;
+}
+
+function impactColor(impact: WinAgainstImpact): string {
+  if (impact === 'high') return COLOR.brand;
+  if (impact === 'medium') return COLOR.brandLight;
+  return COLOR.textMuted;
 }
 
 function formatDate(iso: string): string {
@@ -358,7 +367,9 @@ export async function renderBattlecardPdf(
       sectionHeader(doc, 'Predicted moves', margin, movesY);
       cursorY = movesY + 28;
 
-      const moves = (input.competitor.predictedMoves ?? []).slice(0, 4);
+      // Trimmed from 4 → 3 in Phase 21 to make room for the win-against
+      // tactics section while keeping the battlecard one A4 page.
+      const moves = (input.competitor.predictedMoves ?? []).slice(0, 3);
       if (moves.length === 0) {
         doc
           .fillColor(COLOR.textMuted)
@@ -390,6 +401,58 @@ export async function renderBattlecardPdf(
             .fontSize(8)
             .font('Helvetica-Oblique')
             .text(m.reasoning, margin + 10, cursorY + 12, {
+              width: contentWidth - 20,
+              ellipsis: true,
+              lineBreak: false,
+            });
+          cursorY += 26;
+        }
+      }
+
+      // ─── Win-against tactics (Phase 21) ───
+      const tacticsY = cursorY + 8;
+      sectionHeader(doc, 'Win-against tactics', margin, tacticsY);
+      cursorY = tacticsY + 28;
+
+      const tactics = (input.competitor.winAgainstTactics ?? []).slice(0, 3);
+      if (tactics.length === 0) {
+        doc
+          .fillColor(COLOR.textMuted)
+          .fontSize(9)
+          .font('Helvetica-Oblique')
+          .text(
+            'Tactics will populate after the next research cycle. Regenerate this battlecard to refresh.',
+            margin,
+            cursorY,
+            { width: contentWidth }
+          );
+        cursorY += 16;
+      } else {
+        for (const t of tactics) {
+          if (cursorY + 28 > 720) break;
+          // Tactic line + impact chip on the right
+          doc
+            .fillColor(COLOR.textPrimary)
+            .fontSize(9)
+            .font('Helvetica-Bold')
+            .text(`▸ ${t.tactic}`, margin, cursorY, {
+              width: contentWidth - 90,
+              lineBreak: false,
+              ellipsis: true,
+            });
+          drawChip(
+            doc,
+            `${t.impact.toUpperCase()} · ${t.difficulty.toUpperCase()}`,
+            pageWidth - margin - 90,
+            cursorY,
+            impactColor(t.impact)
+          );
+          // Reasoning line
+          doc
+            .fillColor(COLOR.textMuted)
+            .fontSize(8)
+            .font('Helvetica-Oblique')
+            .text(t.reasoning, margin + 10, cursorY + 12, {
               width: contentWidth - 20,
               ellipsis: true,
               lineBreak: false,

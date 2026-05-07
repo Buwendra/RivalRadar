@@ -12,6 +12,9 @@ export type {
   PredictedMoveTimeHorizon,
   PredictionStatus,
   EvaluatedPrediction,
+  WinAgainstTactic,
+  WinAgainstDifficulty,
+  WinAgainstImpact,
   ChangeNote,
   PageType,
 } from "./competitor";

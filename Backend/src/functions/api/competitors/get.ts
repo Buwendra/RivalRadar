@@ -174,6 +174,8 @@ export const handler = apiHandler(async (event) => {
         predictedMovesAsOf: competitor.predictedMovesAsOf,
         predictionHistory: competitor.predictionHistory,
         predictionHistoryAsOf: competitor.predictionHistoryAsOf,
+        winAgainstTactics: competitor.winAgainstTactics,
+        winAgainstTacticsAsOf: competitor.winAgainstTacticsAsOf,
         recentChanges: changes.map((c) => ({
           id: c.id,
           significance: c.significance,

@@ -46,6 +46,16 @@ export interface EvaluatedPrediction {
   evidenceUrl?: string;
 }
 
+export type WinAgainstDifficulty = "easy" | "moderate" | "hard";
+export type WinAgainstImpact = "low" | "medium" | "high";
+
+export interface WinAgainstTactic {
+  tactic: string;
+  reasoning: string;
+  difficulty: WinAgainstDifficulty;
+  impact: WinAgainstImpact;
+}
+
 export interface Competitor {
   id: string;
   name: string;
@@ -65,6 +75,8 @@ export interface Competitor {
   predictedMovesAsOf?: string;
   predictionHistory?: EvaluatedPrediction[];
   predictionHistoryAsOf?: string;
+  winAgainstTactics?: WinAgainstTactic[];
+  winAgainstTacticsAsOf?: string;
   snoozedUntil?: string | null;
   snoozedAt?: string | null;
 }

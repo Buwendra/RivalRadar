@@ -51,6 +51,7 @@ import { ThreatCard } from "@/components/dashboard/threat-card";
 import { SnoozeButton } from "@/components/dashboard/snooze-button";
 import { CompetitorTagChips } from "@/components/dashboard/competitor-tag-chips";
 import { PredictedMovesCard } from "@/components/dashboard/predicted-moves-card";
+import { WinAgainstCard } from "@/components/dashboard/win-against-card";
 import { BattlecardButton } from "@/components/dashboard/battlecard-button";
 import { formatSmartDate } from "@/lib/utils/format-date";
 import type { CompetitorDetailChange, PageType } from "@/lib/types";
@@ -286,6 +287,11 @@ export default function CompetitorDetailPage() {
           <PredictedMovesCard
             moves={competitor.predictedMoves}
             history={competitor.predictionHistory}
+          />
+
+          <WinAgainstCard
+            tactics={competitor.winAgainstTactics}
+            asOf={competitor.winAgainstTacticsAsOf}
           />
 
           {recentChanges.length > 0 && (
