@@ -35,6 +35,7 @@ export const handler = apiHandler(async (event) => {
     id: k.id,
     name: k.name,
     keyHint: k.keyHint,
+    scope: k.scope ?? 'read', // Pre-Phase-13 rows default to read.
     createdAt: k.createdAt,
     lastUsedAt: k.lastUsedAt,
     disabled: k.disabled,

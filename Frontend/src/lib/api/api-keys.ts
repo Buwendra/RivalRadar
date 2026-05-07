@@ -1,13 +1,13 @@
 import { apiClient } from "./client";
-import type { ApiKeyListItem, ApiKeyCreated } from "@/lib/types";
+import type { ApiKeyListItem, ApiKeyCreated, ApiKeyScope } from "@/lib/types";
 
 export const apiKeysApi = {
   list: () => apiClient<ApiKeyListItem[]>("/workspaces/current/api-keys"),
 
-  create: (name: string) =>
+  create: (input: { name: string; scope: ApiKeyScope }) =>
     apiClient<ApiKeyCreated>("/workspaces/current/api-keys", {
       method: "POST",
-      body: { name },
+      body: input,
     }),
 
   remove: (id: string) =>

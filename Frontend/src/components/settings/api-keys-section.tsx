@@ -22,6 +22,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ApiClientError } from "@/lib/api/client";
 import {
   useApiKeys,
@@ -33,7 +40,7 @@ import {
   CURRENT_WORKSPACE_STORAGE_KEY,
   useWorkspaces,
 } from "@/lib/hooks/use-workspaces";
-import type { ApiKeyCreated } from "@/lib/types";
+import type { ApiKeyCreated, ApiKeyScope } from "@/lib/types";
 
 export function ApiKeysSection() {
   const capabilities = useCapabilities();
@@ -43,6 +50,7 @@ export function ApiKeysSection() {
   const deleteMutation = useDeleteApiKey();
 
   const [name, setName] = useState("");
+  const [scope, setScope] = useState<ApiKeyScope>("read");
   const [reveal, setReveal] = useState<ApiKeyCreated | null>(null);
 
   const currentId =
@@ -98,9 +106,10 @@ export function ApiKeysSection() {
       return;
     }
     try {
-      const created = await createMutation.mutateAsync(trimmed);
+      const created = await createMutation.mutateAsync({ name: trimmed, scope });
       setReveal(created);
       setName("");
+      setScope("read");
       toast.success(`API key "${created.name}" created`);
     } catch (err) {
       const msg = err instanceof ApiClientError ? err.message : "Failed to create key";
@@ -153,7 +162,7 @@ export function ApiKeysSection() {
           <Label htmlFor="key-name" className="text-xs uppercase tracking-wide text-muted-foreground">
             New API key
           </Label>
-          <div className="flex items-start gap-2">
+          <div className="flex flex-wrap items-start gap-2">
             <Input
               id="key-name"
               value={name}
@@ -161,7 +170,21 @@ export function ApiKeysSection() {
               placeholder="Production BI sync"
               maxLength={80}
               disabled={createMutation.isPending || atCap}
+              className="min-w-[200px] flex-1"
             />
+            <Select
+              value={scope}
+              onValueChange={(v) => setScope(v as ApiKeyScope)}
+              disabled={createMutation.isPending || atCap}
+            >
+              <SelectTrigger className="w-[160px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="read">Read-only</SelectItem>
+                <SelectItem value="write">Read + write</SelectItem>
+              </SelectContent>
+            </Select>
             <Button
               onClick={handleCreate}
               disabled={createMutation.isPending || !name.trim() || atCap}
@@ -174,6 +197,16 @@ export function ApiKeysSection() {
               Create
             </Button>
           </div>
+          {scope === "write" && (
+            <div className="flex items-start gap-2 rounded-md border border-amber-900/60 bg-amber-950/30 p-3 text-xs text-amber-200">
+              <AlertCircle className="mt-0.5 h-3 w-3 shrink-0" />
+              <div>
+                <strong>Write keys can mutate workspace state</strong> — create
+                competitors, mark recommendations acted-on, snooze competitors.
+                Treat them like passwords; revoke immediately if leaked.
+              </div>
+            </div>
+          )}
           {atCap && (
             <p className="text-xs text-amber-300/80">
               Plan limit reached ({capabilities.apiKeys.max} keys). Revoke an
@@ -204,6 +237,12 @@ export function ApiKeysSection() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium">{k.name}</span>
+                      <Badge
+                        variant={k.scope === "write" ? "default" : "outline"}
+                        className="h-5 px-1.5 text-[10px] uppercase"
+                      >
+                        {k.scope === "write" ? "Read + Write" : "Read"}
+                      </Badge>
                       {k.disabled && (
                         <Badge variant="outline" className="h-5 px-1.5 text-[10px] uppercase">
                           revoked
@@ -265,6 +304,11 @@ function RevealBanner({
         <AlertCircle className="h-4 w-4" />
         Copy your new key — we won&apos;t show it again.
       </div>
+      {reveal.scope === "write" && (
+        <p className="mt-1 text-xs text-amber-200/80">
+          This is a <strong>write</strong> key — it can mutate workspace state.
+        </p>
+      )}
       <div className="mt-3 flex items-center gap-2">
         <code className="flex-1 truncate rounded bg-brand-950/60 px-2 py-1.5 font-mono text-xs text-amber-100">
           {reveal.plaintext}

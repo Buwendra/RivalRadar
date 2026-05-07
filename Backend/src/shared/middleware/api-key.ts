@@ -30,7 +30,8 @@ import type { TenantContext } from './tenant';
 import type { ApiKey, User } from '../types';
 
 export async function resolveApiKeyContext(
-  event: PublicEvent
+  event: PublicEvent,
+  options?: { requireScope?: 'write' }
 ): Promise<TenantContext> {
   const headers = event.headers as Record<string, string | undefined>;
   const rawKey = headers['x-api-key'];
@@ -42,6 +43,17 @@ export async function resolveApiKeyContext(
   const keyRow = await getItem<ApiKey>(apiKeyByHashPK(hash), apiKeyByHashSK());
   if (!keyRow || keyRow.disabled) {
     throw new HttpError(401, 'INVALID_API_KEY', 'API key is invalid or revoked');
+  }
+
+  // Phase 13 — scope gate. Pre-Phase-13 rows have no `scope`; default to
+  // 'read' so existing keys can never accidentally gain write power.
+  const effectiveScope = keyRow.scope ?? 'read';
+  if (options?.requireScope === 'write' && effectiveScope !== 'write') {
+    throw new HttpError(
+      403,
+      'WRITE_SCOPE_REQUIRED',
+      'This API key is read-only. Mint a write key in workspace settings.'
+    );
   }
 
   // Minute throttle: opportunistic increment-or-reset

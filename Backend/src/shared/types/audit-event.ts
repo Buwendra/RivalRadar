@@ -31,7 +31,10 @@ export type AuditAction =
   | 'account.suspended'
   | 'account.resumed'
   | 'api_key.created'
-  | 'api_key.revoked';
+  | 'api_key.revoked'
+  | 'api.competitor_created'
+  | 'api.competitor_snoozed'
+  | 'api.recommendation_updated';
 
 export interface AuditEvent {
   id: string;

@@ -18,11 +18,21 @@ The base URL is your API Gateway URL. For local testing it's whatever `NEXT_PUBL
 
 Every `/v1/*` request requires `X-API-Key`. Keys are workspace-scoped: a key created in workspace A cannot read workspace B's data. Revoking a key (Settings → API keys → trash icon) immediately invalidates it.
 
+### Scopes
+
+Keys are minted with one of two scopes:
+
+- **`read`** (default) — can hit all `GET /v1/*` endpoints.
+- **`write`** — superset of read; additionally unlocks the write endpoints (`POST /v1/competitors`, `PATCH /v1/competitors/{id}/snooze`, `PATCH /v1/recommendations/{id}`).
+
+Owners pick the scope at creation time in **Settings → Workspace → API keys**. Existing read-only keys keep working unchanged after this update — they default to `read` if they don't have an explicit scope on the row.
+
 | Status | Code | Meaning |
 |---|---|---|
 | 401 | `MISSING_API_KEY` | `X-API-Key` header absent |
 | 401 | `INVALID_API_KEY` | Key is wrong, revoked, or disabled |
 | 403 | `PLAN_REQUIRED` | Workspace owner is on Scout (or downgraded after key creation) |
+| 403 | `WRITE_SCOPE_REQUIRED` | Key is read-only but the endpoint requires `write` scope |
 | 429 | `RATE_LIMITED` | Per-key minute throttle exceeded |
 
 ## Rate limits
@@ -141,9 +151,119 @@ Response item shape:
 }
 ```
 
+## Write endpoints (Strategist+ tier, write-scope keys only)
+
+These endpoints **mutate workspace state**. They require an API key minted with `write` scope (Settings → Workspace → API keys → "Read + write"). A `read` key calling any of these returns **403 `WRITE_SCOPE_REQUIRED`**.
+
+Every write call emits an audit event in your workspace's activity log (Settings → Workspace tab → Activity log) with the source IP and user-agent of the caller.
+
+### `POST /v1/competitors`
+
+Create a competitor. Same validation, plan-limit, sanctions, and AI-input-classifier checks as the dashboard. Counts against the workspace owner's daily research-quota the same as a manual create.
+
+Request body:
+
+```json
+{
+  "name": "Acme Corp",
+  "url": "https://acme.example",
+  "pagesToTrack": ["pricing", "features"]
+}
+```
+
+Where `pagesToTrack` is an array of 1–5 page types (`pricing`, `features`, `homepage`, `blog`, `careers`).
+
+```bash
+curl -X POST -H "X-API-Key: $WRITE_KEY" -H "Content-Type: application/json" \
+  -d '{"name":"Acme","url":"https://acme.example","pagesToTrack":["pricing"]}' \
+  "$BASE/v1/competitors"
+```
+
+Response (`201`):
+
+```json
+{
+  "data": {
+    "id": "01H8...",
+    "name": "Acme",
+    "url": "https://acme.example",
+    "pagesToTrack": ["pricing"],
+    "status": "active",
+    "createdAt": "2026-05-07T12:00:00.000Z"
+  }
+}
+```
+
+Error codes specific to this endpoint:
+
+| Status | Code | Meaning |
+|---|---|---|
+| 403 | `PLAN_LIMIT` | Workspace at `maxCompetitors` for its plan tier |
+| 403 | `SANCTIONS_REJECTED` | URL hits the OFAC SDN denylist |
+| 403 | `CLASSIFIER_REJECTED` | Haiku classifier flags the target as a person / non-business |
+| 429 | `RATE_LIMIT_EXCEEDED` | Tier daily-research-quota exhausted |
+
+### `PATCH /v1/competitors/{id}/snooze`
+
+Set or clear a competitor's `snoozedUntil`. While snoozed, recurring research skips the competitor and its changes are filtered out of the weekly digest.
+
+Request body:
+
+```json
+{ "snoozedUntil": "2026-06-07T00:00:00.000Z" }
+```
+
+Pass `"snoozedUntil": null` to un-snooze immediately.
+
+```bash
+curl -X PATCH -H "X-API-Key: $WRITE_KEY" -H "Content-Type: application/json" \
+  -d '{"snoozedUntil":"2026-06-07T00:00:00.000Z"}' \
+  "$BASE/v1/competitors/01H8.../snooze"
+```
+
+Response (`200`):
+
+```json
+{
+  "data": {
+    "id": "01H8...",
+    "snoozedUntil": "2026-06-07T00:00:00.000Z",
+    "snoozedAt": "2026-05-07T12:00:00.000Z"
+  }
+}
+```
+
+`snoozedUntil` must be a future ISO timestamp; otherwise returns 400 `INVALID_SNOOZE`.
+
+### `PATCH /v1/recommendations/{id}`
+
+Update a recommendation's status. Useful for marking a recommendation acted-on from a Slack thread or CRM workflow.
+
+Request body:
+
+```json
+{ "status": "acted-on" }
+```
+
+Where `status` is one of `open` / `dismissed` / `acted-on`.
+
+```bash
+curl -X PATCH -H "X-API-Key: $WRITE_KEY" -H "Content-Type: application/json" \
+  -d '{"status":"acted-on"}' \
+  "$BASE/v1/recommendations/01H8..."
+```
+
+Response (`200`):
+
+```json
+{ "data": { "id": "01H8...", "status": "acted-on" } }
+```
+
+The status `acted-on` is logged for the prompt-quality framework (Phase 8) — your team's outcomes feed forward into recommendation tuning.
+
 ## Versioning
 
-`/v1` is the stable read-only API. Breaking changes — field renames, removed fields, semantic shifts — go to `/v2` with `/v1` kept alive for at least 6 months after a successor ships.
+`/v1` is the stable read API (Phase 11) plus the three write endpoints above (Phase 13). Breaking changes — field renames, removed fields, semantic shifts — go to `/v2` with `/v1` kept alive for at least 6 months after a successor ships.
 
 Additive changes (new optional fields, new endpoints) land in `/v1` without warning. Treat your client code as forward-compatible.
 
@@ -156,7 +276,8 @@ Additive changes (new optional fields, new endpoints) land in `/v1` without warn
 
 ## Out of scope (future)
 
-- Write endpoints (POST / PATCH / DELETE)
+- DELETE endpoints (delete competitor, delete recommendation)
 - Per-key custom rate limits
-- Per-endpoint scopes
+- Per-endpoint scopes (today: `read` and `write` are the only two scopes; finer granularity like "read + write competitors but not recommendations" is roadmap)
 - Webhooks for live events (today's webhook integration is one-way push from RivalScan; v1 has no subscribe-to-events flow)
+- Bulk endpoints (`POST /v1/competitors/bulk-import` mirroring the dashboard's CSV import)

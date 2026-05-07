@@ -159,6 +159,11 @@ export class ApiStack extends cdk.Stack {
     addRoute('ApiV1ChangesList', apigatewayv2.HttpMethod.GET, '/v1/changes', 'api/v1/changes.ts', false);
     addRoute('ApiV1RecommendationsList', apigatewayv2.HttpMethod.GET, '/v1/recommendations', 'api/v1/recommendations.ts', false);
 
+    // ─── Public write API (Phase 13) — write-scope keys only ───
+    addRoute('ApiV1CompetitorsCreate', apigatewayv2.HttpMethod.POST, '/v1/competitors', 'api/v1/competitors-create.ts', false);
+    addRoute('ApiV1CompetitorsSnooze', apigatewayv2.HttpMethod.PATCH, '/v1/competitors/{id}/snooze', 'api/v1/competitors-snooze.ts', false);
+    addRoute('ApiV1RecommendationsUpdate', apigatewayv2.HttpMethod.PATCH, '/v1/recommendations/{id}', 'api/v1/recommendations-update.ts', false);
+
     // GDPR Art. 15+20 / CCPA §1798.110 — data export
     addRoute('UserExport', apigatewayv2.HttpMethod.GET, '/users/me/export', 'api/users/export.ts');
 

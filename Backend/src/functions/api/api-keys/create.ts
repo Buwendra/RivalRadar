@@ -45,6 +45,12 @@ const DEFAULT_QUOTA_PER_MINUTE = 60;
 
 const createSchema = z.object({
   name: z.string().min(1).max(80).trim(),
+  /**
+   * Phase 13 — capability scope. 'read' (default) hits /v1 GETs only.
+   * 'write' is a superset and unlocks POST /v1/competitors,
+   * PATCH /v1/competitors/{id}/snooze, PATCH /v1/recommendations/{id}.
+   */
+  scope: z.enum(['read', 'write']).optional().default('read'),
 });
 
 export const handler = apiHandler(async (event) => {
@@ -105,6 +111,7 @@ export const handler = apiHandler(async (event) => {
     keyHint,
     createdByUserId: ctx.callerUserId,
     createdAt: now,
+    scope: body.scope,
     quotaPerMinute: DEFAULT_QUOTA_PER_MINUTE,
   };
 
@@ -127,6 +134,7 @@ export const handler = apiHandler(async (event) => {
     action: 'api_key.created',
     resourceId: id,
     resourceLabel: body.name,
+    meta: { scope: body.scope },
     sourceIp: getSourceIp(event),
     userAgent: getUserAgent(event),
   });
@@ -145,6 +153,7 @@ export const handler = apiHandler(async (event) => {
         id,
         name: body.name,
         keyHint,
+        scope: body.scope,
         // Plaintext returned ONCE — UI must surface a copy-now banner.
         plaintext,
         createdAt: now,

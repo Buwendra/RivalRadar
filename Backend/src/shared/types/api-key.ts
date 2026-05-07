@@ -17,6 +17,8 @@
  * failure doesn't block the response.
  */
 
+export type ApiKeyScope = 'read' | 'write';
+
 export interface ApiKey {
   id: string;                  // ULID
   workspaceId: string;
@@ -28,6 +30,14 @@ export interface ApiKey {
   createdAt: string;
   lastUsedAt?: string;
   disabled?: boolean;
+  /**
+   * Phase 13 — capability scope. 'read' (default) hits /v1 GETs only.
+   * 'write' is a superset and unlocks POST /v1/competitors,
+   * PATCH /v1/competitors/{id}/snooze, PATCH /v1/recommendations/{id}.
+   * Optional in the type to support pre-Phase-13 rows; resolver falls
+   * back to 'read'.
+   */
+  scope?: ApiKeyScope;
   /** Per-key requests/min cap. Default 60. */
   quotaPerMinute: number;
   /** Sliding 60s counter — written on every authenticated request. */

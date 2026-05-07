@@ -159,8 +159,8 @@
 
 | # | Question | Answer | Evidence |
 |---|---|---|---|
-| N.1 | Is there a public API? | **Yes — read-only** | Phase 11 ships `/v1/competitors`, `/v1/changes`, `/v1/recommendations` with `X-API-Key` auth. Per-key 60 req/min throttle. Tier-gated to Strategist+ plans. See `PUBLIC_API.md`. |
-| N.2 | How are API keys managed? | **sha256-hashed at rest, plaintext returned once** | Workspace owner-only minting. Audit-logged on creation + revocation. Revocation is immediate — both double-write rows are deleted in parallel. |
+| N.1 | Is there a public API? | **Yes — read + scoped write** | Phase 11 shipped read endpoints (`GET /v1/competitors`, `/v1/changes`, `/v1/recommendations`); Phase 13 adds three write endpoints (`POST /v1/competitors`, `PATCH /v1/competitors/{id}/snooze`, `PATCH /v1/recommendations/{id}`) gated by `write`-scope keys. `X-API-Key` auth. Per-key 60 req/min throttle. Tier-gated to Strategist+ plans. See `PUBLIC_API.md`. |
+| N.2 | How are API keys managed? | **sha256-hashed at rest, plaintext returned once** | Workspace owner-only minting. Audit-logged on creation + revocation. Revocation is immediate — both double-write rows are deleted in parallel. Keys are scoped (`read` default, `write` opt-in); every write API call emits its own audit event so misuse surfaces in the workspace activity log within seconds. |
 | N.3 | Are API webhooks signed? | **Yes — HMAC-SHA256** | Customer-provided webhook URLs (Phase 3) get a per-user HMAC signing secret. Slack webhooks rely on URL secrecy (industry standard). |
 | N.4 | Are API requests logged? | **Yes** | CloudWatch logs every API Gateway + Lambda invocation. Audit events for owner-mutating actions retained 90 days in DynamoDB plus 7 years in CloudTrail. |
 
