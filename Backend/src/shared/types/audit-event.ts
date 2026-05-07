@@ -35,7 +35,8 @@ export type AuditAction =
   | 'api_key.revoked'
   | 'api.competitor_created'
   | 'api.competitor_snoozed'
-  | 'api.recommendation_updated';
+  | 'api.recommendation_updated'
+  | 'saved_view.webhook_matched';
 
 export interface AuditEvent {
   id: string;

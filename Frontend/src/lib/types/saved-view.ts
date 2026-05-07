@@ -16,6 +16,9 @@ export interface SavedView {
   updatedAt: string;
   /** Phase 15 — caller's per-user subscription state for this view. */
   subscribed?: boolean;
+  /** Phase 17 — when true, matching changes fire a real-time webhook to the
+   *  workspace's webhook integration. Owner/admin-only toggle. */
+  webhookOnMatch?: boolean;
 }
 
 export interface SearchResult {

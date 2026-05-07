@@ -28,6 +28,13 @@ export interface SavedView {
   createdByUserId: string;
   createdAt: string;
   updatedAt: string;
+  /**
+   * Phase 17 — when true, every Change written by the research pipeline
+   * that matches this view's filters fires a real-time webhook to the
+   * workspace's webhook integration (HMAC-signed POST). Owner/admin-only
+   * toggle. Default false.
+   */
+  webhookOnMatch?: boolean;
 }
 
 /**

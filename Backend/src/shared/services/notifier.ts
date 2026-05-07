@@ -197,6 +197,68 @@ export async function dispatchCriticalAlert(
   return result;
 }
 
+// ─── dispatchViewMatch (Phase 17) ───
+
+export interface ViewMatchInput {
+  /** Workspace owner / tenant — recipient of the webhook integration. */
+  user: UserContextSlim;
+  workspaceId: string;
+  view: { id: string; name: string };
+  change: {
+    id: string;
+    competitorId: string;
+    competitorName: string;
+    pageUrl: string;
+    significance: number;
+    detectedAt: string;
+    summary?: string;
+    changeType?: string;
+  };
+}
+
+/**
+ * Phase 17 — fired inline from deep-research.ts after a Change is written
+ * AND it matches a saved view with `webhookOnMatch === true`. Webhook-only:
+ * email lives in the saved-view weekly digest cron (Phase 15); Slack is
+ * the per-user critical-alert path. Bypasses notificationPreferences (the
+ * per-view toggle IS the opt-in). Returns { webhook?: boolean } for
+ * forensic logging; null webhook means no integration configured.
+ */
+export async function dispatchViewMatch(
+  input: ViewMatchInput
+): Promise<{ webhook?: boolean }> {
+  const integrations = await loadIntegrations(input.user.userId);
+  const webhook = integrations.get('webhook');
+  if (!webhook?.secret || !webhook.hmacSecret) {
+    return {};
+  }
+
+  const r = await sendWebhookNotification({
+    url: webhook.secret,
+    hmacSecret: webhook.hmacSecret,
+    envelope: {
+      event: 'view.match',
+      timestamp: new Date().toISOString(),
+      data: {
+        workspaceId: input.workspaceId,
+        view: input.view,
+        change: input.change,
+      },
+    },
+  });
+  await recordDelivery(input.user.userId, 'webhook', r.ok, r.ok ? undefined : r.error);
+
+  logger.info('notifier.dispatchViewMatch completed', {
+    userId: input.user.userId,
+    workspaceId: input.workspaceId,
+    viewId: input.view.id,
+    changeId: input.change.id,
+    ok: r.ok,
+  });
+
+  return { webhook: r.ok };
+}
+
 // ─── dispatchWeeklyDigest ───
 
 export interface WeeklyDigestInput {

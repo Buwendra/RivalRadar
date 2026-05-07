@@ -31,6 +31,7 @@ import {
   workspaceSK,
 } from '../../shared/db/keys';
 import { isSnoozed } from '../../shared/utils/snooze';
+import { applyViewFilters } from '../../shared/utils/view-filters';
 import { sendEmail } from '../../shared/services/ses';
 import { logger } from '../../shared/utils/logger';
 import type {
@@ -105,32 +106,6 @@ function groupByView(subs: SavedViewSubscription[]): ViewGroup[] {
     group.subscriptions.push(sub);
   }
   return [...map.values()];
-}
-
-function applyViewFilters(
-  changes: ChangeRow[],
-  filters: SavedView['filters']
-): ChangeRow[] {
-  let out = changes;
-  if (filters.minSignificance && filters.minSignificance > 0) {
-    const min = filters.minSignificance;
-    out = out.filter((c) => c.significance >= min);
-  }
-  if (filters.competitorIds && filters.competitorIds.length > 0) {
-    const set = new Set(filters.competitorIds);
-    out = out.filter((c) => set.has(c.competitorId));
-  }
-  if (filters.changeTypes && filters.changeTypes.length > 0) {
-    const set = new Set(filters.changeTypes);
-    out = out.filter((c) => c.changeType && set.has(c.changeType as never));
-  }
-  if (filters.sinceDays && filters.sinceDays > 0) {
-    const cutoff = new Date(
-      Date.now() - filters.sinceDays * 24 * 60 * 60 * 1000
-    ).toISOString();
-    out = out.filter((c) => c.detectedAt >= cutoff);
-  }
-  return out;
 }
 
 function renderDigestHtml(

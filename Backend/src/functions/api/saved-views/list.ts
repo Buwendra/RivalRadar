@@ -58,6 +58,7 @@ export const handler = apiHandler(async (event) => {
     createdAt: v.createdAt,
     updatedAt: v.updatedAt,
     subscribed: subscribedViewIds.has(v.id),
+    webhookOnMatch: v.webhookOnMatch === true,
   }));
 
   return {

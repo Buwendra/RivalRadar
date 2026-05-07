@@ -7,7 +7,14 @@ export const savedViewsApi = {
   create: (input: { name: string; filters: SavedViewFilters }) =>
     apiClient<SavedView>("/saved-views", { method: "POST", body: input }),
 
-  update: (id: string, input: { name?: string; filters?: SavedViewFilters }) =>
+  update: (
+    id: string,
+    input: {
+      name?: string;
+      filters?: SavedViewFilters;
+      webhookOnMatch?: boolean;
+    }
+  ) =>
     apiClient<SavedView>(`/saved-views/${id}`, {
       method: "PATCH",
       body: input,

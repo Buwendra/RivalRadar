@@ -33,6 +33,7 @@ export function useUpdateSavedView() {
       id: string;
       name?: string;
       filters?: SavedViewFilters;
+      webhookOnMatch?: boolean;
     }) => savedViewsApi.update(id, input),
     onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
   });

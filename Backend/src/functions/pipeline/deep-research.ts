@@ -5,8 +5,11 @@ import {
   predictNextMoves,
   evaluatePriorPredictions,
 } from '../../shared/services/anthropic';
-import { dispatchCriticalAlert } from '../../shared/services/notifier';
-import type { User } from '../../shared/types';
+import {
+  dispatchCriticalAlert,
+  dispatchViewMatch,
+} from '../../shared/services/notifier';
+import type { SavedView, User } from '../../shared/types';
 import { putItem, queryByPK, updateItem, getItem } from '../../shared/db/queries';
 import {
   researchPK,
@@ -15,11 +18,14 @@ import {
   changeSK,
   competitorPK,
   competitorSK,
+  savedViewPK,
+  savedViewSKPrefix,
   userPK,
   userSK,
   gsi1ResearchKeys,
   gsi1ChangeKeys,
 } from '../../shared/db/keys';
+import { matchesViewFilters } from '../../shared/utils/view-filters';
 import { generateId } from '../../shared/utils/id';
 import { logger } from '../../shared/utils/logger';
 import {
@@ -244,6 +250,91 @@ export const handler = async (event: Event): Promise<Output> => {
             error: String(err),
           });
         }
+      }
+    }
+
+    // Phase 17 — fan-out matching saved views to the workspace's webhook
+    // integration. Walks the workspace's saved views, filters to those with
+    // webhookOnMatch=true, dispatches one HMAC-signed POST per (change,view)
+    // pair. Best-effort + parallel via Promise.allSettled — one failed
+    // webhook never blocks others or breaks the pipeline run. No-op for
+    // workspaces without a webhook integration.
+    if (storedChanges.length > 0 && userRecord?.email) {
+      try {
+        const { items: viewItems } = await queryByPK(
+          savedViewPK(event.userId),
+          savedViewSKPrefix()
+        );
+        const webhookViews = (viewItems as unknown as SavedView[]).filter(
+          (v) => v.webhookOnMatch === true
+        );
+        if (webhookViews.length > 0) {
+          const ownerEmail = userRecord.email as string;
+          const ownerName = (userRecord.name as string) ?? '';
+          const ownerPrefs = (userRecord as unknown as User).notificationPreferences;
+          const dispatches: Promise<unknown>[] = [];
+
+          for (let i = 0; i < deltas.length; i++) {
+            const delta = deltas[i];
+            const stored = storedChanges[i];
+            if (!stored) continue;
+            // Build the FilterableChange shape from delta + stored fields.
+            const filterable = {
+              significance: delta.significanceScore,
+              competitorId: event.competitorId,
+              detectedAt: new Date().toISOString(),
+              changeType: delta.changeType,
+            };
+            for (const view of webhookViews) {
+              if (!matchesViewFilters(filterable, view.filters)) continue;
+              dispatches.push(
+                dispatchViewMatch({
+                  user: {
+                    userId: event.userId,
+                    email: ownerEmail,
+                    name: ownerName,
+                    notificationPreferences: ownerPrefs,
+                  },
+                  workspaceId: '(pipeline)',
+                  view: { id: view.id, name: view.name },
+                  change: {
+                    id: stored.changeId,
+                    competitorId: event.competitorId,
+                    competitorName: event.name,
+                    pageUrl: stored.pageUrl,
+                    significance: stored.significance,
+                    detectedAt: filterable.detectedAt,
+                    summary: delta.title,
+                    changeType: delta.changeType,
+                  },
+                }).catch((err) => {
+                  logger.warn('deep-research: view-match webhook failed', {
+                    competitorId: event.competitorId,
+                    viewId: view.id,
+                    changeId: stored.changeId,
+                    error: String(err),
+                  });
+                })
+              );
+              logger.info('saved_view_webhook_matched', {
+                tenantUserId: event.userId,
+                competitorId: event.competitorId,
+                viewId: view.id,
+                viewName: view.name,
+                changeId: stored.changeId,
+              });
+            }
+          }
+
+          if (dispatches.length > 0) {
+            await Promise.allSettled(dispatches);
+          }
+        }
+      } catch (err) {
+        logger.warn('deep-research: saved-view webhook fan-out failed — continuing', {
+          competitorId: event.competitorId,
+          error: String(err),
+        });
       }
     }
 

@@ -1,8 +1,16 @@
 "use client";
 
+import { useMemo } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Bookmark, Trash2, Loader2, Bell, BellRing } from "lucide-react";
+import {
+  Bookmark,
+  Trash2,
+  Loader2,
+  Bell,
+  BellRing,
+  Webhook,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth/use-auth";
@@ -11,8 +19,14 @@ import {
   useSavedViews,
   useSubscribeSavedView,
   useUnsubscribeSavedView,
+  useUpdateSavedView,
 } from "@/lib/hooks/use-saved-views";
+import {
+  CURRENT_WORKSPACE_STORAGE_KEY,
+  useWorkspaces,
+} from "@/lib/hooks/use-workspaces";
 import { capabilitiesFor } from "@/lib/utils/capabilities";
+import { ApiClientError } from "@/lib/api/client";
 import { cn } from "@/lib/utils";
 
 export function SavedViewsSection() {
@@ -20,9 +34,28 @@ export function SavedViewsSection() {
   const searchParams = useSearchParams();
   const activeViewId = searchParams.get("viewId");
   const { data: views, isLoading } = useSavedViews();
+  const { data: workspaces } = useWorkspaces();
   const deleteMutation = useDeleteSavedView();
   const subscribeMutation = useSubscribeSavedView();
   const unsubscribeMutation = useUnsubscribeSavedView();
+  const updateMutation = useUpdateSavedView();
+
+  // Phase 17 — webhook toggle is owner/admin-only. Read role from the
+  // current workspace's membership.
+  const currentWorkspace = useMemo(() => {
+    if (!workspaces || workspaces.length === 0) return null;
+    const id =
+      typeof window !== "undefined"
+        ? localStorage.getItem(CURRENT_WORKSPACE_STORAGE_KEY)
+        : null;
+    return (
+      workspaces.find((w) => w.workspaceId === id) ??
+      workspaces.find((w) => w.role === "owner") ??
+      workspaces[0]
+    );
+  }, [workspaces]);
+  const canManageDelivery =
+    currentWorkspace?.role === "owner" || currentWorkspace?.role === "admin";
 
   // Hide the section entirely for tiers without saved views (Scout).
   const cap = capabilitiesFor(user).savedViews.max;
@@ -62,6 +95,28 @@ export function SavedViewsSection() {
     }
   };
 
+  const handleToggleWebhook = async (
+    id: string,
+    name: string,
+    enabled: boolean,
+    e: React.MouseEvent
+  ) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      await updateMutation.mutateAsync({ id, webhookOnMatch: !enabled });
+      toast.success(
+        !enabled
+          ? `Webhook delivery enabled for "${name}"`
+          : `Webhook delivery disabled for "${name}"`
+      );
+    } catch (err) {
+      const msg =
+        err instanceof ApiClientError ? err.message : "Failed to toggle webhook delivery";
+      toast.error(msg);
+    }
+  };
+
   return (
     <>
       <div className="px-4 py-3">
@@ -73,9 +128,14 @@ export function SavedViewsSection() {
         {views.map((view) => {
           const isActive = activeViewId === view.id;
           const isSubscribed = view.subscribed === true;
+          const webhookEnabled = view.webhookOnMatch === true;
           const subscribeBusy =
             (subscribeMutation.isPending && subscribeMutation.variables === view.id) ||
             (unsubscribeMutation.isPending && unsubscribeMutation.variables === view.id);
+          const webhookBusy =
+            updateMutation.isPending &&
+            updateMutation.variables?.id === view.id &&
+            updateMutation.variables?.webhookOnMatch !== undefined;
           return (
             <Link
               key={view.id}
@@ -121,6 +181,33 @@ export function SavedViewsSection() {
                   <Bell className="h-3 w-3" />
                 )}
               </Button>
+              {canManageDelivery && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  title={
+                    webhookEnabled
+                      ? "Disable real-time webhook delivery"
+                      : "Push matching changes to the workspace webhook in real-time. Requires a webhook integration in Settings → Notifications."
+                  }
+                  className={cn(
+                    "h-5 w-5",
+                    webhookEnabled
+                      ? "text-primary"
+                      : "opacity-0 group-hover:opacity-100"
+                  )}
+                  onClick={(e) =>
+                    handleToggleWebhook(view.id, view.name, webhookEnabled, e)
+                  }
+                  disabled={webhookBusy}
+                >
+                  {webhookBusy ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Webhook className="h-3 w-3" />
+                  )}
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="icon"
