@@ -21,6 +21,7 @@ export type AuditAction =
   | 'workspace.invitation_created'
   | 'workspace.invitation_accepted'
   | 'workspace.member_removed'
+  | 'workspace.member_role_changed'
   | 'integration.connected'
   | 'integration.disconnected'
   | 'competitor.deleted'

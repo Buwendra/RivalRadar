@@ -9,7 +9,7 @@ import { apiHandler, getUserEmail } from '../../../shared/middleware/handler';
 import {
   resolveTenantContext,
   getRequestedWorkspaceId,
-  assertOwner,
+  assertAdminOrOwner,
 } from '../../../shared/middleware/tenant';
 import { queryByPK } from '../../../shared/db/queries';
 import { auditEventPK, auditEventSKPrefix } from '../../../shared/db/keys';
@@ -24,7 +24,7 @@ export const handler = apiHandler(async (event) => {
     email,
     getRequestedWorkspaceId(event.headers as Record<string, string | undefined>)
   );
-  assertOwner(ctx, 'the audit log');
+  assertAdminOrOwner(ctx, 'the audit log');
 
   const { items, cursor } = await queryByPK(
     auditEventPK(ctx.workspaceId),

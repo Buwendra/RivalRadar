@@ -20,7 +20,11 @@ import {
   getSourceIp,
   getUserAgent,
 } from '../../../shared/middleware/handler';
-import { resolveTenantContext, getRequestedWorkspaceId } from '../../../shared/middleware/tenant';
+import {
+  resolveTenantContext,
+  getRequestedWorkspaceId,
+  assertAdminOrOwner,
+} from '../../../shared/middleware/tenant';
 import { putItem } from '../../../shared/db/queries';
 import { invitationPK, invitationSK } from '../../../shared/db/keys';
 import { generateId } from '../../../shared/utils/id';
@@ -34,6 +38,12 @@ const TTL_DAYS = 14;
 
 const inviteSchema = z.object({
   email: z.string().email().toLowerCase(),
+  /**
+   * Phase 14 — role the invitee receives on accept. Defaults to 'member'.
+   * Inviting an admin requires the caller to be the workspace owner; admins
+   * inviting another admin returns 403 ADMIN_INVITE_OWNER_ONLY.
+   */
+  role: z.enum(['member', 'admin']).optional().default('member'),
 });
 
 export const handler = apiHandler(async (event) => {
@@ -41,15 +51,19 @@ export const handler = apiHandler(async (event) => {
   const requestedWsId = getRequestedWorkspaceId(event.headers as Record<string, string | undefined>);
   const ctx = await resolveTenantContext(email, requestedWsId);
 
-  if (ctx.role !== 'owner') {
-    throw new HttpError(
-      403,
-      'FORBIDDEN',
-      'Only the workspace owner can invite members.'
-    );
-  }
+  assertAdminOrOwner(ctx, 'workspace members');
 
   const body = validate(inviteSchema, parseBody(event));
+
+  // Inviting an admin is owner-only — closes the second-owner-attack vector
+  // where an admin could promote a colluder.
+  if (body.role === 'admin' && ctx.role !== 'owner') {
+    throw new HttpError(
+      403,
+      'ADMIN_INVITE_OWNER_ONLY',
+      'Only the workspace owner can invite admins. Admins can invite members.'
+    );
+  }
 
   if (body.email === ctx.callerEmail) {
     throw new HttpError(409, 'INVITE_SELF', "You're already in this workspace.");
@@ -66,6 +80,7 @@ export const handler = apiHandler(async (event) => {
     inviterUserId: ctx.callerUserId,
     inviterEmail: ctx.callerEmail,
     inviteeEmail: body.email,
+    role: body.role,
     status: 'pending',
     createdAt: now.toISOString(),
     expiresAt: expiresAtSec,
@@ -125,6 +140,7 @@ export const handler = apiHandler(async (event) => {
     action: 'workspace.invitation_created',
     resourceId: token,
     resourceLabel: body.email,
+    meta: { role: body.role },
     sourceIp: getSourceIp(event),
     userAgent: getUserAgent(event),
   });
@@ -136,6 +152,7 @@ export const handler = apiHandler(async (event) => {
         token,
         workspaceName: ctx.workspaceName,
         inviteeEmail: body.email,
+        role: body.role,
         expiresAt: new Date(expiresAtSec * 1000).toISOString(),
       },
     },

@@ -136,9 +136,12 @@ export function getRequestedWorkspaceId(headers: Record<string, string | undefin
 }
 
 /**
- * Phase 4b — guard for handlers that mutate workspace-wide state. Throws
- * 403 FORBIDDEN if the caller isn't the workspace owner. Legacy single-seat
- * users always pass (resolver returns role 'owner' for them).
+ * Phase 4b — guard for handlers that mutate persistent / financial state.
+ * Throws 403 FORBIDDEN if the caller isn't the workspace owner. Legacy
+ * single-seat users always pass (resolver returns role 'owner' for them).
+ *
+ * Use for: billing, API key minting, workspace delete, ownership transfer,
+ * member role assignment.
  */
 export function assertOwner(ctx: TenantContext, what = 'this workspace'): void {
   if (ctx.role !== 'owner') {
@@ -146,6 +149,23 @@ export function assertOwner(ctx: TenantContext, what = 'this workspace'): void {
       403,
       'FORBIDDEN',
       `Only the workspace owner can manage ${what}.`
+    );
+  }
+}
+
+/**
+ * Phase 14 — guard for handlers that perform day-to-day delegation work.
+ * Both 'owner' and 'admin' pass; 'member' rejects with 403 FORBIDDEN.
+ *
+ * Use for: invite / kick members, manage integrations, delete competitors,
+ * rename workspace, read audit log.
+ */
+export function assertAdminOrOwner(ctx: TenantContext, what = 'this workspace'): void {
+  if (ctx.role !== 'owner' && ctx.role !== 'admin') {
+    throw new HttpError(
+      403,
+      'FORBIDDEN',
+      `Only workspace owners or admins can manage ${what}.`
     );
   }
 }

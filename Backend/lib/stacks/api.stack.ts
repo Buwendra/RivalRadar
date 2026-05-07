@@ -138,6 +138,8 @@ export class ApiStack extends cdk.Stack {
     addRoute('WorkspacesList', apigatewayv2.HttpMethod.GET, '/workspaces', 'api/workspaces/list.ts');
     addRoute('WorkspaceMembersList', apigatewayv2.HttpMethod.GET, '/workspaces/current/members', 'api/workspaces/members.ts');
     addRoute('WorkspaceMemberRemove', apigatewayv2.HttpMethod.DELETE, '/workspaces/current/members/{userId}', 'api/workspaces/members.ts');
+    // Phase 14 — role change (member ↔ admin), owner-only
+    addRoute('WorkspaceMemberRoleChange', apigatewayv2.HttpMethod.PATCH, '/workspaces/current/members/{userId}', 'api/workspaces/members.ts');
     addRoute('WorkspaceInvite', apigatewayv2.HttpMethod.POST, '/workspaces/current/invitations', 'api/workspaces/invite.ts');
     addRoute('InvitationAccept', apigatewayv2.HttpMethod.POST, '/invitations/{token}/accept', 'api/workspaces/accept-invitation.ts');
 

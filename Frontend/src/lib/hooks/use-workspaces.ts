@@ -24,7 +24,17 @@ export function useWorkspaceMembers() {
 export function useInviteMember() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (email: string) => workspacesApi.invite(email),
+    mutationFn: (input: { email: string; role?: "member" | "admin" }) =>
+      workspacesApi.invite(input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["workspaces", "members"] }),
+  });
+}
+
+export function useChangeMemberRole() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, role }: { userId: string; role: "member" | "admin" }) =>
+      workspacesApi.changeMemberRole(userId, role),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["workspaces", "members"] }),
   });
 }

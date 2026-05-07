@@ -20,11 +20,17 @@ export const workspacesApi = {
       { method: "DELETE" }
     ),
 
-  invite: (email: string) =>
+  invite: (input: { email: string; role?: "member" | "admin" }) =>
     apiClient<InvitationCreatedResponse>("/workspaces/current/invitations", {
       method: "POST",
-      body: { email },
+      body: input,
     }),
+
+  changeMemberRole: (userId: string, role: "member" | "admin") =>
+    apiClient<{ userId: string; role: "member" | "admin" }>(
+      `/workspaces/current/members/${userId}`,
+      { method: "PATCH", body: { role } }
+    ),
 
   acceptInvitation: (token: string) =>
     apiClient<AcceptInvitationResponse>(`/invitations/${token}/accept`, {

@@ -11,7 +11,7 @@ import { logger } from '../../../shared/utils/logger';
 import {
   resolveTenantContext,
   getRequestedWorkspaceId,
-  assertOwner,
+  assertAdminOrOwner,
 } from '../../../shared/middleware/tenant';
 import { recordAuditEvent } from '../../../shared/services/audit';
 import type { IntegrationProvider } from '../../../shared/types';
@@ -34,7 +34,7 @@ export const handler = apiHandler(async (event) => {
     email,
     getRequestedWorkspaceId(event.headers as Record<string, string | undefined>)
   );
-  assertOwner(ctx, 'integrations');
+  assertAdminOrOwner(ctx, 'integrations');
   const userId = ctx.tenantUserId;
 
   await deleteItem(integrationPK(userId), integrationSK(provider));

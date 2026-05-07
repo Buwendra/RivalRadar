@@ -10,7 +10,7 @@ import { competitorPK, competitorSK } from '../../../shared/db/keys';
 import {
   resolveTenantContext,
   getRequestedWorkspaceId,
-  assertOwner,
+  assertAdminOrOwner,
 } from '../../../shared/middleware/tenant';
 import { recordAuditEvent } from '../../../shared/services/audit';
 
@@ -24,7 +24,7 @@ export const handler = apiHandler(async (event) => {
     email,
     getRequestedWorkspaceId(event.headers as Record<string, string | undefined>)
   );
-  assertOwner(ctx, 'competitors');
+  assertAdminOrOwner(ctx, 'competitors');
   const userId = ctx.tenantUserId;
 
   const competitor = await getItem<Record<string, unknown>>(competitorPK(userId), competitorSK(compId));

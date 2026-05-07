@@ -21,7 +21,16 @@
  *   Invitation       — PK=INVITE#<token>,   SK=META
  */
 
-export type MembershipRole = 'owner' | 'member';
+/**
+ * Workspace role hierarchy (Phase 14):
+ *   owner  — unique per workspace; full control including billing, API keys,
+ *            workspace delete, ownership transfer.
+ *   admin  — day-to-day delegation tier: invite/kick members, manage
+ *            integrations, delete competitors, rename workspace, view audit log.
+ *   member — baseline: read everything, create competitors, run research,
+ *            write notes, manage saved views.
+ */
+export type MembershipRole = 'owner' | 'admin' | 'member';
 
 export interface Workspace {
   id: string;
@@ -57,6 +66,12 @@ export interface WorkspaceInvitation {
   inviterUserId: string;
   inviterEmail: string;
   inviteeEmail: string;
+  /**
+   * Phase 14 — role the invitee will receive on accept. Optional in the type
+   * to support pre-Phase-14 rows; accept-side reads `invite.role ?? 'member'`.
+   * Inviting an admin is owner-only; the invite handler enforces.
+   */
+  role?: MembershipRole;
   status: InvitationStatus;
   createdAt: string;
   expiresAt: number;            // epoch seconds — DynamoDB TTL

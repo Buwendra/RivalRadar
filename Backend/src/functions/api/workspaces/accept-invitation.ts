@@ -84,6 +84,10 @@ export const handler = apiHandler(async (event) => {
 
   const now = new Date().toISOString();
 
+  // Phase 14 — preserve the invitation's role onto the membership. Pre-Phase-14
+  // invites have no role field; default to 'member'.
+  const inviteRole = invite.role ?? 'member';
+
   // Create both membership directions in parallel
   await Promise.all([
     putItem({
@@ -91,7 +95,7 @@ export const handler = apiHandler(async (event) => {
       SK: membershipByUserSK(invite.workspaceId),
       workspaceId: invite.workspaceId,
       userId: callerUserId,
-      role: 'member',
+      role: inviteRole,
       joinedAt: now,
       workspaceName: invite.workspaceName,
     }),
@@ -100,7 +104,7 @@ export const handler = apiHandler(async (event) => {
       SK: memberByWorkspaceSK(callerUserId),
       workspaceId: invite.workspaceId,
       userId: callerUserId,
-      role: 'member',
+      role: inviteRole,
       joinedAt: now,
       email: callerEmail,
     }),
@@ -125,12 +129,13 @@ export const handler = apiHandler(async (event) => {
     callerEmail,
     workspaceId: invite.workspaceId,
     workspaceName: invite.workspaceName,
-    role: 'member',
+    role: inviteRole,
   };
   await recordAuditEvent({
     ctx: acceptCtx,
     action: 'workspace.invitation_accepted',
     resourceId: token,
+    meta: { role: inviteRole },
     sourceIp: getSourceIp(event),
     userAgent: getUserAgent(event),
   });
@@ -141,7 +146,7 @@ export const handler = apiHandler(async (event) => {
       data: {
         workspaceId: invite.workspaceId,
         workspaceName: invite.workspaceName,
-        role: 'member',
+        role: inviteRole,
       },
     },
   };

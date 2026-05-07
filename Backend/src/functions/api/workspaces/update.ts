@@ -18,7 +18,7 @@ import {
 import {
   resolveTenantContext,
   getRequestedWorkspaceId,
-  assertOwner,
+  assertAdminOrOwner,
 } from '../../../shared/middleware/tenant';
 import { getItem, queryByPK, updateItem } from '../../../shared/db/queries';
 import {
@@ -46,7 +46,7 @@ export const handler = apiHandler(async (event) => {
     email,
     getRequestedWorkspaceId(event.headers as Record<string, string | undefined>)
   );
-  assertOwner(ctx, 'workspace settings');
+  assertAdminOrOwner(ctx, 'workspace settings');
 
   const workspace = await getItem<Workspace>(workspacePK(ctx.workspaceId), workspaceSK());
   if (!workspace) throw new HttpError(404, 'NOT_FOUND', 'Workspace not found');
