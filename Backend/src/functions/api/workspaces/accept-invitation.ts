@@ -31,6 +31,7 @@ import {
 } from '../../../shared/db/keys';
 import { logger } from '../../../shared/utils/logger';
 import { recordAuditEvent } from '../../../shared/services/audit';
+import { enqueueNotification } from '../../../shared/services/notifications';
 import type { TenantContext } from '../../../shared/middleware/tenant';
 import type { WorkspaceInvitation } from '../../../shared/types';
 
@@ -138,6 +139,20 @@ export const handler = apiHandler(async (event) => {
     meta: { role: inviteRole },
     sourceIp: getSourceIp(event),
     userAgent: getUserAgent(event),
+  });
+
+  // Phase 18 — notify the inviter that their invitation was accepted.
+  void enqueueNotification({
+    recipientUserId: invite.inviterUserId,
+    kind: 'invitation.accepted',
+    title: `${callerEmail} joined ${invite.workspaceName}`,
+    body: `Your invitation was accepted. They're now a ${inviteRole} of the workspace.`,
+    href: '/dashboard/settings',
+    meta: {
+      workspaceId: invite.workspaceId,
+      acceptedByEmail: callerEmail,
+      role: inviteRole,
+    },
   });
 
   return {

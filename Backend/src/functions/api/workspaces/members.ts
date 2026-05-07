@@ -41,6 +41,7 @@ import {
 import { validate } from '../../../shared/middleware/validation';
 import { logger } from '../../../shared/utils/logger';
 import { recordAuditEvent } from '../../../shared/services/audit';
+import { enqueueNotification } from '../../../shared/services/notifications';
 import type { MembershipRole } from '../../../shared/types';
 
 const roleChangeSchema = z.object({
@@ -121,6 +122,19 @@ export const handler = apiHandler(async (event) => {
       userAgent: getUserAgent(event),
     });
 
+    // Phase 18 — notify the kicked user.
+    void enqueueNotification({
+      recipientUserId: targetUserId,
+      kind: 'workspace.member_removed',
+      title: `Removed from ${ctx.workspaceName}`,
+      body: `${ctx.callerEmail} removed you from the workspace.`,
+      href: '/dashboard',
+      meta: {
+        workspaceId: ctx.workspaceId,
+        removedByEmail: ctx.callerEmail,
+      },
+    });
+
     return {
       statusCode: 200,
       body: { data: { removed: true, userId: targetUserId } },
@@ -194,6 +208,21 @@ export const handler = apiHandler(async (event) => {
       meta: { fromRole: oldRole, toRole: body.role },
       sourceIp: getSourceIp(event),
       userAgent: getUserAgent(event),
+    });
+
+    // Phase 18 — notify the affected member of their new role.
+    void enqueueNotification({
+      recipientUserId: targetUserId,
+      kind: 'workspace.role_changed',
+      title: `Your role in ${ctx.workspaceName} changed`,
+      body: `${ctx.callerEmail} changed your role from ${oldRole} to ${body.role}.`,
+      href: '/dashboard/settings',
+      meta: {
+        workspaceId: ctx.workspaceId,
+        fromRole: oldRole,
+        toRole: body.role,
+        changedByEmail: ctx.callerEmail,
+      },
     });
 
     return {

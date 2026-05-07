@@ -11,6 +11,7 @@ export * from './workspace';
 export * from './saved-view';
 export * from './audit-event';
 export * from './api-key';
+export * from './notification';
 
 /** Standard API response envelope */
 export interface ApiResponse<T> {

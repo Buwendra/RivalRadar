@@ -99,6 +99,15 @@ export const apiKeyByWorkspacePK = (workspaceId: string) =>
 export const apiKeyByWorkspaceSK = (id: string) => `APIKEY#${id}`;
 export const apiKeyByWorkspaceSKPrefix = () => 'APIKEY#';
 
+// Notification — per-user in-app feed (Phase 18). Distinct from the
+// workspace audit log (which is owner-only + compliance-oriented).
+// Double-segment SK paginates cleanly when two events land in the same ms.
+export const notificationPK = (recipientUserId: string) =>
+  `USER#${recipientUserId}`;
+export const notificationSK = (timestamp: string, id: string) =>
+  `NOTIF#${timestamp}#${id}`;
+export const notificationSKPrefix = () => 'NOTIF#';
+
 // ─── GSI Key Builders ───
 
 // GSI1: User's changes feed (dashboard)

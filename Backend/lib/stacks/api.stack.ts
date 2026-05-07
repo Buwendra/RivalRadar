@@ -208,6 +208,11 @@ export class ApiStack extends cdk.Stack {
     addRoute('RecommendationsList', apigatewayv2.HttpMethod.GET, '/recommendations', 'api/recommendations/list.ts');
     addRoute('RecommendationsUpdate', apigatewayv2.HttpMethod.PATCH, '/recommendations/{id}', 'api/recommendations/update-status.ts');
 
+    // ─── Notifications (Phase 18) — caller-scoped in-app inbox ───
+    addRoute('NotificationsList', apigatewayv2.HttpMethod.GET, '/notifications', 'api/notifications/list.ts');
+    addRoute('NotificationsMarkRead', apigatewayv2.HttpMethod.PATCH, '/notifications/{id}/read', 'api/notifications/mark-read.ts');
+    addRoute('NotificationsMarkAllRead', apigatewayv2.HttpMethod.POST, '/notifications/mark-all-read', 'api/notifications/mark-all-read.ts');
+
     // ─── Saved Views (Phase 7b) ───
     addRoute('SavedViewsList', apigatewayv2.HttpMethod.GET, '/saved-views', 'api/saved-views/list.ts');
     addRoute('SavedViewsCreate', apigatewayv2.HttpMethod.POST, '/saved-views', 'api/saved-views/create.ts');

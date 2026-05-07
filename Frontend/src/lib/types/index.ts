@@ -48,3 +48,4 @@ export type {
   SearchResponse,
 } from "./saved-view";
 export type { ApiKeyListItem, ApiKeyCreated, ApiKeyScope } from "./api-key";
+export type { NotificationKind, NotificationListItem } from "./notification";

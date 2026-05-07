@@ -14,6 +14,7 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { WorkspaceSwitcher } from "./workspace-switcher";
 import { SearchDialog } from "./search-dialog";
+import { NotificationPopover } from "./notification-popover";
 import Link from "next/link";
 
 interface DashboardHeaderProps {
@@ -75,6 +76,8 @@ export function DashboardHeader({ onMenuClick }: DashboardHeaderProps) {
       </Button>
 
       <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
+
+      <NotificationPopover />
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>

@@ -37,6 +37,7 @@ import {
 } from '../../../shared/db/keys';
 import { validate } from '../../../shared/middleware/validation';
 import { recordAuditEvent } from '../../../shared/services/audit';
+import { enqueueNotification } from '../../../shared/services/notifications';
 import { logger } from '../../../shared/utils/logger';
 import type { Workspace } from '../../../shared/types';
 
@@ -122,6 +123,34 @@ export const handler = apiHandler(async (event) => {
     workspaceId: ctx.workspaceId,
     fromUserId: ctx.callerUserId,
     toUserId: body.newOwnerUserId,
+  });
+
+  // Phase 18 — notify both parties.
+  void enqueueNotification({
+    recipientUserId: body.newOwnerUserId,
+    kind: 'workspace.ownership_received',
+    title: `You're now the owner of ${ctx.workspaceName}`,
+    body: `${ctx.callerEmail} transferred workspace ownership to you. You can now manage billing, API keys, and member roles.`,
+    href: '/dashboard/settings',
+    meta: {
+      workspaceId: ctx.workspaceId,
+      fromUserId: ctx.callerUserId,
+      fromEmail: ctx.callerEmail,
+    },
+  });
+  void enqueueNotification({
+    recipientUserId: ctx.callerUserId,
+    kind: 'workspace.ownership_handed_off',
+    title: `You handed off ${ctx.workspaceName}`,
+    body: `Ownership transferred to ${
+      targetMember.email ?? body.newOwnerUserId
+    }. You're now a member of this workspace.`,
+    href: '/dashboard/settings',
+    meta: {
+      workspaceId: ctx.workspaceId,
+      toUserId: body.newOwnerUserId,
+      ...(targetMember.email ? { toEmail: targetMember.email } : {}),
+    },
   });
 
   return {
