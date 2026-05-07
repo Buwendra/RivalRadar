@@ -1,0 +1,4 @@
+# Phase 10a — SOC 2 evidence + private audit logs. Never commit.
+evidence-*/
+ACCESS_REVIEW_LOG.md
+VENDOR_RISK_REVIEW_LOG.md
