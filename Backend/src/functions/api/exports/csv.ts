@@ -23,10 +23,11 @@ import {
   resolveTenantContext,
   getRequestedWorkspaceId,
 } from '../../../shared/middleware/tenant';
+import { buildCompetitorMatrix } from '../../../shared/services/competitor-matrix';
 import type { User, Competitor, Recommendation } from '../../../shared/types';
 
 const exportSchema = z.object({
-  type: z.enum(['changes', 'competitors', 'recommendations']),
+  type: z.enum(['changes', 'competitors', 'recommendations', 'competitor-matrix']),
   /** Optional ISO date — only export rows since this point. Default: 90d ago. */
   since: z.string().datetime().optional(),
 });
@@ -66,6 +67,16 @@ export const handler = apiHandler(async (event) => {
       403,
       'PLAN_REQUIRED',
       'CSV exports require the Strategist plan or higher.'
+    );
+  }
+
+  // Phase 19 — comparison matrix gated on its own capability so a future tier
+  // could disable matrix export without revoking the rest of CSV.
+  if (body.type === 'competitor-matrix' && !hasCapability(user, 'comparatorMatrix')) {
+    throw new HttpError(
+      403,
+      'PLAN_REQUIRED',
+      'The comparison matrix export requires the Strategist plan or higher.'
     );
   }
 
@@ -137,6 +148,46 @@ export const handler = apiHandler(async (event) => {
         'updatedAt',
       ]),
       ...rows.map(csvLine),
+    ].join('\n');
+    rowCount = rows.length;
+  } else if (body.type === 'competitor-matrix') {
+    const rows = await buildCompetitorMatrix(userId);
+    const cells = rows.map((r) => [
+      r.name,
+      r.url,
+      r.status,
+      r.threatLevel ?? '',
+      r.threatReasoning ?? '',
+      r.momentum ?? '',
+      typeof r.momentumChangePercent === 'number' ? r.momentumChangePercent : '',
+      (r.derivedTags ?? []).join('; '),
+      r.derivedState?.stage ?? '',
+      r.derivedState?.fundingState ?? '',
+      r.derivedState?.hiringState ?? '',
+      r.derivedState?.strategicDirection ?? '',
+      r.derivedState?.techPositioning ?? '',
+      r.derivedState?.pacing ?? '',
+      r.latestResearchAt ?? '',
+    ]);
+    csv = [
+      csvLine([
+        'name',
+        'url',
+        'status',
+        'threatLevel',
+        'threatReasoning',
+        'momentum',
+        'momentumChangePercent',
+        'tags',
+        'stage',
+        'fundingState',
+        'hiringState',
+        'strategicDirection',
+        'techPositioning',
+        'pacing',
+        'latestResearchAt',
+      ]),
+      ...cells.map(csvLine),
     ].join('\n');
     rowCount = rows.length;
   } else if (body.type === 'recommendations') {

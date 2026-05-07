@@ -189,6 +189,8 @@ export class ApiStack extends cdk.Stack {
     addRoute('CompetitorCreate', apigatewayv2.HttpMethod.POST, '/competitors', 'api/competitors/create.ts');
     // Phase 12 — CSV bulk import
     addRoute('CompetitorBulkImport', apigatewayv2.HttpMethod.POST, '/competitors/bulk-import', 'api/competitors/bulk-import.ts');
+    // Phase 19 — cross-competitor comparison matrix (Strategist+)
+    addRoute('CompetitorMatrix', apigatewayv2.HttpMethod.GET, '/competitors/matrix', 'api/competitors/matrix.ts');
     addRoute('CompetitorGet', apigatewayv2.HttpMethod.GET, '/competitors/{id}', 'api/competitors/get.ts');
     addRoute('CompetitorDelete', apigatewayv2.HttpMethod.DELETE, '/competitors/{id}', 'api/competitors/delete.ts');
     const researchFn = addRoute('CompetitorResearch', apigatewayv2.HttpMethod.POST, '/competitors/{id}/research', 'api/competitors/research.ts', true, pipelineEnv);

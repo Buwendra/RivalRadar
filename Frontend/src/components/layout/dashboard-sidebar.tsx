@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Settings, Plus, Lightbulb } from "lucide-react";
+import { LayoutDashboard, Settings, Plus, Lightbulb, GitCompare } from "lucide-react";
 import { Logo } from "@/components/shared/logo";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -55,6 +55,7 @@ export function DashboardSidebar({ onAddCompetitor }: DashboardSidebarProps) {
   const navItems = [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { label: "Recommendations", href: "/dashboard/recommendations", icon: Lightbulb },
+    { label: "Compare", href: "/dashboard/compare", icon: GitCompare },
     { label: "Settings", href: "/dashboard/settings", icon: Settings },
   ];
 

@@ -29,6 +29,7 @@ export function hasCapability(
     | 'customRecommendationCategories'
     | 'scheduledReports'
     | 'apiAccess'
+    | 'comparatorMatrix'
 ): boolean {
   const caps = capabilitiesFor(user);
   return caps[capability] === true;

@@ -20,6 +20,7 @@ export interface Capabilities {
   savedViews: { max: number };
   apiAccess: boolean;
   apiKeys: { max: number };
+  comparatorMatrix: boolean;
 }
 
 export const CAPABILITIES: Record<PlanTier, Capabilities> = {
@@ -36,6 +37,7 @@ export const CAPABILITIES: Record<PlanTier, Capabilities> = {
     savedViews: { max: 0 },
     apiAccess: false,
     apiKeys: { max: 0 },
+    comparatorMatrix: false,
   },
   strategist: {
     pdfExports: true,
@@ -50,6 +52,7 @@ export const CAPABILITIES: Record<PlanTier, Capabilities> = {
     savedViews: { max: 5 },
     apiAccess: true,
     apiKeys: { max: 5 },
+    comparatorMatrix: true,
   },
   command: {
     pdfExports: true,
@@ -64,6 +67,7 @@ export const CAPABILITIES: Record<PlanTier, Capabilities> = {
     savedViews: { max: 25 },
     apiAccess: true,
     apiKeys: { max: 25 },
+    comparatorMatrix: true,
   },
 };
 

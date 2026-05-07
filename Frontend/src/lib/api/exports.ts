@@ -1,6 +1,10 @@
 import { apiClient } from "./client";
 
-export type CsvExportType = "changes" | "competitors" | "recommendations";
+export type CsvExportType =
+  | "changes"
+  | "competitors"
+  | "recommendations"
+  | "competitor-matrix";
 
 export interface CsvExportResponse {
   csv: string;

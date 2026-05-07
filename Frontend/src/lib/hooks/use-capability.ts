@@ -30,6 +30,7 @@ export function useCapability(
     | "customRecommendationCategories"
     | "scheduledReports"
     | "apiAccess"
+    | "comparatorMatrix"
 ): boolean {
   const caps = useCapabilities();
   return caps[capability] === true;

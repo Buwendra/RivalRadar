@@ -49,3 +49,13 @@ export type {
 } from "./saved-view";
 export type { ApiKeyListItem, ApiKeyCreated, ApiKeyScope } from "./api-key";
 export type { NotificationKind, NotificationListItem } from "./notification";
+export type {
+  CompetitorMatrixRow,
+  DerivedState,
+  DerivedStage,
+  DerivedFundingState,
+  DerivedHiringState,
+  DerivedStrategicDirection,
+  DerivedTechPositioning,
+  DerivedPacing,
+} from "./competitor-matrix";

@@ -26,7 +26,12 @@ interface ExportButtonProps {
 
 type BusyTarget = CsvExportType | "pdf";
 
-const TYPE_LABELS: Record<CsvExportType, string> = {
+// 'competitor-matrix' is intentionally not in the generic dropdown — its
+// export lives on `/dashboard/compare`, where the matrix is already on screen.
+const TYPE_LABELS: Record<
+  Exclude<CsvExportType, "competitor-matrix">,
+  string
+> = {
   changes: "Changes (last 90 days)",
   competitors: "Competitors",
   recommendations: "Recommendations",
@@ -140,7 +145,7 @@ export function ExportButton({ only, variant = "default" }: ExportButtonProps) {
         <DropdownMenuLabel className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
           Raw data
         </DropdownMenuLabel>
-        {(Object.keys(TYPE_LABELS) as CsvExportType[]).map((type) => (
+        {(Object.keys(TYPE_LABELS) as Array<keyof typeof TYPE_LABELS>).map((type) => (
           <DropdownMenuItem
             key={type}
             onClick={() => handleExport(type)}
