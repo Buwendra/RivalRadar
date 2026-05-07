@@ -191,6 +191,10 @@ export class ApiStack extends cdk.Stack {
     addRoute('CompetitorBulkImport', apigatewayv2.HttpMethod.POST, '/competitors/bulk-import', 'api/competitors/bulk-import.ts');
     // Phase 19 — cross-competitor comparison matrix (Strategist+)
     addRoute('CompetitorMatrix', apigatewayv2.HttpMethod.GET, '/competitors/matrix', 'api/competitors/matrix.ts');
+    // Phase 20 — per-competitor battlecard generation (auth list + delete)
+    addRoute('BattlecardsList',   apigatewayv2.HttpMethod.GET,    '/battlecards',         'api/battlecards/list.ts');
+    addRoute('BattlecardsDelete', apigatewayv2.HttpMethod.DELETE, '/battlecards/{id}',    'api/battlecards/delete.ts');
+    addRoute('PublicBattlecard',  apigatewayv2.HttpMethod.GET,    '/public/battlecards/{token}', 'api/public/battlecard.ts', false);
     addRoute('CompetitorGet', apigatewayv2.HttpMethod.GET, '/competitors/{id}', 'api/competitors/get.ts');
     addRoute('CompetitorDelete', apigatewayv2.HttpMethod.DELETE, '/competitors/{id}', 'api/competitors/delete.ts');
     const researchFn = addRoute('CompetitorResearch', apigatewayv2.HttpMethod.POST, '/competitors/{id}/research', 'api/competitors/research.ts', true, pipelineEnv);
@@ -268,6 +272,42 @@ export class ApiStack extends cdk.Stack {
       path: '/exports/pdf',
       methods: [apigatewayv2.HttpMethod.POST],
       integration: new apigatewayv2Int.HttpLambdaIntegration('ExportsPdf-Int', exportsPdfFn),
+      authorizer,
+    });
+
+    // ─── Phase 20 — battlecard PDF generator ───
+    // PDFKit cold start + S3 PUT — same memory/timeout override as ExportsPdf,
+    // and the same .afm font-asset copy hook so PDFKit's internal font lookup
+    // resolves at runtime.
+    const competitorBattlecardFn = new nodejs.NodejsFunction(this, 'CompetitorBattlecard', {
+      ...lambdaDefaults,
+      entry: path.join(__dirname, '..', '..', 'src', 'functions', 'api/competitors/battlecard.ts'),
+      functionName: `${this.stackName}-CompetitorBattlecard`,
+      timeout: cdk.Duration.seconds(60),
+      memorySize: 1024,
+      bundling: {
+        ...lambdaDefaults.bundling,
+        commandHooks: {
+          beforeBundling: () => [],
+          beforeInstall: () => [],
+          afterBundling(inputDir: string, outputDir: string) {
+            return [
+              `node -e "const fs=require('fs'),path=require('path');const src=path.join('${inputDir.replace(/\\/g, '/')}','node_modules/pdfkit/js/data');const dst=path.join('${outputDir.replace(/\\/g, '/')}','data');if(fs.existsSync(src)){fs.mkdirSync(dst,{recursive:true});for(const f of fs.readdirSync(src))fs.copyFileSync(path.join(src,f),path.join(dst,f));}"`,
+            ];
+          },
+        },
+      },
+    });
+    table.grantReadWriteData(competitorBattlecardFn);
+    snapshotBucket.grantReadWrite(competitorBattlecardFn);
+    apiSecrets.grantRead(competitorBattlecardFn);
+    this.httpApi.addRoutes({
+      path: '/competitors/{id}/battlecard',
+      methods: [apigatewayv2.HttpMethod.POST],
+      integration: new apigatewayv2Int.HttpLambdaIntegration(
+        'CompetitorBattlecard-Int',
+        competitorBattlecardFn
+      ),
       authorizer,
     });
 

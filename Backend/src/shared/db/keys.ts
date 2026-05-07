@@ -108,6 +108,19 @@ export const notificationSK = (timestamp: string, id: string) =>
   `NOTIF#${timestamp}#${id}`;
 export const notificationSKPrefix = () => 'NOTIF#';
 
+// Battlecard — per-competitor PDF + public share token (Phase 20).
+// Listed under the tenant owner so workspace members share visibility.
+// `battlecardTokenGSI3` mints the GSI3 PK/SK pair used to resolve a public
+// share token to its row in a single query.
+export const battlecardPK = (tenantUserId: string) => `USER#${tenantUserId}`;
+export const battlecardSK = (createdAt: string, id: string) =>
+  `BATTLECARD#${createdAt}#${id}`;
+export const battlecardSKPrefix = () => 'BATTLECARD#';
+export const battlecardTokenGSI3 = (token: string) => ({
+  GSI3PK: `BATTLECARD_TOKEN#${token}`,
+  GSI3SK: `BATTLECARD_TOKEN#${token}`,
+});
+
 // ─── GSI Key Builders ───
 
 // GSI1: User's changes feed (dashboard)

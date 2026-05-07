@@ -59,3 +59,4 @@ export type {
   DerivedTechPositioning,
   DerivedPacing,
 } from "./competitor-matrix";
+export type { BattlecardSummary } from "./battlecard";

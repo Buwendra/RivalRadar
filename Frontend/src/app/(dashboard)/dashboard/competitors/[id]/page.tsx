@@ -51,6 +51,7 @@ import { ThreatCard } from "@/components/dashboard/threat-card";
 import { SnoozeButton } from "@/components/dashboard/snooze-button";
 import { CompetitorTagChips } from "@/components/dashboard/competitor-tag-chips";
 import { PredictedMovesCard } from "@/components/dashboard/predicted-moves-card";
+import { BattlecardButton } from "@/components/dashboard/battlecard-button";
 import { formatSmartDate } from "@/lib/utils/format-date";
 import type { CompetitorDetailChange, PageType } from "@/lib/types";
 
@@ -155,6 +156,7 @@ export default function CompetitorDetailPage() {
                 snoozedUntil={competitor.snoozedUntil}
                 variant="compact"
               />
+              <BattlecardButton competitorId={competitor.id} />
               <Button
                 size="sm"
                 onClick={handleResearch}
