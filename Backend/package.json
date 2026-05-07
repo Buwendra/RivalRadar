@@ -40,7 +40,7 @@
     "aws-cdk": "^2.1108.0",
     "esbuild": "^0.27.3",
     "ts-node": "^10.9.2",
-    "typescript": "^5.9.3",
+    "typescript": "^6.0.3",
     "ulid": "^3.0.2",
     "vitest": "^4.0.18",
     "zod": "^4.3.6"
