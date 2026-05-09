@@ -34,10 +34,16 @@ import {
   deriveTagsFromState,
 } from '../../shared/utils/competitor-metrics';
 import type {
+  ApplicationEvent,
   ResearchFinding,
   PredictedMove,
   EvaluatedPrediction,
 } from '../../shared/types';
+import {
+  flushEventsToRun,
+  makeRunEvent,
+  markRunFinished,
+} from '../../shared/services/research-run';
 
 interface Event {
   competitorId: string;
@@ -45,6 +51,11 @@ interface Event {
   name: string;
   url: string;
   industry?: string;
+  // Phase 22 — observability handle. Optional for backwards-compat with
+  // legacy executions that started before the field was introduced.
+  runId?: string;
+  runStartedAt?: string;
+  tenantUserId?: string;
 }
 
 interface StoredChange {
@@ -80,7 +91,23 @@ export const handler = async (event: Event): Promise<Output> => {
     competitorId: event.competitorId,
     name: event.name,
     url: event.url,
+    runId: event.runId,
   });
+
+  // Phase 22 — accumulate progress events in memory and flush to the
+  // ResearchRun row at end-of-run. The trigger handler already wrote a
+  // `run_queued` event; we add `research_started` first to surface
+  // immediately when the row is next read.
+  const runEvents: ApplicationEvent[] = [];
+  const tenantUserId = event.tenantUserId ?? event.userId;
+  const haveRunRow = !!event.runId && !!event.runStartedAt;
+  runEvents.push(makeRunEvent('research_started', { competitorId: event.competitorId }));
+
+  if (haveRunRow) {
+    // Early flush so the dashboard reflects "research started" within ~2s
+    // even if the deep-research call takes 60s. Best-effort.
+    await flushEventsToRun(tenantUserId, event.runStartedAt!, event.runId!, runEvents);
+  }
 
   try {
     // 1. Load up to 3 prior research findings + the user record in parallel.
@@ -124,6 +151,13 @@ export const handler = async (event: Event): Promise<Output> => {
       current.categories.funding.length +
       current.categories.hiring.length +
       current.categories.social.length;
+    runEvents.push(
+      makeRunEvent('deep_research_completed', {
+        findings: findingsCount,
+        citations: current.citations.length,
+        tokensUsed: current.tokensUsed,
+      })
+    );
 
     // 3. Detect deltas against prior finding BEFORE storing the new one.
     //    If this fails, we leave the prior finding in place for a clean retry.
@@ -144,6 +178,9 @@ export const handler = async (event: Event): Promise<Output> => {
           derivedState: current.derivedState,
         },
       });
+      runEvents.push(makeRunEvent('deltas_detected', { count: deltas.length }));
+    } else {
+      runEvents.push(makeRunEvent('first_run_no_prior_finding'));
     }
 
     // 4. Persist the new ResearchFinding (only after delta detection succeeded)
@@ -575,11 +612,22 @@ export const handler = async (event: Event): Promise<Output> => {
         evaluatedCount: newHistoryEntries.length,
         evaluatedStatuses: newHistoryEntries.map((e) => e.status),
       });
+      runEvents.push(
+        makeRunEvent('enrichment_completed', {
+          momentum: momentum ?? 'unknown',
+          threatLevel: threatLevel ?? 'unscored',
+          tags: derivedTags.length,
+          predictions: predictedMoves.length,
+        })
+      );
     } catch (err) {
       logger.warn('Post-research enrichment failed — continuing', {
         competitorId: event.competitorId,
         error: String(err),
       });
+      runEvents.push(
+        makeRunEvent('enrichment_failed', { error: String(err).slice(0, 200) }, 'warn')
+      );
     }
 
     logger.info('DeepResearch completed', {
@@ -593,6 +641,22 @@ export const handler = async (event: Event): Promise<Output> => {
       storedChanges: storedChanges.length,
       firstRun: !previous,
     });
+
+    runEvents.push(
+      makeRunEvent('research_succeeded', {
+        deltas: storedChanges.length,
+        findings: findingsCount,
+        tokensUsed: current.tokensUsed,
+      })
+    );
+    if (haveRunRow) {
+      await markRunFinished(tenantUserId, event.runStartedAt!, event.runId!, {
+        status: 'succeeded',
+        deltaCount: storedChanges.length,
+        citationCount: current.citations.length,
+        events: runEvents,
+      });
+    }
 
     return {
       compId: event.competitorId,
@@ -609,6 +673,16 @@ export const handler = async (event: Event): Promise<Output> => {
       competitorId: event.competitorId,
       error: String(err),
     });
+    runEvents.push(
+      makeRunEvent('research_failed', { error: String(err).slice(0, 200) }, 'error')
+    );
+    if (haveRunRow) {
+      await markRunFinished(tenantUserId, event.runStartedAt!, event.runId!, {
+        status: 'failed',
+        errorMessage: String(err),
+        events: runEvents,
+      });
+    }
     return {
       compId: event.competitorId,
       userId: event.userId,

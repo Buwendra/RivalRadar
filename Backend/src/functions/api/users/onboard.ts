@@ -18,6 +18,11 @@ import {
 import { generateId } from '../../../shared/utils/id';
 import { PLAN_LIMITS, User } from '../../../shared/types';
 import { enforceResearchEligibility } from '../../../shared/utils/research-eligibility';
+import {
+  createResearchRun,
+  markRunFinished,
+  markRunStarted,
+} from '../../../shared/services/research-run';
 import { logger } from '../../../shared/utils/logger';
 
 const sfn = new SFNClient({});
@@ -152,21 +157,68 @@ export const handler = apiHandler(async (event) => {
   }
   await updateItem(userPK(userId), userSK(), consentUpdates);
 
-  // Trigger initial deep research for each new competitor
+  // Trigger initial deep research for each new competitor (Phase 22 also
+  // creates a queued ResearchRun row per competitor before StartExecution
+  // so the dashboard panel reflects in-flight runs).
   if (process.env.RESEARCH_PIPELINE_ARN) {
+    const runs = await Promise.all(
+      body.competitors.map((comp, i) =>
+        createResearchRun({
+          id: generateId(),
+          tenantUserId: userId,
+          competitorId: competitorIds[i],
+          competitorName: comp.name,
+          triggeredByUserId: userId,
+          triggeredByEmail: email,
+          triggerSource: 'onboarding',
+        })
+      )
+    );
+
     const researchInput = body.competitors.map((comp, i) => ({
       competitorId: competitorIds[i],
       userId,
+      tenantUserId: userId,
+      runId: runs[i].id,
+      runStartedAt: runs[i].startedAt,
       name: comp.name,
       url: comp.url,
       industry: body.industry,
     }));
-    await sfn.send(
-      new StartExecutionCommand({
-        stateMachineArn: process.env.RESEARCH_PIPELINE_ARN,
-        input: JSON.stringify({ competitors: researchInput }),
-      })
-    );
+
+    let executionArn: string | undefined;
+    try {
+      const result = await sfn.send(
+        new StartExecutionCommand({
+          stateMachineArn: process.env.RESEARCH_PIPELINE_ARN,
+          input: JSON.stringify({ competitors: researchInput }),
+        })
+      );
+      executionArn = result.executionArn;
+    } catch (err) {
+      // SFN failure leaves all rows stuck in queued — finalise them as failed
+      // so onboarding still succeeds (the user just sees failed runs they can
+      // retry via Research Now).
+      await Promise.all(
+        runs.map((run) =>
+          markRunFinished(userId, run.startedAt, run.id, {
+            status: 'failed',
+            errorMessage:
+              err instanceof Error ? err.message : 'Failed to start research pipeline',
+          })
+        )
+      );
+      logger.warn('onboarding_pipeline_start_failed', {
+        userId,
+        err: err instanceof Error ? err.message : String(err),
+      });
+    }
+
+    if (executionArn) {
+      await Promise.all(
+        runs.map((run) => markRunStarted(userId, run.startedAt, run.id, executionArn!))
+      );
+    }
   }
 
   logger.info('onboarding_completed', {

@@ -121,6 +121,14 @@ export const battlecardTokenGSI3 = (token: string) => ({
   GSI3SK: `BATTLECARD_TOKEN#${token}`,
 });
 
+// ResearchRun — per-execution status + event log (Phase 22). Listed under
+// the tenant owner so workspace members share visibility. Double-segment SK
+// paginates cleanly when two runs share a millisecond (onboarding bursts).
+export const researchRunPK = (tenantUserId: string) => `USER#${tenantUserId}`;
+export const researchRunSK = (startedAt: string, id: string) =>
+  `RUN#${startedAt}#${id}`;
+export const researchRunSKPrefix = () => 'RUN#';
+
 // ─── GSI Key Builders ───
 
 // GSI1: User's changes feed (dashboard)

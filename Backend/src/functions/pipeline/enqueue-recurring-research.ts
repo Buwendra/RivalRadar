@@ -33,6 +33,12 @@ import { isSnoozed } from '../../shared/utils/snooze';
 import { PLAN_LIMITS } from '../../shared/types';
 import type { User } from '../../shared/types/user';
 import type { Competitor } from '../../shared/types/competitor';
+import { generateId } from '../../shared/utils/id';
+import {
+  createResearchRun,
+  markRunFinished,
+  markRunStarted,
+} from '../../shared/services/research-run';
 import { logger } from '../../shared/utils/logger';
 
 const sfn = new SFNClient({});
@@ -172,14 +178,33 @@ export const handler = async (): Promise<EnqueueResult> => {
       continue;
     }
 
+    // Phase 22 — create per-competitor ResearchRun rows BEFORE StartExecution
+    // so the dashboard reflects the recurring run within ~1s of cron fire.
+    const runs = await Promise.all(
+      dueComps.map((c) =>
+        createResearchRun({
+          id: generateId(),
+          tenantUserId: c.userId,
+          competitorId: c.id,
+          competitorName: c.name,
+          triggeredByUserId: 'system',
+          triggeredByEmail: 'system',
+          triggerSource: 'recurring',
+        })
+      )
+    );
+
     try {
-      await sfn.send(
+      const exec = await sfn.send(
         new StartExecutionCommand({
           stateMachineArn,
           input: JSON.stringify({
-            competitors: dueComps.map((c) => ({
+            competitors: dueComps.map((c, i) => ({
               competitorId: c.id,
               userId: c.userId,
+              tenantUserId: c.userId,
+              runId: runs[i].id,
+              runStartedAt: runs[i].startedAt,
               name: c.name,
               url: c.url,
               industry: (c as { industry?: string }).industry,
@@ -189,6 +214,14 @@ export const handler = async (): Promise<EnqueueResult> => {
       );
       result.executionsStarted += 1;
       result.competitorsEnqueued += dueComps.length;
+
+      if (exec.executionArn) {
+        await Promise.all(
+          runs.map((run, i) =>
+            markRunStarted(dueComps[i].userId, run.startedAt, run.id, exec.executionArn!)
+          )
+        );
+      }
 
       // 4. Stamp lastRecurringResearchAt on each enqueued competitor
       // (best-effort — failure here doesn't unwind the SFN start).
@@ -211,6 +244,16 @@ export const handler = async (): Promise<EnqueueResult> => {
         dueCount: dueComps.length,
         error: String(err),
       });
+      // Finalise the orphan rows as failed so they don't sit stuck in queued.
+      await Promise.all(
+        runs.map((run, i) =>
+          markRunFinished(dueComps[i].userId, run.startedAt, run.id, {
+            status: 'failed',
+            errorMessage:
+              err instanceof Error ? err.message : 'Failed to start research pipeline',
+          })
+        )
+      );
     }
   }
 

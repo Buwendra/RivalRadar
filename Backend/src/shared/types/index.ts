@@ -13,6 +13,7 @@ export * from './audit-event';
 export * from './api-key';
 export * from './notification';
 export * from './battlecard';
+export * from './research-run';
 
 /** Standard API response envelope */
 export interface ApiResponse<T> {

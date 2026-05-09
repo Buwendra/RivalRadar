@@ -19,6 +19,9 @@ interface ApiStackProps extends cdk.StackProps {
   userPool: cognito.UserPool;
   userPoolClient: cognito.UserPoolClient;
   researchStateMachine: sfn.StateMachine;
+  /** DeepResearch Lambda — Phase 22 needs its log-group ARN for the
+   *  research-run details endpoint. */
+  deepResearchFn: lambda.Function;
 }
 
 export class ApiStack extends cdk.Stack {
@@ -27,7 +30,7 @@ export class ApiStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: ApiStackProps) {
     super(scope, id, props);
 
-    const { table, snapshotBucket, userPool, userPoolClient, researchStateMachine } = props;
+    const { table, snapshotBucket, userPool, userPoolClient, researchStateMachine, deepResearchFn } = props;
 
     // Secrets for external APIs
     const apiSecrets = secretsmanager.Secret.fromSecretNameV2(
@@ -201,6 +204,38 @@ export class ApiStack extends cdk.Stack {
     researchStateMachine.grantStartExecution(researchFn);
     // Phase 7a — snooze toggle
     addRoute('CompetitorSnooze', apigatewayv2.HttpMethod.PATCH, '/competitors/{id}/snooze', 'api/competitors/snooze.ts');
+
+    // ─── Research-run observability (Phase 22) ───
+    addRoute('ResearchRunsList', apigatewayv2.HttpMethod.GET, '/research-runs', 'api/research-runs/list.ts');
+    addRoute('ResearchRunsGet',  apigatewayv2.HttpMethod.GET, '/research-runs/{id}', 'api/research-runs/get.ts');
+    // Lazy "Technical details" — pulls SFN execution history + CloudWatch tail.
+    // Needs explicit grants the default `addRoute()` doesn't provide.
+    const researchRunDetailsFn = addRoute(
+      'ResearchRunsDetails',
+      apigatewayv2.HttpMethod.GET,
+      '/research-runs/{id}/details',
+      'api/research-runs/details.ts',
+      true,
+      { DEEP_RESEARCH_LAMBDA_NAME: deepResearchFn.functionName }
+    );
+    researchRunDetailsFn.addToRolePolicy(
+      new cdk.aws_iam.PolicyStatement({
+        actions: ['states:GetExecutionHistory', 'states:DescribeExecution'],
+        resources: [
+          researchStateMachine.stateMachineArn,
+          `${researchStateMachine.stateMachineArn}:*`,
+          `arn:aws:states:${this.region}:${this.account}:execution:${researchStateMachine.stateMachineName}:*`,
+        ],
+      })
+    );
+    researchRunDetailsFn.addToRolePolicy(
+      new cdk.aws_iam.PolicyStatement({
+        actions: ['logs:FilterLogEvents'],
+        resources: [
+          `arn:aws:logs:${this.region}:${this.account}:log-group:/aws/lambda/${deepResearchFn.functionName}:*`,
+        ],
+      })
+    );
 
     // ─── Changes Routes ───
     addRoute('ChangesList', apigatewayv2.HttpMethod.GET, '/changes', 'api/changes/list.ts');

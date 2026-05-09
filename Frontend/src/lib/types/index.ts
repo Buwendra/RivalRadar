@@ -63,3 +63,13 @@ export type {
   DerivedPacing,
 } from "./competitor-matrix";
 export type { BattlecardSummary } from "./battlecard";
+export type {
+  ResearchRunStatus,
+  ResearchTriggerSource,
+  ApplicationEvent,
+  ResearchRunSummary,
+  ResearchRunDetail,
+  SfnHistoryEvent,
+  CloudwatchLogLine,
+  ResearchRunTechnicalDetails,
+} from "./research-run";

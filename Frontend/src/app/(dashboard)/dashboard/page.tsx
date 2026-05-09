@@ -18,6 +18,7 @@ import { FirstRunTour } from "@/components/dashboard/first-run-tour";
 import { ExportButton } from "@/components/dashboard/export-button";
 import { SaveViewDialog } from "@/components/dashboard/save-view-dialog";
 import { OnboardingChecklistCard } from "@/components/dashboard/onboarding-checklist-card";
+import { ActiveResearchPanel } from "@/components/dashboard/active-research-panel";
 import { Button } from "@/components/ui/button";
 import { useCapabilities } from "@/lib/hooks/use-capability";
 
@@ -85,6 +86,8 @@ export default function DashboardPage() {
           </Button>
         </div>
       </PageHeader>
+
+      <ActiveResearchPanel />
 
       <div data-tour="competitor-strip">
         <CompetitorRankedStrip competitors={competitors} />

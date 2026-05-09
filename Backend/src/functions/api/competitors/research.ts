@@ -4,6 +4,12 @@ import { getItem } from '../../../shared/db/queries';
 import { competitorPK, competitorSK, userPK, userSK } from '../../../shared/db/keys';
 import { enforceResearchEligibility } from '../../../shared/utils/research-eligibility';
 import { isSnoozed } from '../../../shared/utils/snooze';
+import { generateId } from '../../../shared/utils/id';
+import {
+  createResearchRun,
+  markRunFinished,
+  markRunStarted,
+} from '../../../shared/services/research-run';
 import {
   resolveTenantContext,
   getRequestedWorkspaceId,
@@ -62,25 +68,63 @@ export const handler = apiHandler(async (event) => {
     throw new HttpError(503, 'PIPELINE_NOT_CONFIGURED', 'Research pipeline not configured');
   }
 
-  await sfn.send(
-    new StartExecutionCommand({
-      stateMachineArn: process.env.RESEARCH_PIPELINE_ARN,
-      input: JSON.stringify({
-        competitors: [
-          {
-            competitorId: compId,
-            userId,
-            name: competitor.name,
-            url: competitor.url,
-            industry: competitor.industry,
-          },
-        ],
-      }),
-    })
-  );
+  // Phase 22 — observability row. Created BEFORE StartExecution so the
+  // dashboard panel reflects the run within ~1s of the click. The runId
+  // travels into the SFN input so the pipeline Lambda can advance the row.
+  const runId = generateId();
+  const run = await createResearchRun({
+    id: runId,
+    tenantUserId: userId,
+    competitorId: compId,
+    competitorName: String(competitor.name),
+    triggeredByUserId: ctx.callerUserId,
+    triggeredByEmail: ctx.callerEmail,
+    triggerSource: 'manual',
+  });
+
+  let executionArn: string | undefined;
+  try {
+    const result = await sfn.send(
+      new StartExecutionCommand({
+        stateMachineArn: process.env.RESEARCH_PIPELINE_ARN,
+        input: JSON.stringify({
+          competitors: [
+            {
+              competitorId: compId,
+              userId,
+              tenantUserId: userId,
+              runId,
+              runStartedAt: run.startedAt,
+              name: competitor.name,
+              url: competitor.url,
+              industry: competitor.industry,
+            },
+          ],
+        }),
+      })
+    );
+    executionArn = result.executionArn;
+  } catch (err) {
+    // SFN failure leaves the row stuck in `queued` — finalise it as failed
+    // so the UI shows a clean error rather than a phantom queued row.
+    await markRunFinished(userId, run.startedAt, runId, {
+      status: 'failed',
+      errorMessage: err instanceof Error ? err.message : 'Failed to start research pipeline',
+    });
+    throw new HttpError(503, 'PIPELINE_START_FAILED', 'Failed to start research pipeline');
+  }
+
+  if (executionArn) {
+    await markRunStarted(userId, run.startedAt, runId, executionArn);
+  }
 
   return {
     statusCode: 202,
-    body: { data: { message: 'Deep research started. Findings will appear shortly.' } },
+    body: {
+      data: {
+        message: 'Deep research started. Findings will appear shortly.',
+        runId,
+      },
+    },
   };
 });

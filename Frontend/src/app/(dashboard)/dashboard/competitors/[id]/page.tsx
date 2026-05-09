@@ -53,6 +53,8 @@ import { CompetitorTagChips } from "@/components/dashboard/competitor-tag-chips"
 import { PredictedMovesCard } from "@/components/dashboard/predicted-moves-card";
 import { WinAgainstCard } from "@/components/dashboard/win-against-card";
 import { BattlecardButton } from "@/components/dashboard/battlecard-button";
+import { ResearchRunCard } from "@/components/dashboard/research-run-card";
+import { useResearchRuns } from "@/lib/hooks/use-research-runs";
 import { formatSmartDate } from "@/lib/utils/format-date";
 import type { CompetitorDetailChange, PageType } from "@/lib/types";
 
@@ -196,6 +198,7 @@ export default function CompetitorDetailPage() {
               </Badge>
             )}
           </TabsTrigger>
+          <TabsTrigger value="research-history">Research history</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
 
@@ -419,6 +422,11 @@ export default function CompetitorDetailPage() {
           )}
         </TabsContent>
 
+        {/* ─── RESEARCH HISTORY (Phase 22) ─── */}
+        <TabsContent value="research-history" className="space-y-3">
+          <ResearchHistoryTab competitorId={competitor.id} />
+        </TabsContent>
+
         {/* ─── SETTINGS ─── */}
         <TabsContent value="settings" className="space-y-4">
           <Card className="border-brand-700 bg-brand-900">
@@ -531,5 +539,36 @@ function CompactChangeRow({ change }: { change: CompetitorDetailChange }) {
         </CardContent>
       </Card>
     </Link>
+  );
+}
+
+function ResearchHistoryTab({ competitorId }: { competitorId: string }) {
+  const { data, isLoading, isError } = useResearchRuns({ competitorId });
+
+  if (isLoading) {
+    return <p className="text-sm text-muted-foreground">Loading runs…</p>;
+  }
+  if (isError) {
+    return (
+      <p className="text-sm text-red-300">
+        Could not load research history.
+      </p>
+    );
+  }
+  const runs = data ?? [];
+  if (runs.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        No research runs yet for this competitor. Click &ldquo;Research
+        Now&rdquo; above to kick one off.
+      </p>
+    );
+  }
+  return (
+    <div className="space-y-2">
+      {runs.map((run) => (
+        <ResearchRunCard key={run.id} run={run} hideCompetitorLink />
+      ))}
+    </div>
   );
 }
