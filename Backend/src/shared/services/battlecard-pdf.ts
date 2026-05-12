@@ -110,6 +110,18 @@ function humanize(value: string | undefined): string {
     .join(' ');
 }
 
+/**
+ * Char-level pre-truncation guard for long Claude-generated text fields.
+ * Belt-and-braces with PDFKit's `height` clip on the text() call: even
+ * if the height-clip misbehaves on an unusually narrow column, the input
+ * is already bounded.
+ */
+function truncate(value: string | undefined, max: number): string {
+  if (!value) return '';
+  if (value.length <= max) return value;
+  return value.slice(0, max - 1).trimEnd() + '…';
+}
+
 function drawChip(
   doc: InstanceType<typeof PDFDocument>,
   text: string,
@@ -187,23 +199,16 @@ export async function renderBattlecardPdf(
         .font('Helvetica')
         .text(input.competitor.url, margin, 114, { link: input.competitor.url });
 
-      // Threat-level chip + reasoning, top right
+      // Threat-level chip, top right. The reasoning is intentionally not
+      // rendered in the header — it can be 200-400 chars (Claude output)
+      // and a narrow column overflows down through every section below.
+      // The threat level chip + the dashboard's ThreatCard cover the rest.
       if (input.competitor.threatLevel) {
         const chipColor =
           THREAT_COLOR[input.competitor.threatLevel] ?? COLOR.threatMonitor;
         const chipText = `${input.competitor.threatLevel.toUpperCase()} THREAT`;
         const chipX = pageWidth - margin - 150;
         drawChip(doc, chipText, chipX, 50, chipColor);
-        if (input.competitor.threatReasoning) {
-          doc
-            .fillColor(COLOR.textMuted)
-            .fontSize(8)
-            .font('Helvetica-Oblique')
-            .text(input.competitor.threatReasoning, chipX, 68, {
-              width: 150,
-              align: 'right',
-            });
-        }
       }
 
       doc
@@ -330,7 +335,8 @@ export async function renderBattlecardPdf(
         cursorY += 18;
       } else {
         for (const c of top5) {
-          if (cursorY + 30 > 700) break;
+          // Each row: header strip (12px) + summary clipped to 2 lines (~22px) + 4px gap.
+          if (cursorY + 38 > 700) break;
           drawChip(
             doc,
             `${c.significance}/10`,
@@ -349,16 +355,18 @@ export async function renderBattlecardPdf(
           if (c.changeType) {
             drawChip(doc, c.changeType.toUpperCase(), margin + 130, cursorY, COLOR.brandLight);
           }
+          // Summary: wraps within contentWidth, clipped to 22px (~2 lines at 9pt)
+          // so a long Claude summary can't push subsequent rows off-page.
           doc
             .fillColor(COLOR.textPrimary)
             .fontSize(9)
             .font('Helvetica')
-            .text(c.summary ?? '(no summary)', margin, cursorY + 16, {
+            .text(truncate(c.summary ?? '(no summary)', 180), margin, cursorY + 16, {
               width: contentWidth,
+              height: 22,
               ellipsis: true,
-              lineBreak: false,
             });
-          cursorY += 32;
+          cursorY += 38;
         }
       }
 
@@ -379,7 +387,8 @@ export async function renderBattlecardPdf(
         cursorY += 16;
       } else {
         for (const m of moves) {
-          if (cursorY + 28 > 720) break;
+          // Header (12px) + reasoning clipped to 2 lines (~20px) + 4px gap.
+          if (cursorY + 36 > 720) break;
           doc
             .fillColor(COLOR.textPrimary)
             .fontSize(9)
@@ -396,16 +405,18 @@ export async function renderBattlecardPdf(
             cursorY,
             COLOR.brand
           );
+          // Reasoning: pre-truncate at the char level so we never hand
+          // PDFKit text that would overflow the 2-line height clip.
           doc
             .fillColor(COLOR.textMuted)
             .fontSize(8)
             .font('Helvetica-Oblique')
-            .text(m.reasoning, margin + 10, cursorY + 12, {
+            .text(truncate(m.reasoning, 200), margin + 10, cursorY + 12, {
               width: contentWidth - 20,
+              height: 20,
               ellipsis: true,
-              lineBreak: false,
             });
-          cursorY += 26;
+          cursorY += 36;
         }
       }
 
@@ -429,7 +440,8 @@ export async function renderBattlecardPdf(
         cursorY += 16;
       } else {
         for (const t of tactics) {
-          if (cursorY + 28 > 720) break;
+          // Header (12px) + reasoning clipped to 2 lines (~20px) + 4px gap.
+          if (cursorY + 36 > 720) break;
           // Tactic line + impact chip on the right
           doc
             .fillColor(COLOR.textPrimary)
@@ -447,17 +459,17 @@ export async function renderBattlecardPdf(
             cursorY,
             impactColor(t.impact)
           );
-          // Reasoning line
+          // Reasoning: same truncation pattern as predicted moves.
           doc
             .fillColor(COLOR.textMuted)
             .fontSize(8)
             .font('Helvetica-Oblique')
-            .text(t.reasoning, margin + 10, cursorY + 12, {
+            .text(truncate(t.reasoning, 200), margin + 10, cursorY + 12, {
               width: contentWidth - 20,
+              height: 20,
               ellipsis: true,
-              lineBreak: false,
             });
-          cursorY += 26;
+          cursorY += 36;
         }
       }
 
