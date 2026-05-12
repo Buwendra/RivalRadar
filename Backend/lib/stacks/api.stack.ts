@@ -394,15 +394,17 @@ export class ApiStack extends cdk.Stack {
       throttlingBurstLimit: 200,
       throttlingRateLimit: 100,
     };
-    defaultStage.routeSettings = [
-      { routeKey: 'POST /auth/signup', throttlingBurstLimit: 10, throttlingRateLimit: 5 },
-      { routeKey: 'POST /auth/signin', throttlingBurstLimit: 10, throttlingRateLimit: 5 },
-      {
-        routeKey: 'POST /auth/resend-verification',
-        throttlingBurstLimit: 5,
-        throttlingRateLimit: 2,
-      },
-    ];
+    // TODO(Phase 9a follow-up): per-route stricter throttling for auth
+    // endpoints. CloudFormation rejects this in the same stack update that
+    // creates the routes because the routeKeys don't yet exist when the
+    // stage update runs. Two workable patterns:
+    //   1. Apply per-route throttling in a separate post-deploy CDK pass
+    //   2. Use an EventBridge rule + custom resource that patches the stage
+    //      after route creation
+    // For now, default route throttling (200 burst / 100 rate) covers
+    // brute-force defense at the API Gateway level. Cognito provides
+    // additional lockout on the auth endpoints. Removing this block
+    // unblocks the deploy.
 
     // ─── Phase 9a: AWS WAF v2 ───
     // Three managed rule sets covering OWASP Top 10 + known-bad inputs +
@@ -486,15 +488,13 @@ export class ApiStack extends cdk.Stack {
       ],
     });
 
-    // Associate the WebACL with the HTTP API's default stage. The ResourceArn
-    // for an HTTP API stage uses the apigateway service prefix, NOT apigatewayv2.
-    const region = cdk.Stack.of(this).region;
-    const apiId = this.httpApi.apiId;
-    const stageArn = `arn:aws:apigateway:${region}::/apis/${apiId}/stages/$default`;
-    new wafv2.CfnWebACLAssociation(this, 'WebAclAssociation', {
-      resourceArn: stageArn,
-      webAclArn: webAcl.attrArn,
-    });
+    // TODO(Phase 9a follow-up): WAFv2 doesn't support direct association
+    // with API Gateway HTTP API v2 — only REST API stages. To attach the
+    // WebACL to traffic, the API would need to be fronted by CloudFront
+    // (which CAN be a WAF target) and the WebACL re-scoped to CLOUDFRONT
+    // instead of REGIONAL. Until then the WebACL is provisioned but not
+    // attached. Original code constructed a ResourceArn that AWS rejected:
+    //   `arn:aws:apigateway:${region}::/apis/${apiId}/stages/$default`
 
     // ─── Outputs ───
     new cdk.CfnOutput(this, 'ApiUrl', { value: this.httpApi.apiEndpoint });
