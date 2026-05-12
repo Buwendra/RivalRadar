@@ -78,6 +78,14 @@ const THREAT_COLOR: Record<string, string> = {
   monitor: COLOR.threatMonitor,
 };
 
+// Fixed bottom-of-content boundary. Anything below this is reserved for
+// the citations strip (690-740) and footer (750-760). Section render loops
+// must clamp against this Y to avoid overflowing past the page bottom and
+// triggering PDFKit's auto-page-break.
+const MAX_CONTENT_Y = 660;
+const CITATIONS_Y = 690;
+const FOOTER_Y = 750;
+
 function significanceColor(score: number): string {
   if (score >= 8) return COLOR.significanceHigh;
   if (score >= 5) return COLOR.significanceMid;
@@ -326,7 +334,10 @@ export async function renderBattlecardPdf(
         .sort((a, b) => (b.significance ?? 0) - (a.significance ?? 0))
         .slice(0, 5);
 
-      if (top5.length === 0) {
+      // Recent-activity rows: max 4, 30px each. Single-line summary with
+      // hard char truncation — no wrap, no risk of PDFKit auto-paging.
+      const top4 = top5.slice(0, 4);
+      if (top4.length === 0) {
         doc
           .fillColor(COLOR.textMuted)
           .fontSize(9)
@@ -334,9 +345,8 @@ export async function renderBattlecardPdf(
           .text('No tracked changes yet.', margin, cursorY);
         cursorY += 18;
       } else {
-        for (const c of top5) {
-          // Each row: header strip (12px) + summary clipped to 2 lines (~22px) + 4px gap.
-          if (cursorY + 38 > 700) break;
+        for (const c of top4) {
+          if (cursorY + 30 > MAX_CONTENT_Y) break;
           drawChip(
             doc,
             `${c.significance}/10`,
@@ -355,157 +365,172 @@ export async function renderBattlecardPdf(
           if (c.changeType) {
             drawChip(doc, c.changeType.toUpperCase(), margin + 130, cursorY, COLOR.brandLight);
           }
-          // Summary: wraps within contentWidth, clipped to 22px (~2 lines at 9pt)
-          // so a long Claude summary can't push subsequent rows off-page.
           doc
             .fillColor(COLOR.textPrimary)
             .fontSize(9)
             .font('Helvetica')
-            .text(truncate(c.summary ?? '(no summary)', 180), margin, cursorY + 16, {
+            .text(truncate(c.summary ?? '(no summary)', 120), margin, cursorY + 14, {
               width: contentWidth,
-              height: 22,
+              lineBreak: false,
               ellipsis: true,
             });
-          cursorY += 38;
+          cursorY += 30;
         }
       }
 
       // ─── Predicted moves ───
-      const movesY = cursorY + 8;
-      sectionHeader(doc, 'Predicted moves', margin, movesY);
-      cursorY = movesY + 28;
+      // Skip the section entirely if we're already too far down — better
+      // to drop than to render a header with no body that crowds citations.
+      if (cursorY <= MAX_CONTENT_Y - 30) {
+        const movesY = cursorY + 8;
+        sectionHeader(doc, 'Predicted moves', margin, movesY);
+        cursorY = movesY + 28;
 
-      // Trimmed from 4 → 3 in Phase 21 to make room for the win-against
-      // tactics section while keeping the battlecard one A4 page.
-      const moves = (input.competitor.predictedMoves ?? []).slice(0, 3);
-      if (moves.length === 0) {
-        doc
-          .fillColor(COLOR.textMuted)
-          .fontSize(9)
-          .font('Helvetica-Oblique')
-          .text('No predictions yet — predictions appear after the next research run.', margin, cursorY);
-        cursorY += 16;
-      } else {
-        for (const m of moves) {
-          // Header (12px) + reasoning clipped to 2 lines (~20px) + 4px gap.
-          if (cursorY + 36 > 720) break;
-          doc
-            .fillColor(COLOR.textPrimary)
-            .fontSize(9)
-            .font('Helvetica-Bold')
-            .text(`• ${m.move}`, margin, cursorY, {
-              width: contentWidth - 90,
-              lineBreak: false,
-              ellipsis: true,
-            });
-          drawChip(
-            doc,
-            `${Math.round(m.probability * 100)}% · ${m.timeHorizon}`,
-            pageWidth - margin - 90,
-            cursorY,
-            COLOR.brand
-          );
-          // Reasoning: pre-truncate at the char level so we never hand
-          // PDFKit text that would overflow the 2-line height clip.
+        const moves = (input.competitor.predictedMoves ?? []).slice(0, 3);
+        if (moves.length === 0) {
           doc
             .fillColor(COLOR.textMuted)
-            .fontSize(8)
+            .fontSize(9)
             .font('Helvetica-Oblique')
-            .text(truncate(m.reasoning, 200), margin + 10, cursorY + 12, {
-              width: contentWidth - 20,
-              height: 20,
-              ellipsis: true,
-            });
-          cursorY += 36;
+            .text(
+              'No predictions yet — predictions appear after the next research run.',
+              margin,
+              cursorY
+            );
+          cursorY += 16;
+        } else {
+          for (const m of moves) {
+            if (cursorY + 30 > MAX_CONTENT_Y) break;
+            doc
+              .fillColor(COLOR.textPrimary)
+              .fontSize(9)
+              .font('Helvetica-Bold')
+              .text(`• ${m.move}`, margin, cursorY, {
+                width: contentWidth - 90,
+                lineBreak: false,
+                ellipsis: true,
+              });
+            drawChip(
+              doc,
+              `${Math.round(m.probability * 100)}% · ${m.timeHorizon}`,
+              pageWidth - margin - 90,
+              cursorY,
+              COLOR.brand
+            );
+            // Single-line reasoning, hard-truncated to fit at 8pt/472px.
+            doc
+              .fillColor(COLOR.textMuted)
+              .fontSize(8)
+              .font('Helvetica-Oblique')
+              .text(truncate(m.reasoning, 120), margin + 10, cursorY + 12, {
+                width: contentWidth - 20,
+                lineBreak: false,
+                ellipsis: true,
+              });
+            cursorY += 30;
+          }
         }
       }
 
       // ─── Win-against tactics (Phase 21) ───
-      const tacticsY = cursorY + 8;
-      sectionHeader(doc, 'Win-against tactics', margin, tacticsY);
-      cursorY = tacticsY + 28;
+      // Same guard as predicted moves — gracefully degrade if upstream
+      // sections consumed too much vertical space.
+      if (cursorY <= MAX_CONTENT_Y - 30) {
+        const tacticsY = cursorY + 8;
+        sectionHeader(doc, 'Win-against tactics', margin, tacticsY);
+        cursorY = tacticsY + 28;
 
-      const tactics = (input.competitor.winAgainstTactics ?? []).slice(0, 3);
-      if (tactics.length === 0) {
-        doc
-          .fillColor(COLOR.textMuted)
-          .fontSize(9)
-          .font('Helvetica-Oblique')
-          .text(
-            'Tactics will populate after the next research cycle. Regenerate this battlecard to refresh.',
-            margin,
-            cursorY,
-            { width: contentWidth }
-          );
-        cursorY += 16;
-      } else {
-        for (const t of tactics) {
-          // Header (12px) + reasoning clipped to 2 lines (~20px) + 4px gap.
-          if (cursorY + 36 > 720) break;
-          // Tactic line + impact chip on the right
-          doc
-            .fillColor(COLOR.textPrimary)
-            .fontSize(9)
-            .font('Helvetica-Bold')
-            .text(`▸ ${t.tactic}`, margin, cursorY, {
-              width: contentWidth - 90,
-              lineBreak: false,
-              ellipsis: true,
-            });
-          drawChip(
-            doc,
-            `${t.impact.toUpperCase()} · ${t.difficulty.toUpperCase()}`,
-            pageWidth - margin - 90,
-            cursorY,
-            impactColor(t.impact)
-          );
-          // Reasoning: same truncation pattern as predicted moves.
+        const tactics = (input.competitor.winAgainstTactics ?? []).slice(0, 3);
+        if (tactics.length === 0) {
           doc
             .fillColor(COLOR.textMuted)
-            .fontSize(8)
+            .fontSize(9)
             .font('Helvetica-Oblique')
-            .text(truncate(t.reasoning, 200), margin + 10, cursorY + 12, {
-              width: contentWidth - 20,
-              height: 20,
-              ellipsis: true,
-            });
-          cursorY += 36;
+            .text(
+              'Tactics will populate after the next research cycle. Regenerate this battlecard to refresh.',
+              margin,
+              cursorY,
+              { width: contentWidth, lineBreak: false, ellipsis: true }
+            );
+          cursorY += 16;
+        } else {
+          for (const t of tactics) {
+            if (cursorY + 30 > MAX_CONTENT_Y) break;
+            doc
+              .fillColor(COLOR.textPrimary)
+              .fontSize(9)
+              .font('Helvetica-Bold')
+              .text(`▸ ${t.tactic}`, margin, cursorY, {
+                width: contentWidth - 90,
+                lineBreak: false,
+                ellipsis: true,
+              });
+            drawChip(
+              doc,
+              `${t.impact.toUpperCase()} · ${t.difficulty.toUpperCase()}`,
+              pageWidth - margin - 90,
+              cursorY,
+              impactColor(t.impact)
+            );
+            // Single-line reasoning, hard-truncated.
+            doc
+              .fillColor(COLOR.textMuted)
+              .fontSize(8)
+              .font('Helvetica-Oblique')
+              .text(truncate(t.reasoning, 120), margin + 10, cursorY + 12, {
+                width: contentWidth - 20,
+                lineBreak: false,
+                ellipsis: true,
+              });
+            cursorY += 30;
+          }
         }
       }
 
-      // ─── Citations ───
-      const citationY = Math.max(cursorY + 6, 690);
+      // ─── Citations (fixed Y) ───
+      // Pinned to a fixed Y so a tall variable-content section above can
+      // never push the citation drawing past the page bottom margin. The
+      // section-skip guards above ensure cursorY stays <= MAX_CONTENT_Y.
       doc
         .strokeColor(COLOR.border)
         .lineWidth(0.5)
-        .moveTo(margin, citationY)
-        .lineTo(pageWidth - margin, citationY)
+        .moveTo(margin, CITATIONS_Y)
+        .lineTo(pageWidth - margin, CITATIONS_Y)
         .stroke();
       doc
         .fillColor(COLOR.textMuted)
         .fontSize(7)
         .font('Helvetica-Bold')
-        .text('SOURCES', margin, citationY + 6);
+        .text('SOURCES', margin, CITATIONS_Y + 6, { lineBreak: false });
+
       const seen = new Set<string>();
       const uniqueCitations = input.citations.filter((c) => {
         if (seen.has(c.url)) return false;
         seen.add(c.url);
         return true;
       });
+      // Single line at 7pt within contentWidth ≈ 512px holds ~140 chars.
+      // Pre-truncate the joined URL string to avoid any wrap. Cap at 3
+      // URLs which is plenty for a one-pager.
+      const citationLine =
+        uniqueCitations.slice(0, 3).map((c) => c.url).join(' · ') ||
+        'No citations available.';
       doc
         .fillColor(COLOR.textSubtle)
         .fontSize(7)
         .font('Helvetica')
-        .text(
-          uniqueCitations.slice(0, 6).map((c) => c.url).join(' · ') ||
-            'No citations available.',
-          margin,
-          citationY + 18,
-          { width: contentWidth }
-        );
+        .text(truncate(citationLine, 180), margin, CITATIONS_Y + 18, {
+          width: contentWidth,
+          lineBreak: false,
+          ellipsis: true,
+        });
 
-      // ─── Footer ───
-      const footerY = doc.page.height - margin + 8;
+      // ─── Footer (fixed Y) ───
+      // Reset doc.y to a safe value before the footer text calls. Any
+      // implicit doc.y advance from earlier text() calls accumulating
+      // past the bottom margin would otherwise trigger PDFKit's
+      // auto-page-add on the next text() invocation.
+      doc.y = FOOTER_Y;
       doc
         .fillColor(COLOR.textMuted)
         .fontSize(7)
@@ -513,14 +538,14 @@ export async function renderBattlecardPdf(
         .text(
           'AI-generated analysis. May contain errors. For internal evaluation only — not legal or financial advice.',
           margin,
-          footerY,
-          { width: contentWidth - 60, lineBreak: false }
+          FOOTER_Y,
+          { width: contentWidth - 60, lineBreak: false, ellipsis: true }
         );
       doc
         .fillColor(COLOR.brand)
         .fontSize(7)
         .font('Helvetica-Bold')
-        .text('rivalscan.com', pageWidth - margin - 60, footerY, {
+        .text('rivalscan.com', pageWidth - margin - 60, FOOTER_Y, {
           width: 60,
           align: 'right',
           lineBreak: false,
