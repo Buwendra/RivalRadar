@@ -21,7 +21,7 @@ import type {
   APIGatewayProxyResultV2,
   Context,
 } from 'aws-lambda';
-import { queryGSI } from '../../../shared/db/queries';
+import { getItem, queryGSI } from '../../../shared/db/queries';
 import { logger } from '../../../shared/utils/logger';
 import type { Battlecard } from '../../../shared/types';
 
@@ -65,6 +65,9 @@ export async function handler(
   }
 
   try {
+    // GSI3 has a KEYS_ONLY projection — the query gives us PK + SK + GSI keys
+    // only. Follow up with a base-table getItem to fetch the full row
+    // (s3Key, revokedAt, expiresAt, etc.).
     const { items } = await queryGSI(
       'GSI3',
       'GSI3PK',
@@ -73,7 +76,14 @@ export async function handler(
     if (items.length === 0) {
       return jsonError(404, 'NOT_FOUND', 'Battlecard not found.');
     }
-    const row = items[0] as unknown as Battlecard;
+    const stub = items[0] as { PK?: string; SK?: string };
+    if (!stub.PK || !stub.SK) {
+      return jsonError(404, 'NOT_FOUND', 'Battlecard not found.');
+    }
+    const row = await getItem<Battlecard>(stub.PK, stub.SK);
+    if (!row) {
+      return jsonError(404, 'NOT_FOUND', 'Battlecard not found.');
+    }
 
     if (row.revokedAt) {
       return jsonError(410, 'REVOKED', 'This battlecard has been revoked.');
