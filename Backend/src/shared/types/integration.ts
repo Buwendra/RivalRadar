@@ -41,13 +41,18 @@ export interface IntegrationCredential {
 
 /** Per-event-type opt-in map stored on the User record. */
 export interface NotificationPreferences {
-  email?: { weeklyDigest?: boolean; criticalAlerts?: boolean };
+  /**
+   * `comparativeBrief` (Phase 24) — PR-flavoured weekly digest that runs Mon
+   * 10am UTC alongside the standard competitive digest. Email-only at v1;
+   * other channels reserved on the type for forward compat but unwired.
+   */
+  email?: { weeklyDigest?: boolean; criticalAlerts?: boolean; comparativeBrief?: boolean };
   slack?: { weeklyDigest?: boolean; criticalAlerts?: boolean };
   webhook?: { weeklyDigest?: boolean; criticalAlerts?: boolean };
 }
 
 export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
-  email: { weeklyDigest: true, criticalAlerts: true },
+  email: { weeklyDigest: true, criticalAlerts: true, comparativeBrief: false },
   slack: { weeklyDigest: false, criticalAlerts: true },
   webhook: { weeklyDigest: false, criticalAlerts: true },
 };

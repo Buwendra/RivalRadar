@@ -147,6 +147,74 @@ export class PipelineStack extends cdk.Stack {
       tracingEnabled: true,
     });
 
+    // ─── Comparative Briefing State Machine (Phase 24) ───
+    // Runs Mon 10am UTC — 2h after the standard digest, 1h after the saved-view
+    // digests. Subscribers must opt in via notificationPreferences.email
+    // .comparativeBrief. Email-only — no Slack/webhook fan-out at v1.
+    const getComparativeSubscribersFn = createPipelineFn(
+      'GetComparativeSubscribers',
+      'scheduled/get-comparative-subscribers.ts'
+    );
+    const aggregateBrandCoverageFn = createPipelineFn(
+      'AggregateBrandCoverage',
+      'scheduled/aggregate-brand-coverage.ts'
+    );
+    const generateComparativeBriefingFn = createPipelineFn(
+      'GenerateComparativeBriefing',
+      'scheduled/generate-comparative-briefing.ts'
+    );
+    const renderSendComparativeBriefFn = createPipelineFn(
+      'RenderSendComparativeBrief',
+      'scheduled/render-send-comparative-brief.ts'
+    );
+    renderSendComparativeBriefFn.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ['ses:SendEmail', 'ses:SendRawEmail'],
+        resources: ['*'],
+      })
+    );
+
+    const getComparativeSubscribersTask = new tasks.LambdaInvoke(
+      this,
+      'GetComparativeSubscribersTask',
+      { lambdaFunction: getComparativeSubscribersFn, outputPath: '$.Payload' }
+    );
+    const aggregateBrandCoverageTask = new tasks.LambdaInvoke(
+      this,
+      'AggregateBrandCoverageTask',
+      { lambdaFunction: aggregateBrandCoverageFn, outputPath: '$.Payload' }
+    );
+    const generateComparativeBriefingTask = new tasks.LambdaInvoke(
+      this,
+      'GenerateComparativeBriefingTask',
+      { lambdaFunction: generateComparativeBriefingFn, outputPath: '$.Payload' }
+    );
+    const renderSendComparativeBriefTask = new tasks.LambdaInvoke(
+      this,
+      'RenderSendComparativeBriefTask',
+      { lambdaFunction: renderSendComparativeBriefFn, outputPath: '$.Payload' }
+    );
+
+    const perComparativeSubscriberChain = aggregateBrandCoverageTask
+      .next(generateComparativeBriefingTask)
+      .next(renderSendComparativeBriefTask);
+
+    const mapComparativeSubscribers = new sfn.Map(this, 'MapComparativeSubscribers', {
+      itemsPath: '$.subscribers',
+      maxConcurrency: 5,
+      resultPath: '$.results',
+    });
+    mapComparativeSubscribers.itemProcessor(perComparativeSubscriberChain);
+
+    const comparativeDefinition = getComparativeSubscribersTask.next(mapComparativeSubscribers);
+
+    const comparativeStateMachine = new sfn.StateMachine(this, 'ComparativeBriefing', {
+      stateMachineName: `${this.stackName}-ComparativeBriefing`,
+      definitionBody: sfn.DefinitionBody.fromChainable(comparativeDefinition),
+      timeout: cdk.Duration.hours(1),
+      tracingEnabled: true,
+    });
+
     // ─── Research Pipeline State Machine ───
     // Input: { competitors: [{ competitorId, userId, name, url, industry? }] }
     // Per competitor: DeepResearch (research + delta detection + store changes) → SendAlert.
@@ -236,6 +304,15 @@ export class PipelineStack extends cdk.Stack {
       ruleName: `${this.stackName}-WeeklyCron`,
       schedule: events.Schedule.cron({ minute: '0', hour: '8', weekDay: 'MON' }),
       targets: [new targets.SfnStateMachine(this.weeklyStateMachine)],
+    });
+
+    // Weekly Monday at 10:00 AM UTC — Comparative Briefing (Phase 24).
+    // Offset 2h after the competitive digest and 1h after the saved-view
+    // digests so the three weekly emails don't pile up in the same minute.
+    new events.Rule(this, 'ComparativeBriefingCronRule', {
+      ruleName: `${this.stackName}-ComparativeBriefingCron`,
+      schedule: events.Schedule.cron({ minute: '0', hour: '10', weekDay: 'MON' }),
+      targets: [new targets.SfnStateMachine(comparativeStateMachine)],
     });
 
     // Weekly Sunday at 6:00 AM UTC — recurring research enqueuer

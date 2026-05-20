@@ -19,8 +19,9 @@ import { ExportButton } from "@/components/dashboard/export-button";
 import { SaveViewDialog } from "@/components/dashboard/save-view-dialog";
 import { OnboardingChecklistCard } from "@/components/dashboard/onboarding-checklist-card";
 import { ActiveResearchPanel } from "@/components/dashboard/active-research-panel";
+import { BrandHealthScoreCard } from "@/components/dashboard/brand-health-score-card";
 import { Button } from "@/components/ui/button";
-import { useCapabilities } from "@/lib/hooks/use-capability";
+import { useCapabilities, useCapability } from "@/lib/hooks/use-capability";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -33,6 +34,7 @@ export default function DashboardPage() {
   const [significanceFilter, setSignificanceFilter] = useState<string | undefined>();
 
   const capabilities = useCapabilities();
+  const brandPulseEnabled = useCapability("brandPulse");
   const { data: competitors = [] } = useCompetitors();
   const { data: views = [] } = useSavedViews();
 
@@ -96,6 +98,8 @@ export default function DashboardPage() {
       <div data-tour="recommendations">
         <RecommendationsCard />
       </div>
+
+      {brandPulseEnabled && <BrandHealthScoreCard size="sm" />}
 
       <div data-tour="stats-cards">
         <StatsCards

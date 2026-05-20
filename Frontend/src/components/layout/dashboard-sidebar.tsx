@@ -2,7 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Settings, Plus, Lightbulb, GitCompare, Sparkles } from "lucide-react";
+import {
+  LayoutDashboard,
+  Settings,
+  Plus,
+  Lightbulb,
+  GitCompare,
+  Sparkles,
+  BarChart3,
+} from "lucide-react";
 import { Logo } from "@/components/shared/logo";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -54,7 +62,13 @@ export function DashboardSidebar({ onAddCompetitor }: DashboardSidebarProps) {
     return a.name.localeCompare(b.name);
   });
 
-  const navItems = [
+  interface NavItem {
+    label: string;
+    href: string;
+    icon: typeof LayoutDashboard;
+    subItems?: Array<{ label: string; href: string; icon: typeof LayoutDashboard }>;
+  }
+  const navItems: NavItem[] = [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     // Phase 23 — "Your Brand" sits between Dashboard and the rest because
     // it's the workspace's home for self-monitoring; gated by brandPulse.
@@ -62,7 +76,22 @@ export function DashboardSidebar({ onAddCompetitor }: DashboardSidebarProps) {
       ? [{ label: "Your Brand", href: "/dashboard/your-brand", icon: Sparkles }]
       : []),
     { label: "Recommendations", href: "/dashboard/recommendations", icon: Lightbulb },
-    { label: "Compare", href: "/dashboard/compare", icon: GitCompare },
+    {
+      label: "Compare",
+      href: "/dashboard/compare",
+      icon: GitCompare,
+      // Phase 24 — Share of Voice nests under Compare. Sub-item is gated on
+      // brandPulse since SoV is part of the comparative-analytics surface.
+      subItems: brandPulseEnabled
+        ? [
+            {
+              label: "Share of Voice",
+              href: "/dashboard/compare/share-of-voice",
+              icon: BarChart3,
+            },
+          ]
+        : undefined,
+    },
     { label: "Settings", href: "/dashboard/settings", icon: Settings },
   ];
 
@@ -77,21 +106,46 @@ export function DashboardSidebar({ onAddCompetitor }: DashboardSidebarProps) {
       <Separator className="bg-brand-700" />
 
       <nav className="flex flex-col gap-1 p-3">
-        {navItems.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={cn(
-              "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-              pathname === item.href
-                ? "bg-brand-800 text-foreground"
-                : "text-muted-foreground hover:bg-brand-800 hover:text-foreground"
-            )}
-          >
-            <item.icon className="h-4 w-4" />
-            {item.label}
-          </Link>
-        ))}
+        {navItems.map((item) => {
+          const isActive =
+            pathname === item.href ||
+            (item.subItems?.some((s) => pathname === s.href) ?? false);
+          return (
+            <div key={item.href}>
+              <Link
+                href={item.href}
+                className={cn(
+                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                  isActive
+                    ? "bg-brand-800 text-foreground"
+                    : "text-muted-foreground hover:bg-brand-800 hover:text-foreground"
+                )}
+              >
+                <item.icon className="h-4 w-4" />
+                {item.label}
+              </Link>
+              {item.subItems && item.subItems.length > 0 && (
+                <div className="ml-4 mt-0.5 flex flex-col gap-0.5 border-l border-brand-700 pl-3">
+                  {item.subItems.map((sub) => (
+                    <Link
+                      key={sub.href}
+                      href={sub.href}
+                      className={cn(
+                        "flex items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors",
+                        pathname === sub.href
+                          ? "bg-brand-800 text-foreground"
+                          : "text-muted-foreground hover:bg-brand-800 hover:text-foreground"
+                      )}
+                    >
+                      <sub.icon className="h-3 w-3" />
+                      {sub.label}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </nav>
 
       <Separator className="bg-brand-700" />

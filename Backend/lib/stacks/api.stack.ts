@@ -209,6 +209,10 @@ export class ApiStack extends cdk.Stack {
     addRoute('BrandGet',       apigatewayv2.HttpMethod.GET,  '/brand',           'api/brand/get.ts');
     addRoute('BrandCoverage',  apigatewayv2.HttpMethod.GET,  '/brand/coverage',  'api/brand/coverage.ts');
     addRoute('BrandSentiment', apigatewayv2.HttpMethod.GET,  '/brand/sentiment', 'api/brand/sentiment.ts');
+    // Phase 24 — Brand Health Score composite KPI.
+    addRoute('BrandHealth',    apigatewayv2.HttpMethod.GET,  '/brand/health',    'api/brand/health.ts');
+    // Phase 24 — Share of Voice comparative analytics.
+    addRoute('AnalyticsShareOfVoice', apigatewayv2.HttpMethod.GET, '/analytics/share-of-voice', 'api/analytics/share-of-voice.ts');
     const brandSetupFn = addRoute(
       'BrandSetup',
       apigatewayv2.HttpMethod.POST,

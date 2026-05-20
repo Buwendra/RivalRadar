@@ -425,6 +425,146 @@ Keep it actionable and concise. Write for a busy founder or marketing leader.`;
 }
 
 /**
+ * Phase 24 — Comparative weekly briefing. PR-flavoured digest that contrasts
+ * the user's own brand against tracked competitors over the last 7 days.
+ * Output is short prose (3–4 paragraphs) plus 2–3 suggested narrative angles
+ * the user could pitch or post about. Pure Sonnet text call, no web search.
+ *
+ * Returns plain text + structured angles. The caller (render-send-comparative-brief)
+ * wraps it in HTML for the weekly email.
+ */
+export async function generateComparativeBriefing(input: {
+  userId?: string;
+  userCompanyName: string;
+  userIndustry?: string;
+  /** Self-brand summary: counts + sentiment breakdown + momentum + tags. */
+  brand: {
+    name: string;
+    mentions7d: number;
+    sentiment: { positive: number; neutral: number; negative: number };
+    momentum?: string;
+    derivedTags?: string[];
+    latestSummary?: string;
+  };
+  /** Top-N competitor snapshots ordered by mention volume desc. */
+  competitors: Array<{
+    name: string;
+    mentions7d: number;
+    momentum?: string;
+    threatLevel?: string;
+    topTags?: string[];
+  }>;
+  /** Per-category SoV rows for the user's own brand (percent only). */
+  sovByCategory: Record<string, { percent: number; rank: number; outOf: number }>;
+}): Promise<{ briefingText: string; suggestedAngles: string[] }> {
+  const secrets = await getSecret('rivalscan/api-keys');
+
+  const sentTotal =
+    input.brand.sentiment.positive + input.brand.sentiment.neutral + input.brand.sentiment.negative;
+  const sentLine =
+    sentTotal === 0
+      ? 'No sentiment-tagged mentions this week.'
+      : `Sentiment breakdown: ${input.brand.sentiment.positive} positive, ${input.brand.sentiment.neutral} neutral, ${input.brand.sentiment.negative} negative.`;
+
+  const sovBlock = Object.entries(input.sovByCategory)
+    .map(([cat, v]) => `- ${cat}: ${v.percent}% (rank ${v.rank} of ${v.outOf})`)
+    .join('\n');
+
+  const competitorBlock = input.competitors
+    .slice(0, 5)
+    .map(
+      (c) =>
+        `- ${c.name}: ${c.mentions7d} mention${c.mentions7d === 1 ? '' : 's'}${
+          c.threatLevel ? `, threat=${c.threatLevel}` : ''
+        }${c.momentum ? `, momentum=${c.momentum}` : ''}${
+          c.topTags && c.topTags.length > 0 ? `, tags=[${c.topTags.join(', ')}]` : ''
+        }`
+    )
+    .join('\n');
+
+  const prompt = `You are a strategic communications advisor writing a weekly Comparative Briefing for the PR / comms / marketing lead at ${input.userCompanyName}${input.userIndustry ? ` (${input.userIndustry})` : ''}.
+
+This briefing is about how the MARKET is talking about the user's brand vs their tracked competitors — the angle is media narrative penetration, not competitive product strategy.
+
+YOUR BRAND THIS WEEK
+Name: ${input.brand.name}
+Mentions: ${input.brand.mentions7d}
+${sentLine}
+${input.brand.momentum ? `Momentum: ${input.brand.momentum}` : ''}
+${input.brand.derivedTags && input.brand.derivedTags.length > 0 ? `Signals: ${input.brand.derivedTags.join(', ')}` : ''}
+${input.brand.latestSummary ? `Latest synthesis: ${input.brand.latestSummary}` : ''}
+
+SHARE OF VOICE (this week, by category)
+${sovBlock || '(no data)'}
+
+COMPETITOR COVERAGE THIS WEEK
+${competitorBlock || '(no significant competitor coverage)'}
+
+Write a 3–4 paragraph comparative briefing that:
+1. Calls out where the user is BREAKING THROUGH (categories where their SoV is leading or rising) and where they are BEING DROWNED OUT.
+2. Names specific competitors who are out-narrating the user this week, with a short hypothesis on what's driving it.
+3. Recommends 1 specific positioning move the user could make this week.
+
+Then output 2–3 SUGGESTED ANGLES — short, pitchable narrative hooks the user could share with journalists, post on LinkedIn, or feed into their next press release. Each angle is one sentence + a one-line "why this works" rationale.
+
+Return ONLY valid JSON in this exact shape — no prose, no code fences:
+{
+  "briefingText": "3–4 paragraph prose. Use \\n\\n for paragraph breaks.",
+  "suggestedAngles": [
+    { "angle": "...", "rationale": "..." }
+  ]
+}`;
+
+  const response = await callAnthropic(
+    secrets.ANTHROPIC_API_KEY,
+    {
+      model: SONNET_MODEL,
+      max_tokens: 1500,
+      messages: [{ role: 'user', content: prompt }],
+    },
+    'generateComparativeBriefing',
+    { userId: input.userId ?? null }
+  );
+
+  if (!response.ok) {
+    logger.error('Anthropic API error for comparative briefing', { status: response.status });
+    throw new Error(`Anthropic API error: ${response.status}`);
+  }
+
+  const data = (await response.json()) as {
+    content: Array<{ type: string; text: string }>;
+  };
+
+  const text = data.content[0]?.text?.trim() ?? '';
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    logger.error('generateComparativeBriefing: no JSON in response', { text: text.slice(0, 300) });
+    // Soft-degrade — return the prose as-is so the email isn't blocked.
+    return { briefingText: text, suggestedAngles: [] };
+  }
+
+  try {
+    const parsed = JSON.parse(jsonMatch[0]) as {
+      briefingText?: string;
+      suggestedAngles?: Array<{ angle: string; rationale?: string }>;
+    };
+    const angles = (parsed.suggestedAngles ?? [])
+      .filter((a) => a && typeof a.angle === 'string')
+      .map((a) => `${a.angle}${a.rationale ? ` — ${a.rationale}` : ''}`)
+      .slice(0, 3);
+    return {
+      briefingText: parsed.briefingText ?? text,
+      suggestedAngles: angles,
+    };
+  } catch (err) {
+    logger.warn('generateComparativeBriefing: JSON parse failed — returning raw text', {
+      error: String(err),
+    });
+    return { briefingText: text, suggestedAngles: [] };
+  }
+}
+
+/**
  * Deep research on a competitor using Claude Sonnet + the web_search server tool.
  * Claude runs up to 8 web searches and synthesizes findings into structured JSON.
  */

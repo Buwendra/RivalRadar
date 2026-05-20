@@ -26,6 +26,11 @@ export interface SetIntegrationResponse {
 export interface NotificationChannelPreferences {
   weeklyDigest?: boolean;
   criticalAlerts?: boolean;
+  /**
+   * Phase 24 — PR-flavoured weekly comparative briefing. Email-only at v1;
+   * present on the shared channel type for forward compat with Slack/webhook.
+   */
+  comparativeBrief?: boolean;
 }
 
 export interface NotificationPreferences {

@@ -71,7 +71,16 @@ export type {
   BrandSentimentResponse,
   BrandSetupInput,
   BrandSetupResponse,
+  BrandHealthScore,
+  BrandHealthComponent,
+  BrandHealthConfidence,
 } from "./brand";
+export type {
+  SoVRow,
+  ShareOfVoiceWindow,
+  ShareOfVoiceResponse,
+  ShareOfVoiceWindowKey,
+} from "./share-of-voice";
 export type {
   ResearchRunStatus,
   ResearchTriggerSource,

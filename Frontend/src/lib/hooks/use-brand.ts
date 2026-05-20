@@ -57,6 +57,17 @@ export function useBrandSentiment() {
   });
 }
 
+export function useBrandHealth() {
+  return useQuery({
+    queryKey: ["brand", "health"],
+    queryFn: () => brandApi.health(),
+    staleTime: 60_000,
+    // Health Score 404s when brand setup is missing — treat as "no data" rather
+    // than an error so the card can hide cleanly without flashing a toast.
+    retry: false,
+  });
+}
+
 export function useBrandSetup() {
   const queryClient = useQueryClient();
   return useMutation({

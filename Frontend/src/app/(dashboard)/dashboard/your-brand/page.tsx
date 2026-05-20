@@ -38,6 +38,7 @@ import { AiDisclaimer } from "@/components/dashboard/ai-disclaimer";
 import { SentimentTrend } from "@/components/dashboard/sentiment-trend";
 import { BrandCoverageFeed } from "@/components/dashboard/brand-coverage-feed";
 import { BrandSetupDialog } from "@/components/dashboard/brand-setup-dialog";
+import { BrandHealthScoreCard } from "@/components/dashboard/brand-health-score-card";
 
 function formatRelative(iso: string | null | undefined): string {
   if (!iso) return "Never";
@@ -159,6 +160,9 @@ export default function YourBrandPage() {
           Research now
         </Button>
       </PageHeader>
+
+      {/* Brand Health Score (Phase 24) */}
+      <BrandHealthScoreCard />
 
       {/* Top metrics */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">

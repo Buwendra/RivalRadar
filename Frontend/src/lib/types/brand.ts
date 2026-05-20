@@ -66,3 +66,24 @@ export interface BrandSetupResponse {
   industry?: string;
   runId?: string;
 }
+
+/**
+ * Phase 24 — Brand Health Score. Composite 0–100 KPI + per-component breakdown.
+ */
+export type BrandHealthConfidence = "low" | "medium" | "high";
+
+export interface BrandHealthComponent {
+  score: number;
+  detail: string;
+}
+
+export interface BrandHealthScore {
+  score: number;
+  components: {
+    sentiment: BrandHealthComponent;
+    voice: BrandHealthComponent;
+    momentum: BrandHealthComponent;
+  };
+  confidence: BrandHealthConfidence;
+  asOf: string;
+}

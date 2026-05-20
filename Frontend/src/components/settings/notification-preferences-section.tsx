@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/lib/auth/use-auth";
 import { usersApi } from "@/lib/api/users";
 import { ApiClientError } from "@/lib/api/client";
+import { useCapability } from "@/lib/hooks/use-capability";
 import type { NotificationPreferences } from "@/lib/types";
 
 type Channel = "email" | "slack" | "webhook";
@@ -44,6 +45,7 @@ function effectivePref(
 
 export function NotificationPreferencesSection() {
   const { user, refreshUser } = useAuth();
+  const brandPulseEnabled = useCapability("brandPulse");
   const [draft, setDraft] = useState<NotificationPreferences>(
     user?.notificationPreferences ?? {}
   );
@@ -53,6 +55,15 @@ export function NotificationPreferencesSection() {
     setDraft((d) => ({
       ...d,
       [channel]: { ...(d[channel] ?? {}), [event]: value },
+    }));
+  };
+
+  // Phase 24 — opt-in to the comparative weekly briefing. Email-only at v1.
+  const comparativeBriefOn = draft.email?.comparativeBrief === true;
+  const setComparativeBrief = (value: boolean) => {
+    setDraft((d) => ({
+      ...d,
+      email: { ...(d.email ?? {}), comparativeBrief: value },
     }));
   };
 
@@ -136,6 +147,28 @@ export function NotificationPreferencesSection() {
             </tbody>
           </table>
         </div>
+        {brandPulseEnabled && (
+          <div className="space-y-3 rounded-md border border-brand-700/60 bg-brand-950/40 p-4">
+            <div className="flex items-start gap-3">
+              <Checkbox
+                id="comparative-brief"
+                checked={comparativeBriefOn}
+                onCheckedChange={(v) => setComparativeBrief(v === true)}
+              />
+              <div className="flex-1">
+                <Label htmlFor="comparative-brief" className="cursor-pointer text-sm font-medium">
+                  Comparative Weekly Briefing
+                </Label>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  PR-flavoured weekly email delivered every Monday morning. Surfaces how the
+                  market is talking about your brand vs your top competitors, with suggested
+                  narrative angles. Separate from the standard competitive digest.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="flex justify-end pt-2">
           <Button onClick={handleSave} disabled={isSaving}>
             {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

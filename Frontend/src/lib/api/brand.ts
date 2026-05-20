@@ -14,6 +14,7 @@ import type {
   BrandSentimentResponse,
   BrandSetupInput,
   BrandSetupResponse,
+  BrandHealthScore,
   PaginationMeta,
 } from "@/lib/types";
 
@@ -48,6 +49,8 @@ export const brandApi = {
   },
 
   sentiment: () => apiClient<BrandSentimentResponse>("/brand/sentiment"),
+
+  health: () => apiClient<BrandHealthScore>("/brand/health"),
 
   setup: (input: BrandSetupInput) =>
     apiClient<BrandSetupResponse>("/brand/setup", { method: "POST", body: input }),
