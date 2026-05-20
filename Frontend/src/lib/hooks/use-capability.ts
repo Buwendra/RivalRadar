@@ -31,6 +31,7 @@ export function useCapability(
     | "scheduledReports"
     | "apiAccess"
     | "comparatorMatrix"
+    | "brandPulse"
 ): boolean {
   const caps = useCapabilities();
   return caps[capability] === true;

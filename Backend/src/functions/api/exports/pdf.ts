@@ -77,19 +77,26 @@ export const handler = apiHandler(async (event) => {
     queryByPK(recommendationPK(userId), 'REC#', { scanForward: false, limit: 50 }),
   ]);
 
-  const competitors = competitorsResult.items as unknown as Competitor[];
+  // Phase 23 — weekly briefing PDF is about competitors; exclude self-brand.
+  const allRows = competitorsResult.items as unknown as Competitor[];
+  const competitors = allRows.filter((c) => c.targetKind !== 'self');
+  const selfCompetitorIds = new Set(
+    allRows.filter((c) => c.targetKind === 'self').map((c) => c.id)
+  );
 
-  const topChanges = changesResult.items.map((c) => {
-    const a = (c.aiAnalysis as Record<string, unknown> | undefined) ?? {};
-    return {
-      competitorName: (c.competitorName as string) ?? '',
-      detectedAt: (c.detectedAt as string) ?? '',
-      changeType: ((a.changeType as string) ?? 'content'),
-      significance: (c.significance as number) ?? 0,
-      summary: ((a.summary as string) ?? ''),
-      strategicImplication: a.strategicImplication as string | undefined,
-    };
-  });
+  const topChanges = changesResult.items
+    .filter((c) => !selfCompetitorIds.has(c.competitorId as string))
+    .map((c) => {
+      const a = (c.aiAnalysis as Record<string, unknown> | undefined) ?? {};
+      return {
+        competitorName: (c.competitorName as string) ?? '',
+        detectedAt: (c.detectedAt as string) ?? '',
+        changeType: ((a.changeType as string) ?? 'content'),
+        significance: (c.significance as number) ?? 0,
+        summary: ((a.summary as string) ?? ''),
+        strategicImplication: a.strategicImplication as string | undefined,
+      };
+    });
 
   const recommendations = (recsResult.items as unknown as Recommendation[])
     .filter((r) => r.status === 'open' && r.createdAt >= recCutoff)

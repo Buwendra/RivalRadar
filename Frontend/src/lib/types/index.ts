@@ -64,6 +64,15 @@ export type {
 } from "./competitor-matrix";
 export type { BattlecardSummary } from "./battlecard";
 export type {
+  BrandDetail,
+  BrandLatestResearch,
+  BrandCoverageChange,
+  BrandSentimentWeek,
+  BrandSentimentResponse,
+  BrandSetupInput,
+  BrandSetupResponse,
+} from "./brand";
+export type {
   ResearchRunStatus,
   ResearchTriggerSource,
   ApplicationEvent,

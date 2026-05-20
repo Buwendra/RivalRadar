@@ -170,6 +170,9 @@ export const handler = apiHandler(async (event) => {
   }
 
   for (const item of compsRes.items) {
+    // Phase 23 — search results expose competitors only; the self-brand row
+    // has its own surface at /dashboard/your-brand.
+    if (item.targetKind === 'self') continue;
     const tags = Array.isArray(item.derivedTags) ? (item.derivedTags as string[]).join(' ') : '';
     const fields: Array<[string, string]> = [
       ['name', String(item.name ?? '')],

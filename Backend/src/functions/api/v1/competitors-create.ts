@@ -32,6 +32,7 @@ import {
 import { generateId } from '../../../shared/utils/id';
 import { validate, competitorCreateSchema } from '../../../shared/middleware/validation';
 import { enforceResearchEligibility } from '../../../shared/utils/research-eligibility';
+import { competitorsOnly } from '../../../shared/utils/competitor-target';
 import { recordAuditEvent } from '../../../shared/services/audit';
 import { PLAN_LIMITS } from '../../../shared/types';
 import type { PublicEvent } from '../../../shared/middleware/handler';
@@ -47,9 +48,11 @@ export const handler = apiHandler<PublicEvent>(async (event) => {
   const user = await getItem<User & Record<string, unknown>>(userPK(userId), userSK());
   if (!user) throw new HttpError(404, 'USER_NOT_FOUND', 'Workspace owner not found');
 
+  // Phase 23 — self-brand row does not count against the competitor quota.
   const { items: existing } = await queryByPK(competitorPK(userId), 'COMP#');
+  const existingCompetitors = competitorsOnly(existing);
   const maxCompetitors = PLAN_LIMITS[user.plan].maxCompetitors;
-  if (existing.length >= maxCompetitors) {
+  if (existingCompetitors.length >= maxCompetitors) {
     throw new HttpError(
       403,
       'PLAN_LIMIT',
@@ -82,6 +85,7 @@ export const handler = apiHandler<PublicEvent>(async (event) => {
     url: body.url,
     pagesToTrack: body.pagesToTrack,
     status: 'active',
+    targetKind: 'competitor',
     createdAt: now,
     updatedAt: now,
     ...gsi2ActiveCompetitorKeys(compId),

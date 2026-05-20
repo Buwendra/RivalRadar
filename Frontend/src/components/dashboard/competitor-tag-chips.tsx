@@ -150,6 +150,44 @@ const TAG_CONFIG: Record<string, TagSpec> = {
       "Both threat and momentum suggest this competitor warrants minimal attention.",
     tone: "muted",
   },
+
+  // Phase 23 — Brand Pulse self-brand tags (reuse this component on
+  // the Your Brand page so the visual language stays consistent).
+  "coverage-rising": {
+    label: "Coverage rising",
+    description: "Volume of third-party mentions is trending up week over week.",
+    tone: "success",
+  },
+  "media-quiet": {
+    label: "Media quiet",
+    description: "Few third-party mentions detected recently.",
+    tone: "muted",
+  },
+  "narrative-funding-buzz": {
+    label: "Funding buzz",
+    description: "Funding news is being amplified by the market right now.",
+    tone: "warning",
+  },
+  "narrative-runway-risk": {
+    label: "Runway narrative",
+    description: "Coverage is flagging cash-position concerns.",
+    tone: "destructive",
+  },
+  "narrative-layoffs": {
+    label: "Layoffs narrative",
+    description: "Layoffs are being reported on in coverage.",
+    tone: "destructive",
+  },
+  "launch-landing": {
+    label: "Launch landing",
+    description: "Product launches are being picked up in coverage.",
+    tone: "success",
+  },
+  "growth-story": {
+    label: "Growth story",
+    description: "Hiring + expansion are forming a coherent growth narrative.",
+    tone: "success",
+  },
 };
 
 const TONE_CLASS: Record<Tone, string> = {

@@ -56,6 +56,11 @@ interface Event {
   runId?: string;
   runStartedAt?: string;
   tenantUserId?: string;
+  // Phase 23 — Brand Pulse. `'self'` switches the deepResearch prompt
+  // framing, skips threat scoring + predictions, and routes tag derivation
+  // to the self-brand rule set. Absent / `'competitor'` preserves prior
+  // behaviour for back-compat with in-flight executions.
+  targetKind?: 'competitor' | 'self';
 }
 
 interface StoredChange {
@@ -128,6 +133,7 @@ export const handler = async (event: Event): Promise<Output> => {
     // 2. Run web_search-backed research. Pass the most recent prior snapshot
     //    (if any) so Claude can bias its 8 web searches toward what's new
     //    since then — without dropping known facts from the output.
+    const isSelf = event.targetKind === 'self';
     const current = await deepResearch({
       competitorId: event.competitorId,
       userId: event.userId,
@@ -136,6 +142,7 @@ export const handler = async (event: Event): Promise<Output> => {
       industry: event.industry,
       userCompanyName,
       userIndustry,
+      targetKind: event.targetKind,
       priorContext: previous
         ? {
             summary: previous.summary,
@@ -404,37 +411,41 @@ export const handler = async (event: Event): Promise<Output> => {
 
       // Threat level (Haiku call). Best-effort — wrapped so failures don't break momentum write.
       // userCompanyName + userIndustry come from the top-of-handler user load.
+      // Phase 23 — skip for self-brand targets: "how threatening is our own
+      // brand to us" is nonsensical and the field stays undefined on the row.
       let threatLevel: string | undefined;
       let threatReasoning: string | undefined;
-      try {
-        const recentChangeSummaries = recentChangeItems
-          .map((c) => ({
-            summary: ((c.aiAnalysis as { summary?: string } | undefined)?.summary ?? '') as string,
-            significance: (c.significance as number) ?? 0,
-            detectedAt: (c.detectedAt as string) ?? '',
-          }))
-          .filter((c) => c.summary && c.detectedAt);
+      if (!isSelf) {
+        try {
+          const recentChangeSummaries = recentChangeItems
+            .map((c) => ({
+              summary: ((c.aiAnalysis as { summary?: string } | undefined)?.summary ?? '') as string,
+              significance: (c.significance as number) ?? 0,
+              detectedAt: (c.detectedAt as string) ?? '',
+            }))
+            .filter((c) => c.summary && c.detectedAt);
 
-        const threat = await scoreCompetitorThreat({
-          competitorName: event.name,
-          userId: event.userId,
-          userCompanyName,
-          userIndustry,
-          latestFinding: {
-            summary: current.summary,
-            categories: current.categories,
-            derivedState: current.derivedState,
-          },
-          recentChanges: recentChangeSummaries,
-          momentum,
-        });
-        threatLevel = threat.threatLevel;
-        threatReasoning = threat.reasoning;
-      } catch (err) {
-        logger.warn('Threat scoring failed — continuing without threat update', {
-          competitorId: event.competitorId,
-          error: String(err),
-        });
+          const threat = await scoreCompetitorThreat({
+            competitorName: event.name,
+            userId: event.userId,
+            userCompanyName,
+            userIndustry,
+            latestFinding: {
+              summary: current.summary,
+              categories: current.categories,
+              derivedState: current.derivedState,
+            },
+            recentChanges: recentChangeSummaries,
+            momentum,
+          });
+          threatLevel = threat.threatLevel;
+          threatReasoning = threat.reasoning;
+        } catch (err) {
+          logger.warn('Threat scoring failed — continuing without threat update', {
+            competitorId: event.competitorId,
+            error: String(err),
+          });
+        }
       }
 
       // Derive tag chips from structured state + recent changes + momentum/threat.
@@ -454,6 +465,7 @@ export const handler = async (event: Event): Promise<Output> => {
           | 'low'
           | 'monitor'
           | undefined,
+        targetKind: event.targetKind,
       });
 
       // Reusable shape used by both the evaluator and the predictor.
@@ -471,12 +483,13 @@ export const handler = async (event: Event): Promise<Output> => {
       // ones. The current predictedMoves on the competitor record (if any)
       // become candidates for status assignment — realized / partially-realized
       // / expired / pending — and are then appended to predictionHistory.
+      // Phase 23 — skipped for self-brand: predicting our own moves is circular.
       const newHistoryEntries: EvaluatedPrediction[] = [];
       const priorPredictedMoves =
         (competitorRecord?.predictedMoves as PredictedMove[] | undefined) ?? [];
       const priorPredictedAt =
         (competitorRecord?.predictedMovesAsOf as string | undefined) ?? undefined;
-      if (priorPredictedMoves.length > 0 && priorPredictedAt) {
+      if (!isSelf && priorPredictedMoves.length > 0 && priorPredictedAt) {
         try {
           const evalInput = priorPredictedMoves.map((p) => ({
             move: p.move,
@@ -524,8 +537,9 @@ export const handler = async (event: Event): Promise<Output> => {
 
       // Predicted next moves — Sonnet call, only when ≥ 1 prior finding exists.
       // Best-effort: a failure here should not block momentum/threat/tags writes.
+      // Phase 23 — skipped for self-brand: same reason as evaluatePriorPredictions.
       let predictedMoves: PredictedMove[] = [];
-      if (priorItems.length >= 1) {
+      if (!isSelf && priorItems.length >= 1) {
         try {
           const priorsCompact = priorItems
             .slice(0, 3)

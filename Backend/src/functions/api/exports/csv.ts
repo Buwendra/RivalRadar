@@ -122,7 +122,10 @@ export const handler = apiHandler(async (event) => {
     rowCount = rows.length;
   } else if (body.type === 'competitors') {
     const { items } = await queryByPK(competitorPK(userId), 'COMP#', { scanForward: true });
-    const rows = (items as unknown as Competitor[]).map((c) => [
+    // Phase 23 — CSV "competitors" export excludes the self-brand row.
+    const rows = (items as unknown as Competitor[])
+      .filter((c) => c.targetKind !== 'self')
+      .map((c) => [
       c.name,
       c.url,
       c.status,

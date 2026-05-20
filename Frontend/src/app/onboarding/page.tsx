@@ -106,6 +106,9 @@ export default function OnboardingPage() {
       await usersApi.onboard({
         companyName: companyName.trim(),
         industry,
+        // Phase 23 — only include companyWebsite when present; backend
+        // treats it as optional and skips self-brand row creation otherwise.
+        ...(companyUrl.trim() ? { companyWebsite: companyUrl.trim() } : {}),
         competitors: competitors.map((c, i) => ({
           name: c.name.trim(),
           url: c.url.trim(),
@@ -143,8 +146,10 @@ export default function OnboardingPage() {
             <StepCompanyInfo
               companyName={companyName}
               industry={industry}
+              companyUrl={companyUrl}
               onCompanyNameChange={setCompanyName}
               onIndustryChange={setIndustry}
+              onCompanyUrlChange={setCompanyUrl}
             />
           )}
           {currentStep === 1 && (

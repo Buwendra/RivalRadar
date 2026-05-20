@@ -61,6 +61,15 @@ export interface WinAgainstTactic {
   impact: WinAgainstImpact;
 }
 
+/**
+ * What this row represents. `'competitor'` (default for legacy rows) is a
+ * tracked rival; `'self'` is the workspace's own brand — Phase 23 (Brand Pulse).
+ * Self rows reuse the same pipeline + key layout but are excluded from
+ * competitor list endpoints and exposed via the separate `/brand/*` surface.
+ * Exactly one self row per workspace.
+ */
+export type CompetitorTargetKind = 'competitor' | 'self';
+
 export interface Competitor {
   id: string;
   userId: string;
@@ -70,6 +79,11 @@ export interface Competitor {
   status: 'active' | 'paused';
   createdAt: string;
   updatedAt: string;
+  /**
+   * Phase 23 — Brand Pulse. Absent on legacy rows; treated as `'competitor'`.
+   */
+  targetKind?: CompetitorTargetKind;
+  industry?: string;
   momentum?: Momentum;
   momentumChangePercent?: number;
   momentumAsOf?: string;

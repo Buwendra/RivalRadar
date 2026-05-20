@@ -228,14 +228,24 @@ export const handler = async (): Promise<DigestResult> => {
         queryByPK(competitorPK(tenantUserId), 'COMP#'),
       ]);
 
+      // Phase 23 — exclude self-brand from the competitor portfolio used to
+      // build the snooze map. Saved-view digests are about RIVALS.
+      const competitorRows = competitorsResult.items.filter((c) => c.targetKind !== 'self');
+      const selfCompetitorIds = new Set(
+        competitorsResult.items
+          .filter((c) => c.targetKind === 'self')
+          .map((c) => c.id as string)
+      );
+
       // Snooze filter — drop changes whose competitor is currently snoozed.
       const snoozedNames = new Set(
-        competitorsResult.items
+        competitorRows
           .filter((c) => isSnoozed(c as { snoozedUntil?: string }))
           .map((c) => c.name as string)
       );
 
       const changes: ChangeRow[] = changesResult.items
+        .filter((item) => !selfCompetitorIds.has(item.competitorId as string))
         .filter((item) => !snoozedNames.has(item.competitorName as string))
         .map((item) => {
           const a = item.aiAnalysis as Record<string, unknown> | undefined;

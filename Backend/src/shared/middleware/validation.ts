@@ -36,6 +36,9 @@ export const competitorCreateSchema = z.object({
 export const onboardSchema = z.object({
   companyName: z.string().min(1).max(100),
   industry: z.string().min(1).max(100),
+  // Phase 23 — Brand Pulse. Optional for back-compat with clients still on
+  // the old payload shape; when present, seeds the self-brand Competitor row.
+  companyWebsite: z.string().url().optional(),
   competitors: z
     .array(
       z.object({

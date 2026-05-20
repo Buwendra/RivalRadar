@@ -21,6 +21,8 @@ export interface Capabilities {
   apiAccess: boolean;
   apiKeys: { max: number };
   comparatorMatrix: boolean;
+  /** Phase 23 — Brand Pulse: self-brand monitoring. Available on all tiers. */
+  brandPulse: boolean;
 }
 
 export const CAPABILITIES: Record<PlanTier, Capabilities> = {
@@ -38,6 +40,7 @@ export const CAPABILITIES: Record<PlanTier, Capabilities> = {
     apiAccess: false,
     apiKeys: { max: 0 },
     comparatorMatrix: false,
+    brandPulse: true,
   },
   strategist: {
     pdfExports: true,
@@ -53,6 +56,7 @@ export const CAPABILITIES: Record<PlanTier, Capabilities> = {
     apiAccess: true,
     apiKeys: { max: 5 },
     comparatorMatrix: true,
+    brandPulse: true,
   },
   command: {
     pdfExports: true,
@@ -68,6 +72,7 @@ export const CAPABILITIES: Record<PlanTier, Capabilities> = {
     apiAccess: true,
     apiKeys: { max: 25 },
     comparatorMatrix: true,
+    brandPulse: true,
   },
 };
 

@@ -436,6 +436,13 @@ export async function deepResearch(input: {
   industry?: string;
   userCompanyName?: string;
   userIndustry?: string;
+  /**
+   * Phase 23 — Brand Pulse. When `'self'`, the prompt reframes to "how is the
+   * market perceiving X?" (third-party coverage, sentiment, narratives) instead
+   * of "what is competitor X doing?" Output shape is identical so the downstream
+   * pipeline (delta detection, persistence, tag derivation) is unchanged.
+   */
+  targetKind?: 'competitor' | 'self';
   priorContext?: {
     summary: string;
     derivedState?: DerivedState;
@@ -443,9 +450,11 @@ export async function deepResearch(input: {
   };
 }): Promise<Omit<ResearchFinding, 'id' | 'generatedAt'>> {
   const secrets = await getSecret('rivalscan/api-keys');
+  const isSelf = input.targetKind === 'self';
 
-  const userContextLine =
-    input.userCompanyName || input.userIndustry
+  const userContextLine = isSelf
+    ? `Target: ${input.name} — this is the USER'S OWN brand. Surface third-party coverage, sentiment, and narratives the market is forming about them. Do NOT frame anything from the company's own POV; this analysis is for self-awareness, not internal reporting.`
+    : input.userCompanyName || input.userIndustry
       ? `User context: ${input.userCompanyName ?? '(unknown company)'} (industry: ${input.userIndustry ?? 'unknown'}). Tailor relevance to their POV — flag findings that materially affect their competitive position.`
       : `User context: not provided. Treat the analysis as general competitive intelligence.`;
 
@@ -457,19 +466,33 @@ Derived state was: ${input.priorContext.derivedState ? JSON.stringify(input.prio
 Use this prior context to direct your searches toward what's NEW since the prior snapshot date. Still produce a COMPLETE current snapshot in your output — do not omit known facts. If a previously-known item is still relevant, include it again. The downstream consumer needs the full current state to compute deltas.\n`
     : '';
 
-  const prompt = `You are a competitive intelligence analyst. Research the competitor below across the public web.
+  const roleLine = isSelf
+    ? 'You are a media-intelligence analyst. Research how the public web is currently talking about the brand below.'
+    : 'You are a competitive intelligence analyst. Research the competitor below across the public web.';
 
-${userContextLine}
-${priorContextBlock}
-Competitor: ${input.name}
-Website: ${input.url}${input.industry ? `\nIndustry: ${input.industry}` : ''}
+  const subjectLabel = isSelf ? 'Brand' : 'Competitor';
 
-Search the web for recent, substantive findings about this company. Cover these categories:
-- news: press releases, announcements, press coverage
+  const categoryGuidance = isSelf
+    ? `- news: press coverage, mentions in third-party outlets, podcast/blog mentions
+- product: third-party reactions to product launches, reviews, comparisons
+- funding: public commentary on the brand's financial position, analyst notes
+- hiring: external coverage of the brand's hiring or leadership moves, Glassdoor signals
+- social: how the brand is being discussed on LinkedIn / Twitter / community forums — sentiment, viral moments, criticism`
+    : `- news: press releases, announcements, press coverage
 - product: product launches, feature releases, roadmap hints
 - funding: investment rounds, valuation news, financial performance
 - hiring: notable hires, leadership changes, layoffs, headcount signals
-- social: LinkedIn posts from leaders, prominent Twitter/X activity, community buzz
+- social: LinkedIn posts from leaders, prominent Twitter/X activity, community buzz`;
+
+  const prompt = `${roleLine}
+
+${userContextLine}
+${priorContextBlock}
+${subjectLabel}: ${input.name}
+Website: ${input.url}${input.industry ? `\nIndustry: ${input.industry}` : ''}
+
+Search the web for recent, substantive findings about this ${isSelf ? 'brand' : 'company'}. Cover these categories:
+${categoryGuidance}
 
 Prioritize the last 30 days. Use up to ${WEB_SEARCH_MAX_USES} targeted searches.
 
@@ -504,7 +527,7 @@ After your searches, respond with ONLY valid JSON in this exact shape — no pro
 
 Field guidance:
 - importance: 3 = must-know strategic, 2 = notable, 1 = minor.
-- sentiment: from the COMPETITOR's POV (positive = good for them, negative = bad for them).
+- sentiment: ${isSelf ? "the EXTERNAL tone toward the brand (positive = favourable coverage, negative = unfavourable)." : "from the COMPETITOR's POV (positive = good for them, negative = bad for them)."}
 - timeSensitivity: breaking = published within last 7 days, recent = last 30 days, historical = older.
 - derivedState: use "unknown" liberally when evidence is thin. Do NOT guess. Every label must be supported by a finding.
 - Omit a category entirely (empty array) if nothing relevant found. Every finding MUST include a sourceUrl from your searches.`;

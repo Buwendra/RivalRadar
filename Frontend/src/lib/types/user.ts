@@ -19,4 +19,9 @@ export interface User {
   status?: "active" | "restricted" | "pending-deletion";
   /** Phase 7b — workspace-shared feed threshold. 0 = no filter. */
   feedSignificanceThreshold?: number;
+  /** Captured at onboarding for AI-call relevance framing. */
+  companyName?: string;
+  industry?: string;
+  /** Phase 23 — Brand Pulse. Seeds the self-brand row. */
+  companyWebsite?: string;
 }

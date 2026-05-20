@@ -13,6 +13,12 @@ export interface User {
   onboardingComplete: boolean;
   companyName?: string;
   industry?: string;
+  /**
+   * Phase 23 — Brand Pulse. The user's own brand URL, used to seed the
+   * self-brand Competitor row at onboarding (or via the setup modal for
+   * legacy users) so the same deep-research pipeline can monitor it.
+   */
+  companyWebsite?: string;
   createdAt: string;
   updatedAt: string;
 

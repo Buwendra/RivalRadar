@@ -56,6 +56,12 @@ export interface Capabilities {
   };
   /** Cross-competitor comparison matrix (Phase 19). */
   comparatorMatrix: boolean;
+  /**
+   * Phase 23 — Brand Pulse: monitor the workspace's own brand using the same
+   * deep-research engine. Included on all tiers; cost is low enough to absorb
+   * and it's the wedge feature for the PR / comms persona.
+   */
+  brandPulse: boolean;
 }
 
 export const CAPABILITIES: Record<PlanTier, Capabilities> = {
@@ -73,6 +79,7 @@ export const CAPABILITIES: Record<PlanTier, Capabilities> = {
     apiAccess: false,
     apiKeys: { max: 0 },
     comparatorMatrix: false,
+    brandPulse: true,
   },
   strategist: {
     pdfExports: true,
@@ -88,6 +95,7 @@ export const CAPABILITIES: Record<PlanTier, Capabilities> = {
     apiAccess: true,
     apiKeys: { max: 5 },
     comparatorMatrix: true,
+    brandPulse: true,
   },
   command: {
     pdfExports: true,
@@ -103,5 +111,6 @@ export const CAPABILITIES: Record<PlanTier, Capabilities> = {
     apiAccess: true,
     apiKeys: { max: 25 },
     comparatorMatrix: true,
+    brandPulse: true,
   },
 };

@@ -131,7 +131,10 @@ async function generateAndSendForUser(
       }),
     ]);
 
-    const competitors = competitorsResult.items as unknown as Competitor[];
+    // Phase 23 — scheduled reports are competitor-focused; exclude self-brand.
+    const competitors = (competitorsResult.items as unknown as Competitor[]).filter(
+      (c) => c.targetKind !== 'self'
+    );
     const topChanges = changesResult.items.map((c) => {
       const a = (c.aiAnalysis as Record<string, unknown> | undefined) ?? {};
       return {

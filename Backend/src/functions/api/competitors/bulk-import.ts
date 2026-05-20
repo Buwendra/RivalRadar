@@ -221,14 +221,16 @@ export const handler = apiHandler(async (event) => {
     throw new HttpError(400, 'NO_VALID_ROWS', 'No valid rows to import.');
   }
 
-  // Plan-limit gate: existing + valid <= maxCompetitors
+  // Plan-limit gate: existing + valid <= maxCompetitors. Phase 23 — exclude
+  // the self-brand row so monitoring your own brand doesn't consume a slot.
   const { items: existing } = await queryByPK(competitorPK(userId), 'COMP#');
+  const existingCompetitors = existing.filter((c) => c.targetKind !== 'self');
   const maxCompetitors = PLAN_LIMITS[user.plan].maxCompetitors;
-  if (existing.length + valid.length > maxCompetitors) {
+  if (existingCompetitors.length + valid.length > maxCompetitors) {
     throw new HttpError(
       403,
       'PLAN_LIMIT',
-      `Your ${user.plan} plan allows up to ${maxCompetitors} competitors. You currently have ${existing.length} and tried to add ${valid.length}.`
+      `Your ${user.plan} plan allows up to ${maxCompetitors} competitors. You currently have ${existingCompetitors.length} and tried to add ${valid.length}.`
     );
   }
 
@@ -260,6 +262,7 @@ export const handler = apiHandler(async (event) => {
         url: v.url,
         pagesToTrack: v.pagesToTrack,
         status: 'active',
+        targetKind: 'competitor',
         createdAt: now,
         updatedAt: now,
         ...gsi2ActiveCompetitorKeys(compId),

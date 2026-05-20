@@ -82,10 +82,41 @@ export const handler = apiHandler(async (event) => {
       url: comp.url,
       pagesToTrack: comp.pagesToTrack,
       status: 'active',
+      targetKind: 'competitor',
       createdAt: now,
       updatedAt: now,
       ...gsi2ActiveCompetitorKeys(compId),
     });
+  }
+
+  // Phase 23 — Brand Pulse. If the user provided their own company website,
+  // also create the self-brand Competitor row so the same deep-research
+  // pipeline monitors it on day 1. Idempotent for re-onboard: skip if a
+  // self row already exists for this workspace.
+  let selfBrandId: string | undefined;
+  if (body.companyWebsite) {
+    const { items: existingSelf } = await queryByPK(competitorPK(userId), 'COMP#');
+    const hasExistingSelf = (existingSelf as Array<Record<string, unknown>>).some(
+      (c) => c.targetKind === 'self'
+    );
+    if (!hasExistingSelf) {
+      selfBrandId = generateId();
+      await putItem({
+        PK: competitorPK(userId),
+        SK: competitorSK(selfBrandId),
+        id: selfBrandId,
+        userId,
+        name: body.companyName,
+        url: body.companyWebsite,
+        pagesToTrack: ['homepage'],
+        status: 'active',
+        targetKind: 'self',
+        industry: body.industry,
+        createdAt: now,
+        updatedAt: now,
+        ...gsi2ActiveCompetitorKeys(selfBrandId),
+      });
+    }
   }
 
   // Phase 4a — bootstrap a default workspace + owner Membership for this
@@ -147,6 +178,9 @@ export const handler = apiHandler(async (event) => {
     industry: body.industry,
     updatedAt: now,
   };
+  if (body.companyWebsite) {
+    consentUpdates.companyWebsite = body.companyWebsite;
+  }
   if (body.tosVersion) {
     consentUpdates.tosVersion = body.tosVersion;
     consentUpdates.tosAcceptedAt = now;
@@ -161,13 +195,34 @@ export const handler = apiHandler(async (event) => {
   // creates a queued ResearchRun row per competitor before StartExecution
   // so the dashboard panel reflects in-flight runs).
   if (process.env.RESEARCH_PIPELINE_ARN) {
+    // Phase 23 — append a self-brand research run when we created the self row.
+    const allTargets: Array<{
+      competitorId: string;
+      name: string;
+      url: string;
+      targetKind: 'competitor' | 'self';
+    }> = body.competitors.map((comp, i) => ({
+      competitorId: competitorIds[i],
+      name: comp.name,
+      url: comp.url,
+      targetKind: 'competitor' as const,
+    }));
+    if (selfBrandId && body.companyWebsite) {
+      allTargets.push({
+        competitorId: selfBrandId,
+        name: body.companyName,
+        url: body.companyWebsite,
+        targetKind: 'self',
+      });
+    }
+
     const runs = await Promise.all(
-      body.competitors.map((comp, i) =>
+      allTargets.map((t) =>
         createResearchRun({
           id: generateId(),
           tenantUserId: userId,
-          competitorId: competitorIds[i],
-          competitorName: comp.name,
+          competitorId: t.competitorId,
+          competitorName: t.name,
           triggeredByUserId: userId,
           triggeredByEmail: email,
           triggerSource: 'onboarding',
@@ -175,15 +230,16 @@ export const handler = apiHandler(async (event) => {
       )
     );
 
-    const researchInput = body.competitors.map((comp, i) => ({
-      competitorId: competitorIds[i],
+    const researchInput = allTargets.map((t, i) => ({
+      competitorId: t.competitorId,
       userId,
       tenantUserId: userId,
       runId: runs[i].id,
       runStartedAt: runs[i].startedAt,
-      name: comp.name,
-      url: comp.url,
+      name: t.name,
+      url: t.url,
       industry: body.industry,
+      targetKind: t.targetKind,
     }));
 
     let executionArn: string | undefined;

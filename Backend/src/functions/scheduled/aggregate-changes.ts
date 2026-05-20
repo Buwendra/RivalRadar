@@ -58,13 +58,24 @@ export const handler = async (
 
   const feedThreshold = tenantUser?.feedSignificanceThreshold ?? 0;
 
+  // Phase 23 — drop the self-brand row from the competitor portfolio before
+  // building the snooze map / snapshot list. The weekly competitor digest is
+  // about RIVALS, not the workspace's own brand. Self-brand changes are
+  // surfaced separately in the "Your Brand" page.
+  const competitorRows = competitorsResult.items.filter((c) => c.targetKind !== 'self');
+  const selfCompetitorIds = new Set(
+    competitorsResult.items
+      .filter((c) => c.targetKind === 'self')
+      .map((c) => c.id as string)
+  );
+
   // Build a snooze map by competitor name so we can drop changes from
   // currently-snoozed competitors before they leak into the digest. Keying
   // by name (not id) because aggregated changes have only the denormalized
   // competitorName field. Names are unique within a user's portfolio at
   // create-time so collisions are not a concern.
   const snoozedNames = new Set(
-    competitorsResult.items
+    competitorRows
       .filter((c) => isSnoozed(c as { snoozedUntil?: string }))
       .map((c) => c.name as string)
   );
@@ -72,6 +83,7 @@ export const handler = async (
   // Map, filter, and sort: drop snoozed competitors, drop changes below the
   // workspace's feed threshold (Phase 7b), then top-10 by significance.
   const changes: AggregatedChange[] = changesResult.items
+    .filter((item) => !selfCompetitorIds.has(item.competitorId as string))
     .filter((item) => !snoozedNames.has(item.competitorName as string))
     .map((item) => {
       const analysis = item.aiAnalysis as Record<string, unknown>;
@@ -93,7 +105,7 @@ export const handler = async (
   // or threat) so the digest doesn't include stale "unscored" placeholders.
   // Snoozed competitors are also excluded — the user explicitly asked us
   // not to surface them.
-  const competitorSnapshots: CompetitorSnapshot[] = competitorsResult.items
+  const competitorSnapshots: CompetitorSnapshot[] = competitorRows
     .filter((c) => (c.momentum || c.threatLevel || c.derivedTags) && !isSnoozed(c as { snoozedUntil?: string }))
     .map((c) => {
       const derivedState = c.derivedState as { stage?: string } | undefined;

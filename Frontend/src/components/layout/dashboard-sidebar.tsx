@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Settings, Plus, Lightbulb, GitCompare } from "lucide-react";
+import { LayoutDashboard, Settings, Plus, Lightbulb, GitCompare, Sparkles } from "lucide-react";
 import { Logo } from "@/components/shared/logo";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCompetitors } from "@/lib/hooks/use-competitors";
 import { useAuth } from "@/lib/auth/use-auth";
+import { useCapability } from "@/lib/hooks/use-capability";
 import { cn } from "@/lib/utils";
 import type { Momentum, ThreatLevel } from "@/lib/types";
 import { SavedViewsSection } from "./saved-views-section";
@@ -41,6 +42,7 @@ export function DashboardSidebar({ onAddCompetitor }: DashboardSidebarProps) {
   const pathname = usePathname();
   const { user } = useAuth();
   const { data: competitors, isLoading } = useCompetitors();
+  const brandPulseEnabled = useCapability("brandPulse");
 
   const sortedCompetitors = [...(competitors ?? [])].sort((a, b) => {
     const ta = a.threatLevel ? THREAT_RANK[a.threatLevel] : THREAT_UNSCORED;
@@ -54,6 +56,11 @@ export function DashboardSidebar({ onAddCompetitor }: DashboardSidebarProps) {
 
   const navItems = [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+    // Phase 23 — "Your Brand" sits between Dashboard and the rest because
+    // it's the workspace's home for self-monitoring; gated by brandPulse.
+    ...(brandPulseEnabled
+      ? [{ label: "Your Brand", href: "/dashboard/your-brand", icon: Sparkles }]
+      : []),
     { label: "Recommendations", href: "/dashboard/recommendations", icon: Lightbulb },
     { label: "Compare", href: "/dashboard/compare", icon: GitCompare },
     { label: "Settings", href: "/dashboard/settings", icon: Settings },

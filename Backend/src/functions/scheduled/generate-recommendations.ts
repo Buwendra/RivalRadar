@@ -87,6 +87,8 @@ export const handler = async (event: Event): Promise<Output> => {
       getItem<User & Record<string, unknown>>(userPK(event.userId), userSK()),
       queryByPK(competitorPK(event.userId), 'COMP#', { scanForward: true }),
     ]);
+    // Phase 23 — recommendations are about competitive moves; exclude self-brand.
+    const competitorItems = competitorsResult.items.filter((c) => c.targetKind !== 'self');
     userCompanyName = userRecord?.companyName as string | undefined;
     userIndustry = userRecord?.industry as string | undefined;
     // Custom recommendation focus areas (Command-tier only). The capability
@@ -106,7 +108,7 @@ export const handler = async (event: Event): Promise<Output> => {
     // SFN payload trim, but the recommendations prompt benefits from knowing
     // what the LLM already predicted each competitor will do.
     const movesByName = new Map<string, PredictedMove[]>();
-    for (const c of competitorsResult.items) {
+    for (const c of competitorItems) {
       const name = c.name as string | undefined;
       const moves = c.predictedMoves as PredictedMove[] | undefined;
       if (name && moves && moves.length > 0) movesByName.set(name, moves);

@@ -205,6 +205,29 @@ export class ApiStack extends cdk.Stack {
     // Phase 7a — snooze toggle
     addRoute('CompetitorSnooze', apigatewayv2.HttpMethod.PATCH, '/competitors/{id}/snooze', 'api/competitors/snooze.ts');
 
+    // ─── Brand Pulse (Phase 23) — self-brand monitoring ───
+    addRoute('BrandGet',       apigatewayv2.HttpMethod.GET,  '/brand',           'api/brand/get.ts');
+    addRoute('BrandCoverage',  apigatewayv2.HttpMethod.GET,  '/brand/coverage',  'api/brand/coverage.ts');
+    addRoute('BrandSentiment', apigatewayv2.HttpMethod.GET,  '/brand/sentiment', 'api/brand/sentiment.ts');
+    const brandSetupFn = addRoute(
+      'BrandSetup',
+      apigatewayv2.HttpMethod.POST,
+      '/brand/setup',
+      'api/brand/setup.ts',
+      true,
+      pipelineEnv
+    );
+    researchStateMachine.grantStartExecution(brandSetupFn);
+    const brandResearchFn = addRoute(
+      'BrandResearch',
+      apigatewayv2.HttpMethod.POST,
+      '/brand/research',
+      'api/brand/research.ts',
+      true,
+      pipelineEnv
+    );
+    researchStateMachine.grantStartExecution(brandResearchFn);
+
     // ─── Research-run observability (Phase 22) ───
     addRoute('ResearchRunsList', apigatewayv2.HttpMethod.GET, '/research-runs', 'api/research-runs/list.ts');
     addRoute('ResearchRunsGet',  apigatewayv2.HttpMethod.GET, '/research-runs/{id}', 'api/research-runs/get.ts');

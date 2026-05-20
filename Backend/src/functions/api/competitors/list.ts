@@ -1,6 +1,7 @@
 import { apiHandler, getUserEmail } from '../../../shared/middleware/handler';
 import { queryByPK } from '../../../shared/db/queries';
 import { competitorPK } from '../../../shared/db/keys';
+import { competitorsOnly } from '../../../shared/utils/competitor-target';
 import {
   resolveTenantContext,
   getRequestedWorkspaceId,
@@ -16,7 +17,8 @@ export const handler = apiHandler(async (event) => {
 
   const { items } = await queryByPK(competitorPK(userId), 'COMP#', { scanForward: true });
 
-  const competitors = items.map((item) => ({
+  // Phase 23 — exclude the workspace's self-brand row from competitor lists.
+  const competitors = competitorsOnly(items).map((item) => ({
     id: item.id,
     name: item.name,
     url: item.url,

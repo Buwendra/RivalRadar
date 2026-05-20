@@ -126,6 +126,11 @@ export const handler = apiHandler(async (event) => {
   if (!competitor) {
     throw new HttpError(404, 'NOT_FOUND', 'Competitor not found');
   }
+  // Phase 23 — the self-brand row is served exclusively via /brand. Refuse
+  // to render it on the competitor surface so the UI stays consistent.
+  if (competitor.targetKind === 'self') {
+    throw new HttpError(404, 'NOT_FOUND', 'Competitor not found');
+  }
 
   const [{ items: changes }, { items: research }] = await Promise.all([
     queryByPK(`COMP#${compId}`, 'CHANGE#', { limit: 30 }),

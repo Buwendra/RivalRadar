@@ -67,7 +67,17 @@ export function deriveTagsFromState(input: {
   recentChanges: Array<{ sourceCategory?: string; detectedAt: string }>;
   momentum: Momentum;
   threatLevel?: ThreatLevel;
+  /**
+   * Phase 23 — Brand Pulse. When `'self'`, emit brand-flavoured tags
+   * (coverage tone, momentum framing) instead of competitor-framed tags
+   * (going-upmarket, hiring-aggressively, deprioritize). Same priority
+   * structure so the downstream cap-at-6 logic is unchanged.
+   */
+  targetKind?: 'competitor' | 'self';
 }): string[] {
+  if (input.targetKind === 'self') {
+    return deriveSelfBrandTags(input);
+  }
   const tagged: Array<{ tag: string; priority: number }> = [];
   const ds = input.derivedState;
   const dayMs = 24 * 60 * 60 * 1000;
@@ -144,6 +154,102 @@ export function deriveTagsFromState(input: {
   }
 
   // Sort by priority asc, dedupe, cap at 6
+  tagged.sort((a, b) => a.priority - b.priority);
+  const seen = new Set<string>();
+  const output: string[] = [];
+  for (const t of tagged) {
+    if (seen.has(t.tag)) continue;
+    seen.add(t.tag);
+    output.push(t.tag);
+    if (output.length >= 6) break;
+  }
+  return output;
+}
+
+/**
+ * Phase 23 — Brand Pulse. Self-brand variant of `deriveTagsFromState()`.
+ * Same shape + cap-at-6 rules, but rephrases tags from the audience POV
+ * (e.g. `coverage-rising` instead of `going-upmarket`, `media-quiet` instead
+ * of `deprioritize`). Derived state semantics also flip: `fundingState:
+ * 'recently-raised'` becomes a `narrative-funding-buzz` tag rather than
+ * `just-raised`, because for self-brand the question is "is the market
+ * noticing?" not "what did they do?".
+ */
+function deriveSelfBrandTags(input: {
+  derivedState?: DerivedState;
+  recentChanges: Array<{ sourceCategory?: string; detectedAt: string }>;
+  momentum: Momentum;
+}): string[] {
+  const tagged: Array<{ tag: string; priority: number }> = [];
+  const ds = input.derivedState;
+  const dayMs = 24 * 60 * 60 * 1000;
+  const cutoff30 = Date.now() - 30 * dayMs;
+
+  // Priority 0 — Coverage red flags.
+  if (ds?.fundingState === 'runway-concerns') {
+    tagged.push({ tag: 'narrative-runway-risk', priority: 0 });
+  }
+  if (ds?.hiringState === 'layoffs') {
+    tagged.push({ tag: 'narrative-layoffs', priority: 0 });
+  }
+
+  // Priority 1 — Momentum framing on coverage volume.
+  if (input.momentum === 'rising') {
+    tagged.push({ tag: 'coverage-rising', priority: 1 });
+  } else if (input.momentum === 'declining') {
+    tagged.push({ tag: 'media-quiet', priority: 1 });
+  }
+
+  // Priority 2 — Funding narrative penetration. Combine derivedState with a
+  // funding-category mention in the last 30 days so we only tag when the
+  // market is actually talking about it.
+  if (ds?.fundingState === 'recently-raised' || ds?.fundingState === 'actively-raising') {
+    const hasFundingMention30d = input.recentChanges.some((c) => {
+      if (c.sourceCategory !== 'funding') return false;
+      const ts = Date.parse(c.detectedAt);
+      return !isNaN(ts) && ts >= cutoff30;
+    });
+    if (hasFundingMention30d) {
+      tagged.push({ tag: 'narrative-funding-buzz', priority: 2 });
+    }
+  }
+
+  // Priority 3 — Product launches landing in coverage.
+  const hasProductMention30d = input.recentChanges.some((c) => {
+    if (c.sourceCategory !== 'product') return false;
+    const ts = Date.parse(c.detectedAt);
+    return !isNaN(ts) && ts >= cutoff30;
+  });
+  if (hasProductMention30d) {
+    tagged.push({ tag: 'launch-landing', priority: 3 });
+  }
+
+  // Priority 4 — Hiring narrative.
+  if (ds?.hiringState === 'aggressive') {
+    tagged.push({ tag: 'growth-story', priority: 4 });
+  }
+
+  // Priority 5 — Stage / positioning surfaces.
+  if (ds?.stage === 'public') {
+    tagged.push({ tag: 'public-co', priority: 5 });
+  } else if (ds?.stage && ds.stage !== 'unknown') {
+    tagged.push({ tag: `${ds.stage}-stage`, priority: 5 });
+  }
+
+  // Priority 6 — Tech positioning.
+  if (ds?.techPositioning === 'ai-native') {
+    tagged.push({ tag: 'ai-native', priority: 6 });
+  } else if (ds?.techPositioning === 'open-source') {
+    tagged.push({ tag: 'open-source', priority: 6 });
+  }
+
+  // Priority 7 — Pacing as a coverage cue.
+  if (ds?.pacing === 'shipping-fast') {
+    tagged.push({ tag: 'shipping-fast', priority: 7 });
+  } else if (ds?.pacing === 'frozen') {
+    tagged.push({ tag: 'shipping-frozen', priority: 7 });
+  }
+
   tagged.sort((a, b) => a.priority - b.priority);
   const seen = new Set<string>();
   const output: string[] = [];

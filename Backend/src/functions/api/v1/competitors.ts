@@ -13,6 +13,7 @@ import {
 } from '../../../shared/middleware/api-key';
 import { queryByPK } from '../../../shared/db/queries';
 import { competitorPK } from '../../../shared/db/keys';
+import { competitorsOnly } from '../../../shared/utils/competitor-target';
 import { validate, paginationSchema } from '../../../shared/middleware/validation';
 import type { PublicEvent } from '../../../shared/middleware/handler';
 
@@ -28,7 +29,8 @@ export const handler = apiHandler<PublicEvent>(async (event) => {
     scanForward: true,
   });
 
-  const data = items.map((c) => ({
+  // Phase 23 — self-brand rows are not exposed via the public competitor API.
+  const data = competitorsOnly(items).map((c) => ({
     id: c.id as string,
     name: c.name as string,
     url: c.url as string,

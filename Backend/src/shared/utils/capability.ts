@@ -30,6 +30,7 @@ export function hasCapability(
     | 'scheduledReports'
     | 'apiAccess'
     | 'comparatorMatrix'
+    | 'brandPulse'
 ): boolean {
   const caps = capabilitiesFor(user);
   return caps[capability] === true;

@@ -4,6 +4,8 @@ import type { User, PageType, NotificationPreferences } from "@/lib/types";
 export interface OnboardInput {
   companyName: string;
   industry: string;
+  /** Phase 23 — Brand Pulse. When present, seeds the self-brand monitoring row. */
+  companyWebsite?: string;
   competitors: Array<{
     name: string;
     url: string;

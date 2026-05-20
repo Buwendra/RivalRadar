@@ -1,0 +1,587 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>RivalScan — Demo Deck</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: [
+                'ui-sans-serif',
+                'system-ui',
+                '-apple-system',
+                'Segoe UI',
+                'Roboto',
+                'Inter',
+                'sans-serif',
+              ],
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        background: #020617;
+        color: #f1f5f9;
+        overflow: hidden;
+      }
+      .slide {
+        display: none;
+        height: 100vh;
+        width: 100vw;
+        padding: 5rem 6rem;
+        box-sizing: border-box;
+        position: relative;
+        overflow: hidden;
+      }
+      .slide.active {
+        display: flex;
+      }
+      .slide::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background:
+          radial-gradient(900px circle at 15% 20%, rgba(16, 185, 129, 0.12), transparent 55%),
+          radial-gradient(700px circle at 85% 85%, rgba(59, 130, 246, 0.10), transparent 55%);
+      }
+      .slide > * {
+        position: relative;
+        z-index: 1;
+      }
+      .accent {
+        color: #34d399;
+      }
+      .accent-soft {
+        color: #6ee7b7;
+      }
+      .muted {
+        color: #94a3b8;
+      }
+      .chip {
+        display: inline-block;
+        padding: 0.3rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.85rem;
+        background: rgba(16, 185, 129, 0.12);
+        color: #6ee7b7;
+        border: 1px solid rgba(16, 185, 129, 0.35);
+        margin-right: 0.4rem;
+        margin-bottom: 0.4rem;
+      }
+      .card {
+        background: rgba(15, 23, 42, 0.75);
+        border: 1px solid rgba(148, 163, 184, 0.15);
+        border-radius: 1.25rem;
+        backdrop-filter: blur(8px);
+      }
+      .card-accent {
+        border-color: rgba(52, 211, 153, 0.55);
+        box-shadow: 0 0 0 1px rgba(52, 211, 153, 0.15), 0 20px 60px -20px rgba(16, 185, 129, 0.35);
+      }
+      .timeline-dot {
+        flex-shrink: 0;
+        width: 2.5rem;
+        height: 2.5rem;
+        border-radius: 9999px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(16, 185, 129, 0.15);
+        color: #6ee7b7;
+        border: 1px solid rgba(52, 211, 153, 0.4);
+        font-weight: 600;
+      }
+      .progress {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 3px;
+        background: linear-gradient(90deg, #10b981, #3b82f6);
+        z-index: 50;
+        transition: width 250ms ease;
+      }
+      .nav-btn {
+        position: fixed;
+        bottom: 1.5rem;
+        z-index: 40;
+        background: rgba(15, 23, 42, 0.6);
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        color: #cbd5e1;
+        border-radius: 9999px;
+        width: 2.75rem;
+        height: 2.75rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        opacity: 0.55;
+        transition: opacity 150ms ease, transform 150ms ease;
+      }
+      .nav-btn:hover {
+        opacity: 1;
+        transform: translateY(-1px);
+      }
+      .counter {
+        position: fixed;
+        bottom: 1.7rem;
+        right: 5rem;
+        z-index: 40;
+        font-size: 0.85rem;
+        color: #64748b;
+        font-variant-numeric: tabular-nums;
+      }
+      .keycap {
+        display: inline-block;
+        padding: 0.1rem 0.45rem;
+        border-radius: 0.35rem;
+        font-size: 0.75rem;
+        background: rgba(30, 41, 59, 0.85);
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        color: #94a3b8;
+        margin: 0 0.15rem;
+      }
+      .hint {
+        position: fixed;
+        bottom: 1.7rem;
+        left: 5rem;
+        z-index: 40;
+        font-size: 0.8rem;
+        color: #475569;
+      }
+      .strike {
+        position: relative;
+      }
+      .strike::after {
+        content: '';
+        position: absolute;
+        left: -4%;
+        right: -4%;
+        top: 55%;
+        height: 3px;
+        background: rgba(239, 68, 68, 0.7);
+        transform: rotate(-3deg);
+      }
+    </style>
+  </head>
+  <body class="font-sans antialiased">
+    <div id="progress" class="progress" style="width: 0%"></div>
+
+    <!-- 1. Title -->
+    <section class="slide active flex-col justify-center items-start">
+      <div class="chip">AI Competitive Intelligence</div>
+      <h1 class="text-8xl font-bold tracking-tight mt-8">
+        Rival<span class="accent">Scan</span>
+      </h1>
+      <p class="text-3xl muted mt-8 max-w-3xl leading-snug">
+        Strategic competitor intelligence for the rest of us.
+      </p>
+      <div class="mt-16 text-base muted">
+        Product demo · 2026
+      </div>
+    </section>
+
+    <!-- 2. The Problem -->
+    <section class="slide flex-col justify-center">
+      <div class="chip">The Problem</div>
+      <h2 class="text-6xl font-bold tracking-tight mt-6 max-w-5xl leading-tight">
+        There's a <span class="accent">$20,000 gap</span> in competitive intelligence.
+      </h2>
+      <div class="grid grid-cols-3 gap-8 mt-16">
+        <div class="card p-8">
+          <div class="muted text-sm uppercase tracking-wider">Free tools</div>
+          <div class="text-3xl font-semibold mt-2">Google Alerts</div>
+          <div class="muted mt-4 text-lg">Noisy. Surface-level. Tells you <em>what</em>, never <em>so what</em>.</div>
+          <div class="mt-6 text-emerald-300 text-2xl font-semibold">$0</div>
+        </div>
+        <div class="card p-8 card-accent">
+          <div class="text-emerald-300 text-sm uppercase tracking-wider">The missing middle</div>
+          <div class="text-3xl font-semibold mt-2">???</div>
+          <div class="muted mt-4 text-lg">SMBs, lean strategy teams, founders — nothing built for them.</div>
+          <div class="mt-6 text-emerald-300 text-2xl font-semibold">— gap —</div>
+        </div>
+        <div class="card p-8">
+          <div class="muted text-sm uppercase tracking-wider">Enterprise</div>
+          <div class="text-3xl font-semibold mt-2">Crayon · Klue</div>
+          <div class="muted mt-4 text-lg">Powerful, but priced for a full CI team you don't have.</div>
+          <div class="mt-6 text-red-400 text-2xl font-semibold">$20,000+/yr</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. The Solution -->
+    <section class="slide flex-col justify-center items-start">
+      <div class="chip">The Solution</div>
+      <h2 class="text-7xl font-bold tracking-tight mt-6 max-w-5xl leading-tight">
+        RivalScan fills the middle.
+      </h2>
+      <p class="text-3xl mt-10 max-w-4xl leading-snug muted">
+        Enterprise-grade competitive intel, powered by Claude, priced for the rest of us —
+        <span class="accent font-semibold">$49 to $199 per month.</span>
+      </p>
+      <div class="mt-14 flex flex-wrap gap-3">
+        <span class="chip">Deep web research</span>
+        <span class="chip">Weekly strategic briefings</span>
+        <span class="chip">Threat scoring</span>
+        <span class="chip">Battlecards</span>
+        <span class="chip">Predicted moves</span>
+        <span class="chip">Team workspaces</span>
+        <span class="chip">Slack · API · Webhooks</span>
+      </div>
+    </section>
+
+    <!-- 4. SP1 — Strategic briefings -->
+    <section class="slide flex-col justify-center">
+      <div class="chip">Differentiator · 01</div>
+      <h2 class="text-6xl font-bold tracking-tight mt-6 max-w-5xl leading-tight">
+        Strategic <span class="accent">briefings</span>, not raw alerts.
+      </h2>
+      <div class="grid grid-cols-2 gap-10 mt-14">
+        <div class="card p-8">
+          <div class="muted text-sm uppercase tracking-wider">Everyone else</div>
+          <div class="text-2xl mt-3">"Acme just posted on LinkedIn."</div>
+          <div class="muted mt-4">You read 40 of these. You ignore 39.</div>
+        </div>
+        <div class="card p-8 card-accent">
+          <div class="text-emerald-300 text-sm uppercase tracking-wider">RivalScan</div>
+          <div class="text-2xl mt-3 leading-snug">
+            "Acme is pivoting upmarket. Expect a Series B raise within 60 days and aggressive
+            hiring on enterprise sales — here's how it changes your positioning."
+          </div>
+          <div class="muted mt-4">Claude Sonnet synthesizes one weekly digest. <em>Read it in 4 minutes.</em></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. SP2 — Deep research -->
+    <section class="slide flex-col justify-center">
+      <div class="chip">Differentiator · 02</div>
+      <h2 class="text-6xl font-bold tracking-tight mt-6 max-w-5xl leading-tight">
+        Deep <span class="accent">web research</span>, not just scraping.
+      </h2>
+      <p class="text-2xl muted mt-8 max-w-4xl leading-snug">
+        We don't watch a homepage diff. Claude searches the entire web, every cycle, with citations.
+      </p>
+      <div class="grid grid-cols-5 gap-5 mt-14">
+        <div class="card p-6 text-center">
+          <div class="text-4xl">📰</div>
+          <div class="mt-3 font-semibold">News</div>
+          <div class="muted text-sm mt-1">Press, blogs, podcasts</div>
+        </div>
+        <div class="card p-6 text-center">
+          <div class="text-4xl">💸</div>
+          <div class="mt-3 font-semibold">Funding</div>
+          <div class="muted text-sm mt-1">Raises, valuations, runway</div>
+        </div>
+        <div class="card p-6 text-center">
+          <div class="text-4xl">🛠️</div>
+          <div class="mt-3 font-semibold">Product</div>
+          <div class="muted text-sm mt-1">Launches, pricing, roadmap</div>
+        </div>
+        <div class="card p-6 text-center">
+          <div class="text-4xl">👥</div>
+          <div class="mt-3 font-semibold">Hiring</div>
+          <div class="muted text-sm mt-1">Roles, regions, signals</div>
+        </div>
+        <div class="card p-6 text-center">
+          <div class="text-4xl">💬</div>
+          <div class="mt-3 font-semibold">Social</div>
+          <div class="muted text-sm mt-1">Sentiment, momentum</div>
+        </div>
+      </div>
+      <p class="mt-10 muted text-lg">Every finding linked back to its source. No hallucinations, no guessing.</p>
+    </section>
+
+    <!-- 6. SP3 — Intelligence layer -->
+    <section class="slide flex-col justify-center">
+      <div class="chip">Differentiator · 03</div>
+      <h2 class="text-6xl font-bold tracking-tight mt-6 max-w-5xl leading-tight">
+        A real <span class="accent">intelligence layer</span> — not a feed.
+      </h2>
+      <div class="grid grid-cols-2 gap-8 mt-12">
+        <div class="card p-7">
+          <div class="text-emerald-300 text-sm uppercase tracking-wider">Threat scoring</div>
+          <div class="text-2xl mt-2 font-semibold">Critical → Monitor</div>
+          <div class="muted mt-3">Every competitor gets a level + 1-2 sentence rationale, refreshed each cycle.</div>
+        </div>
+        <div class="card p-7">
+          <div class="text-emerald-300 text-sm uppercase tracking-wider">Momentum</div>
+          <div class="text-2xl mt-2 font-semibold">Rising · Stable · Slowing · Declining</div>
+          <div class="muted mt-3">Activity-based trend over a 30-day window. Spot acceleration before the market does.</div>
+        </div>
+        <div class="card p-7">
+          <div class="text-emerald-300 text-sm uppercase tracking-wider">Auto-derived tags</div>
+          <div class="mt-2 flex flex-wrap gap-2">
+            <span class="chip">just-raised</span>
+            <span class="chip">going-upmarket</span>
+            <span class="chip">hiring-aggressively</span>
+            <span class="chip">ai-native</span>
+            <span class="chip">growth-stage</span>
+          </div>
+          <div class="muted mt-3">Scan your whole market at a glance.</div>
+        </div>
+        <div class="card p-7 card-accent">
+          <div class="text-emerald-300 text-sm uppercase tracking-wider">Predicted moves</div>
+          <div class="text-2xl mt-2 font-semibold">30 · 60 · 90 days out</div>
+          <div class="muted mt-3">Forward-looking forecasts per competitor. Stop being reactive.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. SP4 — Battlecards -->
+    <section class="slide flex-col justify-center">
+      <div class="chip">Differentiator · 04</div>
+      <h2 class="text-6xl font-bold tracking-tight mt-6 max-w-5xl leading-tight">
+        <span class="accent">Battlecards</span> on demand.
+      </h2>
+      <p class="text-2xl muted mt-8 max-w-4xl leading-snug">
+        One click. PDF in seconds. Shareable public link for your sales team.
+      </p>
+      <div class="grid grid-cols-3 gap-6 mt-14">
+        <div class="card p-7">
+          <div class="text-3xl">🎯</div>
+          <div class="text-xl font-semibold mt-3">How to win against them</div>
+          <div class="muted mt-2">3-5 sales-enablement tactics, generated per competitor.</div>
+        </div>
+        <div class="card p-7">
+          <div class="text-3xl">📄</div>
+          <div class="text-xl font-semibold mt-3">Polished PDF</div>
+          <div class="muted mt-2">Branded, single-page, ready to send to a rep before a call.</div>
+        </div>
+        <div class="card p-7">
+          <div class="text-3xl">🔗</div>
+          <div class="text-xl font-semibold mt-3">Public share link</div>
+          <div class="muted mt-2">Token-based, expiring. No login needed for the recipient.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. SP5 — Teams -->
+    <section class="slide flex-col justify-center">
+      <div class="chip">Differentiator · 05</div>
+      <h2 class="text-6xl font-bold tracking-tight mt-6 max-w-5xl leading-tight">
+        Built for <span class="accent">teams</span>.
+      </h2>
+      <div class="grid grid-cols-2 gap-8 mt-14">
+        <div class="card p-7">
+          <div class="text-xl font-semibold">Workspaces</div>
+          <div class="muted mt-2">One source of truth. Everyone sees the same competitors and intel.</div>
+        </div>
+        <div class="card p-7">
+          <div class="text-xl font-semibold">Three roles</div>
+          <div class="muted mt-2">Owner · Admin · Member. Sensible defaults, real access control.</div>
+        </div>
+        <div class="card p-7">
+          <div class="text-xl font-semibold">Audit log</div>
+          <div class="muted mt-2">Every consequential action recorded — for compliance and trust.</div>
+        </div>
+        <div class="card p-7">
+          <div class="text-xl font-semibold">In-app notifications</div>
+          <div class="muted mt-2">Invitations, role changes, ownership transfers — everyone stays in sync.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9. SP6 — Integrations & API -->
+    <section class="slide flex-col justify-center">
+      <div class="chip">Differentiator · 06</div>
+      <h2 class="text-6xl font-bold tracking-tight mt-6 max-w-5xl leading-tight">
+        Real <span class="accent">integrations</span>. Real <span class="accent">API</span>.
+      </h2>
+      <div class="grid grid-cols-3 gap-6 mt-14">
+        <div class="card p-6">
+          <div class="text-xl font-semibold">Slack</div>
+          <div class="muted mt-2 text-sm">High-significance alerts pushed where your team already lives.</div>
+        </div>
+        <div class="card p-6">
+          <div class="text-xl font-semibold">Webhooks</div>
+          <div class="muted mt-2 text-sm">Wire intel into your CRM, data warehouse, or internal tools.</div>
+        </div>
+        <div class="card p-6">
+          <div class="text-xl font-semibold">Public REST API</div>
+          <div class="muted mt-2 text-sm">Scoped keys (read / write). Build on top of your own data.</div>
+        </div>
+        <div class="card p-6">
+          <div class="text-xl font-semibold">CSV & PDF exports</div>
+          <div class="muted mt-2 text-sm">Take your intelligence to the boardroom.</div>
+        </div>
+        <div class="card p-6">
+          <div class="text-xl font-semibold">Scheduled reports</div>
+          <div class="muted mt-2 text-sm">Custom cadence, custom recipients, hands-off.</div>
+        </div>
+        <div class="card p-6">
+          <div class="text-xl font-semibold">Saved views</div>
+          <div class="muted mt-2 text-sm">Filter, slice, and subscribe. Everyone gets their own lens.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 10. Demo flow -->
+    <section class="slide flex-col justify-center">
+      <div class="chip">What you'll see today</div>
+      <h2 class="text-6xl font-bold tracking-tight mt-6 max-w-5xl leading-tight">
+        The <span class="accent">15-minute</span> walk-through.
+      </h2>
+      <div class="mt-12 flex flex-col gap-4 max-w-4xl">
+        <div class="flex items-center gap-5">
+          <div class="timeline-dot">1</div>
+          <div class="text-xl">The problem — why current tools fall short.</div>
+        </div>
+        <div class="flex items-center gap-5">
+          <div class="timeline-dot">2</div>
+          <div class="text-xl">Onboarding — add competitors, Day 1 research kicks off automatically.</div>
+        </div>
+        <div class="flex items-center gap-5">
+          <div class="timeline-dot">3</div>
+          <div class="text-xl">Dashboard — threat-sorted sidebar, momentum, tags, citations.</div>
+        </div>
+        <div class="flex items-center gap-5">
+          <div class="timeline-dot">4</div>
+          <div class="text-xl">Strategic output — weekly digest + recommendation cards (the "so what").</div>
+        </div>
+        <div class="flex items-center gap-5">
+          <div class="timeline-dot">5</div>
+          <div class="text-xl">Battlecard — generate live, share the public link.</div>
+        </div>
+        <div class="flex items-center gap-5">
+          <div class="timeline-dot">6</div>
+          <div class="text-xl">Team & integrations — workspace switch, Slack, API.</div>
+        </div>
+        <div class="flex items-center gap-5">
+          <div class="timeline-dot">7</div>
+          <div class="text-xl">Pricing & next steps.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 11. Pricing -->
+    <section class="slide flex-col justify-center">
+      <div class="chip">Pricing</div>
+      <h2 class="text-6xl font-bold tracking-tight mt-6 max-w-5xl leading-tight">
+        Three tiers. <span class="accent">No CI team required.</span>
+      </h2>
+      <div class="grid grid-cols-3 gap-6 mt-12">
+        <div class="card p-8">
+          <div class="muted text-sm uppercase tracking-wider">Scout</div>
+          <div class="text-5xl font-bold mt-2">$49<span class="text-xl muted font-normal">/mo</span></div>
+          <div class="mt-5 space-y-2 text-lg">
+            <div>3 competitors</div>
+            <div>30 days history</div>
+            <div>Weekly briefings</div>
+            <div>Battlecards · Exports</div>
+          </div>
+        </div>
+        <div class="card p-8 card-accent relative">
+          <div class="absolute -top-3 left-1/2 -translate-x-1/2">
+            <span class="chip" style="background: rgba(16,185,129,0.25); color: #d1fae5;">Most popular</span>
+          </div>
+          <div class="text-emerald-300 text-sm uppercase tracking-wider">Strategist</div>
+          <div class="text-5xl font-bold mt-2">$99<span class="text-xl muted font-normal">/mo</span></div>
+          <div class="mt-5 space-y-2 text-lg">
+            <div>10 competitors</div>
+            <div>90 days history</div>
+            <div>Predicted moves</div>
+            <div>Slack · Webhooks</div>
+          </div>
+        </div>
+        <div class="card p-8">
+          <div class="muted text-sm uppercase tracking-wider">Command</div>
+          <div class="text-5xl font-bold mt-2">$199<span class="text-xl muted font-normal">/mo</span></div>
+          <div class="mt-5 space-y-2 text-lg">
+            <div>25 competitors</div>
+            <div>1 year history</div>
+            <div>Public API · Scheduled reports</div>
+            <div>Priority support</div>
+          </div>
+        </div>
+      </div>
+      <div class="mt-10 text-lg muted">
+        For context: <span class="strike">Crayon · Klue</span>
+        <span class="ml-3">$20,000+ per year.</span>
+      </div>
+    </section>
+
+    <!-- 12. Closing -->
+    <section class="slide flex-col justify-center items-start">
+      <div class="chip">Let's talk</div>
+      <h2 class="text-8xl font-bold tracking-tight mt-8">
+        Questions?
+      </h2>
+      <p class="text-3xl muted mt-10 max-w-3xl leading-snug">
+        Strategic competitor intelligence for the rest of us.
+      </p>
+      <div class="mt-16 text-emerald-300 text-2xl font-semibold">RivalScan</div>
+    </section>
+
+    <!-- Chrome -->
+    <button id="prev" class="nav-btn" style="left: 1.5rem" aria-label="Previous slide">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+    </button>
+    <button id="next" class="nav-btn" style="right: 1.5rem" aria-label="Next slide">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+    </button>
+    <div id="counter" class="counter">1 / 12</div>
+    <div class="hint">
+      <span class="keycap">←</span><span class="keycap">→</span> to navigate
+    </div>
+
+    <script>
+      (function () {
+        const slides = Array.from(document.querySelectorAll('.slide'));
+        const counter = document.getElementById('counter');
+        const progress = document.getElementById('progress');
+        const prevBtn = document.getElementById('prev');
+        const nextBtn = document.getElementById('next');
+        let current = 0;
+
+        function render() {
+          slides.forEach((s, i) => s.classList.toggle('active', i === current));
+          counter.textContent = current + 1 + ' / ' + slides.length;
+          progress.style.width = ((current + 1) / slides.length) * 100 + '%';
+        }
+
+        function next() {
+          if (current < slides.length - 1) {
+            current++;
+            render();
+          }
+        }
+        function prev() {
+          if (current > 0) {
+            current--;
+            render();
+          }
+        }
+
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+            e.preventDefault();
+            next();
+          } else if (e.key === 'ArrowLeft' || e.key === 'Backspace' || e.key === 'PageUp') {
+            e.preventDefault();
+            prev();
+          } else if (e.key === 'Home') {
+            current = 0;
+            render();
+          } else if (e.key === 'End') {
+            current = slides.length - 1;
+            render();
+          }
+        });
+        nextBtn.addEventListener('click', next);
+        prevBtn.addEventListener('click', prev);
+
+        render();
+      })();
+    </script>
+  </body>
+</html>
