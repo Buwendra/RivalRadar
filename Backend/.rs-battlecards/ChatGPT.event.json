@@ -1,0 +1,12 @@
+{
+  "version": "2.0",
+  "routeKey": "POST /competitors/{id}/battlecard",
+  "rawPath": "/competitors/01KPWYDHP8770M9KXDGZ0WBP81/battlecard",
+  "headers": { "content-type": "application/json", "user-agent": "seed-battlecards" },
+  "requestContext": {
+    "http": { "method": "POST", "path": "/competitors/01KPWYDHP8770M9KXDGZ0WBP81/battlecard", "sourceIp": "127.0.0.1", "userAgent": "seed-battlecards" },
+    "authorizer": { "jwt": { "claims": { "email": "buwendra.s@gmail.com", "sub": "14a8d488-3031-7067-dd5b-fd12d01fdf9e" } } }
+  },
+  "pathParameters": { "id": "01KPWYDHP8770M9KXDGZ0WBP81" },
+  "isBase64Encoded": false
+}
