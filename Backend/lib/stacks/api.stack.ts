@@ -9,7 +9,6 @@ import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
-import * as wafv2 from 'aws-cdk-lib/aws-wafv2';
 import { Construct } from 'constructs';
 import * as path from 'path';
 
@@ -410,121 +409,25 @@ export class ApiStack extends cdk.Stack {
       { ADMIN_EMAILS: process.env.ADMIN_EMAILS ?? '' }
     );
 
-    // ─── Phase 9a: API Gateway Throttling ───
+    // ─── Phase 9: API Gateway Throttling ───
     // Default loose limit (100 req/s, 200 burst) catches runaway client loops
-    // without affecting normal usage. Per-route tight limits on auth endpoints
-    // (5 req/s, 10 burst) blunt credential-stuffing + signup-spam attacks.
-    // Phase 9b will add full AWS WAF rate-based rules; this is the API-level
-    // first line of defense.
+    // without affecting normal usage. Tight per-route limits (5 req/s,
+    // 10 burst) blunt credential-stuffing + signup-spam attacks against the
+    // unauthenticated endpoints. WAF rate-based rules are deferred to the
+    // Go Live phase (CloudFront fronting required for HTTP API v2).
     const defaultStage = this.httpApi.defaultStage!.node.defaultChild as apigatewayv2.CfnStage;
     defaultStage.defaultRouteSettings = {
       throttlingBurstLimit: 200,
       throttlingRateLimit: 100,
     };
-    // TODO(Phase 9a follow-up): per-route stricter throttling for auth
-    // endpoints. CloudFormation rejects this in the same stack update that
-    // creates the routes because the routeKeys don't yet exist when the
-    // stage update runs. Two workable patterns:
-    //   1. Apply per-route throttling in a separate post-deploy CDK pass
-    //   2. Use an EventBridge rule + custom resource that patches the stage
-    //      after route creation
-    // For now, default route throttling (200 burst / 100 rate) covers
-    // brute-force defense at the API Gateway level. Cognito provides
-    // additional lockout on the auth endpoints. Removing this block
-    // unblocks the deploy.
-
-    // ─── Phase 9a: AWS WAF v2 ───
-    // Three managed rule sets covering OWASP Top 10 + known-bad inputs +
-    // anonymous IP / IP reputation. Plus a custom rate-based rule capping
-    // any single IP at 2000 requests / 5 min (≈ 400 req/min). Action defaults
-    // to BLOCK except for managed rules where we trust AWS's defaults.
-    const webAcl = new wafv2.CfnWebACL(this, 'WebAcl', {
-      name: `${this.stackName}-WebAcl`,
-      scope: 'REGIONAL',
-      defaultAction: { allow: {} },
-      visibilityConfig: {
-        cloudWatchMetricsEnabled: true,
-        metricName: `${this.stackName}-WebAcl`,
-        sampledRequestsEnabled: true,
-      },
-      rules: [
-        {
-          name: 'AWSManagedRulesCommonRuleSet',
-          priority: 1,
-          overrideAction: { none: {} },
-          statement: {
-            managedRuleGroupStatement: {
-              vendorName: 'AWS',
-              name: 'AWSManagedRulesCommonRuleSet',
-            },
-          },
-          visibilityConfig: {
-            cloudWatchMetricsEnabled: true,
-            metricName: 'AWSManagedRulesCommonRuleSet',
-            sampledRequestsEnabled: true,
-          },
-        },
-        {
-          name: 'AWSManagedRulesKnownBadInputsRuleSet',
-          priority: 2,
-          overrideAction: { none: {} },
-          statement: {
-            managedRuleGroupStatement: {
-              vendorName: 'AWS',
-              name: 'AWSManagedRulesKnownBadInputsRuleSet',
-            },
-          },
-          visibilityConfig: {
-            cloudWatchMetricsEnabled: true,
-            metricName: 'AWSManagedRulesKnownBadInputsRuleSet',
-            sampledRequestsEnabled: true,
-          },
-        },
-        {
-          name: 'AWSManagedRulesAmazonIpReputationList',
-          priority: 3,
-          overrideAction: { none: {} },
-          statement: {
-            managedRuleGroupStatement: {
-              vendorName: 'AWS',
-              name: 'AWSManagedRulesAmazonIpReputationList',
-            },
-          },
-          visibilityConfig: {
-            cloudWatchMetricsEnabled: true,
-            metricName: 'AWSManagedRulesAmazonIpReputationList',
-            sampledRequestsEnabled: true,
-          },
-        },
-        {
-          name: 'RateLimitPerIp',
-          priority: 10,
-          action: { block: {} },
-          statement: {
-            rateBasedStatement: {
-              limit: 2000, // 2000 requests per 5 min = ~400 req/min sustained
-              aggregateKeyType: 'IP',
-            },
-          },
-          visibilityConfig: {
-            cloudWatchMetricsEnabled: true,
-            metricName: 'RateLimitPerIp',
-            sampledRequestsEnabled: true,
-          },
-        },
-      ],
-    });
-
-    // TODO(Phase 9a follow-up): WAFv2 doesn't support direct association
-    // with API Gateway HTTP API v2 — only REST API stages. To attach the
-    // WebACL to traffic, the API would need to be fronted by CloudFront
-    // (which CAN be a WAF target) and the WebACL re-scoped to CLOUDFRONT
-    // instead of REGIONAL. Until then the WebACL is provisioned but not
-    // attached. Original code constructed a ResourceArn that AWS rejected:
-    //   `arn:aws:apigateway:${region}::/apis/${apiId}/stages/$default`
+    defaultStage.routeSettings = {
+      'POST /auth/signin': { throttlingRateLimit: 5, throttlingBurstLimit: 10 },
+      'POST /auth/signup': { throttlingRateLimit: 5, throttlingBurstLimit: 10 },
+      'POST /auth/resend-verification': { throttlingRateLimit: 5, throttlingBurstLimit: 10 },
+      'POST /users/me/accept-tos': { throttlingRateLimit: 5, throttlingBurstLimit: 10 },
+    };
 
     // ─── Outputs ───
     new cdk.CfnOutput(this, 'ApiUrl', { value: this.httpApi.apiEndpoint });
-    new cdk.CfnOutput(this, 'WebAclArn', { value: webAcl.attrArn });
   }
 }

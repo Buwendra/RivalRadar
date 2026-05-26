@@ -89,6 +89,13 @@ export const auditEventSK = (timestamp: string, id: string) =>
   `AUDIT#${timestamp}#${id}`;
 export const auditEventSKPrefix = () => 'AUDIT#';
 
+// AuthAuditEvent — workspace-less audit rows for signin/signup events
+// (Phase 9 final wave). Bucketed monthly so forensic scans stay cheap.
+export const authAuditPK = (yyyymm: string) => `AUTH_AUDIT#${yyyymm}`;
+export const authAuditSK = (timestamp: string, id: string) =>
+  `EVENT#${timestamp}#${id}`;
+export const authAuditSKPrefix = () => 'EVENT#';
+
 // ApiKey — public-API credential, double-write (Phase 11). The auth-lookup
 // row is hashed (no plaintext at rest); the workspace mirror enables the
 // owner-facing list endpoint.

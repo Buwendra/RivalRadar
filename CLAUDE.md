@@ -12,8 +12,8 @@ RivalScan is an AI-powered competitive intelligence monitoring SaaS for SMBs. It
 - **Backend**: AWS CDK (TypeScript) — fully serverless
   - API Gateway HTTP API v2 + Lambda (Node.js 20, ARM64)
   - DynamoDB (single-table, on-demand). The S3 snapshot bucket from `StorageStack` is still provisioned but unused — kept around to avoid deleting historical data.
-  - Step Functions (2 state machines: weekly digest, research pipeline)
-  - EventBridge Scheduler (Monday 8am UTC for the weekly digest only — there is **no** daily cron)
+  - Step Functions (3 state machines: WeeklyDigest, ResearchPipeline, ComparativeBriefing)
+  - EventBridge Scheduler (several recurring jobs — three on Monday morning, plus daily cost/retention crons and a Sunday recurring-research enqueuer; see "Pipeline Flow" for the full set)
   - Cognito (auth) + SES (email) + Secrets Manager + CloudWatch + X-Ray
 - **External Services**: Anthropic Claude API (deep research with native `web_search` tool, delta detection, threat scoring, weekly summaries) + Paddle (payments). Firecrawl was removed when deep research became the core change-detection engine.
 
@@ -22,8 +22,9 @@ RivalScan is an AI-powered competitive intelligence monitoring SaaS for SMBs. It
 ```
 Next.js (Amplify SSR) → API Gateway v2 → Cognito JWT → Lambda → DynamoDB
 
-EventBridge (Mon 8am UTC) → WeeklyDigest SFN    → [Aggregate → Sonnet Summary → SES Email]
-Onboard / manual click    → ResearchPipeline SFN → [DeepResearch (web_search) → SendAlert]
+EventBridge (Mon  8am UTC) → WeeklyDigest SFN         → [Aggregate → Sonnet Summary → SES Email]
+EventBridge (Mon 10am UTC) → ComparativeBriefing SFN  → [BrandCoverage → Sonnet Briefing → SES Email]   (Phase 24, opt-in)
+Onboard / manual click     → ResearchPipeline SFN     → [DeepResearch (web_search) → SendAlert]
 ```
 
 **8 CDK stacks** wired in `bin/app.ts` with explicit cross-stack dependencies:
@@ -47,6 +48,8 @@ npx vitest                           # Run all tests
 npx vitest --watch                   # Tests in watch mode
 npx vitest src/path/to/file.test.ts  # Run a single test file
 ```
+
+Tests are colocated next to source as `*.test.ts`. `vitest.config.ts` includes both `test/**/*.test.ts` and `src/**/*.test.ts` — if you add tests in a new place, confirm one of those patterns matches.
 
 ### Frontend (`Frontend/`)
 
@@ -132,7 +135,7 @@ Resolution order: email → `callerUserId` (GSI3) → memberships under `USER#<c
 
 Tier-gated features go through `hasCapability(user, 'pdfExports')` from `shared/utils/capability.ts`, fed by the `CAPABILITIES` matrix in `shared/types/capabilities.ts`. The frontend mirrors this manually in `Frontend/src/lib/utils/capabilities.ts` + `lib/hooks/use-capability.ts` — when adding a new capability flag, update **both files** plus the union type on `hasCapability`'s parameter and the `useCapability` hook. Backend remains the enforcement source of truth; frontend uses the mirror only for UI gating (showing/hiding upgrade prompts, disabling buttons).
 
-Current capability flags: `pdfExports`, `csvExports`, `slackIntegration`, `webhookIntegration`, `predictedMoves`, `customRecommendationCategories`, `scheduledReports`, `apiAccess`, `comparatorMatrix`. Numeric capacity flags (`recommendations.maxVisible`, `seats.max`, `savedViews.max`, `apiKeys.max`) are read directly from `capabilitiesFor(user)` rather than via the boolean check.
+Current capability flags: `pdfExports`, `csvExports`, `slackIntegration`, `webhookIntegration`, `predictedMoves`, `customRecommendationCategories`, `scheduledReports`, `apiAccess`, `comparatorMatrix`, `brandPulse` (Phase 23 — self-brand monitoring + Phase 24 comparative analytics, true on all tiers). Numeric capacity flags (`recommendations.maxVisible`, `seats.max`, `savedViews.max`, `apiKeys.max`) are read directly from `capabilitiesFor(user)` rather than via the boolean check.
 
 ### Public API (Phase 11/13)
 
@@ -161,7 +164,8 @@ All Anthropic calls go through `callAnthropic()` in `shared/services/anthropic.t
 - **Claude Sonnet 4.5** (alias `claude-sonnet-4-5`):
   - `deepResearch()` — research with native `web_search_20250305` tool, max 8 uses/run, max_tokens 4096
   - `detectResearchDeltas()` — compares prior vs current `ResearchFinding`, max_tokens **16384** (large because it generates detailed deltas + impact analysis). Has a `parseDeltasJson()` helper that does **partial JSON recovery** if Claude truncates mid-array — salvages every complete delta object before the cut-off rather than discarding the whole response.
-  - `generateWeeklySummary()` — strategic briefing prose for the digest email
+  - `generateWeeklySummary()` — strategic briefing prose for the competitive digest email
+  - `generateComparativeBriefing()` — PR-flavoured briefing for the Phase 24 Comparative Briefing email; returns prose + 2–3 suggested narrative angles. max_tokens 1500, ~$0.01–0.02/call. Soft-degrades to raw text if the JSON envelope can't be parsed.
   - `predictNextMoves()` — forward-looking 30/60/90-day predictions per competitor (~$0.02)
 - **Claude Haiku 4.5** (`claude-haiku-4-5-20251001`):
   - `scoreCompetitorThreat()` — 1-2 sentence threat rationale + level (~$0.002/call)
@@ -177,6 +181,8 @@ All AI surfaces (dashboard cards, weekly digest email, battlecard PDF) carry an 
 
 `deepResearch()` uses Anthropic's `web_search_20250305` **server tool** — Claude manages the search loop internally, no client-side tool-use loop is needed. Single `fetch` call returns `content[]` with a mix of `text`, `server_tool_use`, and `web_search_tool_result` blocks; citations come from `web_search_tool_result`, the structured JSON answer from the final text block. The prompt asks for findings in 5 categories (`news`/`product`/`funding`/`hiring`/`social`) plus a `derivedState` summary block (`stage`, `fundingState`, `hiringState`, `strategicDirection`, `techPositioning`, `pacing`, `evidenceNotes`) and per-finding `sentiment` + `timeSensitivity` metadata.
 
+The `targetKind` parameter (Phase 23) swaps the prompt framing: `'competitor'` (default) frames the analysis from a competitive-intelligence POV; `'self'` reframes as media intelligence ("how is the market perceiving X?") so the same engine produces brand-monitoring findings. Output schema is identical so the downstream pipeline (delta detection, persistence, enrichment) is untouched.
+
 Triggered automatically on onboarding (in `users/onboard.ts`) to populate day-1 data, and manually via `POST /competitors/{id}/research`. Each run writes one `ResearchFinding` to DynamoDB plus a `Change` record per detected delta. Cost: ~$0.30/run end-to-end.
 
 ### Per-competitor enrichment (momentum / threat / tags)
@@ -188,6 +194,26 @@ After every research run, `deep-research.ts` runs a post-research enrichment blo
 - **`derivedTags`** (rule-based, free) — array of up to 6 slug-style tags (e.g. `growth-stage`, `just-raised`, `hiring-aggressively`, `ai-native`, `going-upmarket`). Computed by `deriveTagsFromState()` with priority-ordered rules (concerns > funding events > stage > hiring > strategy > tech > pacing > deprioritize). Frontend `CompetitorTagChips` maps slugs to display labels + tones via a `TAG_CONFIG` dictionary.
 
 The enrichment block is wrapped in try/catch — Haiku failures don't break momentum/tags writes. Sidebar list sort order is **threat desc → momentum desc → name asc** (see `Frontend/src/components/layout/dashboard-sidebar.tsx`).
+
+**Self-brand carve-outs (Phase 23):** when the Competitor row has `targetKind === 'self'`, `deep-research.ts` skips `scoreCompetitorThreat()` and the entire predicted-moves block (evaluating + generating) — both are conceptually nonsensical for your own brand. Momentum still runs (your own activity is a valid signal). `deriveTagsFromState()` routes to a separate `deriveSelfBrandTags()` rule set with brand-flavoured slugs (`coverage-rising`, `narrative-funding-buzz`, `media-quiet`, etc.) so the same `CompetitorTagChips` component renders sensible labels for both.
+
+### Brand Pulse — self-brand monitoring (Phase 23)
+
+The workspace's own brand is monitored using the same deep-research engine as competitors, persisted as a **Competitor row with `targetKind: 'self'`**. Exactly one self row per workspace; created at onboarding when the user supplies `companyWebsite`, or via the `POST /brand/setup` endpoint for legacy users (renders an empty-state CTA on the Your Brand page).
+
+The discriminator approach (vs a separate Brand entity) means every key builder, query helper, enrichment block, and the entire `deep-research.ts` Lambda is reused as-is. The cost is a **filter-discipline rule**: every endpoint that lists competitors must exclude self rows. Use `competitorsOnly()` / `isCompetitorTarget()` from `shared/utils/competitor-target.ts`. Already applied to: `competitors/list`, `competitors/create` + `bulk-import` (so self doesn't consume a plan-limit slot), `v1/competitors` + `v1/competitors-create`, `search`, the weekly digest pipeline (aggregate-changes, generate-recommendations, send-saved-view-digests), the PDF/CSV exports. Account delete and GDPR export deliberately do NOT filter — they want everything. `competitors/get` and `competitors/research` 404 on self rows so the UI surface stays consistent.
+
+The self-brand surface is `/brand/*`: `GET /brand`, `POST /brand/research`, `GET /brand/coverage`, `GET /brand/sentiment`, `GET /brand/health` (Phase 24), `POST /brand/setup`. Handlers share `loadSelfBrand()`, `loadUserForBrand()`, and `assertBrandPulseCapability()` from `api/brand/_shared.ts`. The frontend mirror is at `Frontend/src/app/(dashboard)/dashboard/your-brand/`.
+
+### Comparative analytics (Phase 24)
+
+Three features built on Phase 23, gated by the same `brandPulse` capability:
+
+- **Share of Voice** — `GET /analytics/share-of-voice?window=7d|30d|90d` returns per-entity coverage breakdown across the 5 research categories. Pure aggregation in `shared/utils/share-of-voice.ts` over recent Change records. Window is clamped to the tier's `PLAN_LIMITS[plan].historyDays`. Frontend renders at `/dashboard/compare/share-of-voice` using `ShareOfVoiceChart` (stacked horizontal bars, no chart library).
+- **Brand Health Score** — `GET /brand/health` returns a composite 0–100 KPI + three components (sentiment / voice / momentum) + a `confidence` bucket (`low | medium | high`) based on mention volume. Pure rules in `shared/utils/brand-health.ts` with the formula `round((sentimentScore + voiceScore + momentumScore) / 3)` — no AI cost. Card rendered by `BrandHealthScoreCard` (default variant on Your Brand, `size="sm"` on the dashboard home).
+- **Comparative Weekly Briefing** — PR-flavoured email variant running on its own state machine (`ComparativeBriefing`) at Mon 10am UTC. Opt-in via `notificationPreferences.email.comparativeBrief === true`. Pipeline: `get-comparative-subscribers` (opt-in + capability + self-row existence filter) → MAP(maxConcurrency=5) → `aggregate-brand-coverage` → `generate-comparative-briefing` (Sonnet) → `render-send-comparative-brief` (SES via the email-only adapter, NOT `dispatchWeeklyDigest()` because that's gated by the `weeklyDigest` preference and fans out to Slack/webhook). The Mon 10am slot is chosen to offset cleanly from the existing Mon 8am competitive digest and Mon 9am saved-view digests.
+
+Both pure-aggregation utils have colocated unit tests (`share-of-voice.test.ts`, `brand-health.test.ts`) — useful templates for any future Phase 25+ scoring work.
 
 ### Step Functions concurrency
 
@@ -203,7 +229,7 @@ Funnel events are emitted as structured JSON via `logger.info(eventName, metadat
 |--------|----|----|----|
 | User | `USER#<id>` | `PROFILE` | |
 | Subscription | `USER#<id>` | `SUB` | |
-| Competitor | `USER#<tenantUserId>` | `COMP#<id>` | shared across workspace |
+| Competitor | `USER#<tenantUserId>` | `COMP#<id>` | shared across workspace; carries `targetKind: 'competitor' \| 'self'` (Phase 23, default `'competitor'`) |
 | Change | `COMP#<id>` | `CHANGE#<timestamp>` | |
 | ResearchFinding | `COMP#<id>` | `RESEARCH#<timestamp>` | carries `derivedState` |
 | Recommendation | `USER#<tenantUserId>` | `REC#<timestamp>` | Phase 2 |
@@ -233,9 +259,11 @@ The `Snapshot` entity from the original Firecrawl pipeline is no longer written.
   - `<email-lowercased>` → user by email (every authenticated route's first step)
   - `BATTLECARD_TOKEN#<token>` → public battlecard share-token lookup (Phase 20)
 
-The **Competitor** record carries derived intelligence written by the enrichment block: `momentum`, `momentumChangePercent`, `momentumAsOf`, `threatLevel`, `threatReasoning`, `threatAsOf`, `derivedTags`, `derivedTagsAsOf`, `predictedMoves`, `predictionHistory`. Plus the lazy-populated `winAgainstTactics` cache (Phase 21) keyed by `winAgainstTacticsResearchId` so battlecard regeneration within one research cycle skips the Claude call. All read directly by the list/detail endpoints without recomputation.
+The **Competitor** record carries derived intelligence written by the enrichment block: `momentum`, `momentumChangePercent`, `momentumAsOf`, `threatLevel`, `threatReasoning`, `threatAsOf`, `derivedTags`, `derivedTagsAsOf`, `predictedMoves`, `predictionHistory`. Plus the lazy-populated `winAgainstTactics` cache (Phase 21) keyed by `winAgainstTacticsResearchId` so battlecard regeneration within one research cycle skips the Claude call. All read directly by the list/detail endpoints without recomputation. **`targetKind`** (Phase 23) discriminates competitor vs self-brand rows; threat/predicted-moves fields stay unset for self rows.
 
-Key builders in `shared/db/keys.ts`. Query helpers (`getItem`, `putItem`, `queryByPK`, `queryGSI`, `updateItem`) in `shared/db/queries.ts`. Pure-function metrics (`computeMomentum`, `buildChangesByDay`, `deriveTagsFromState`) live in `shared/utils/competitor-metrics.ts`.
+The **User** record gained `companyWebsite?` (Phase 23) — seeds the self-brand Competitor row at onboarding or via `POST /brand/setup`.
+
+Key builders in `shared/db/keys.ts`. Query helpers (`getItem`, `putItem`, `queryByPK`, `queryGSI`, `updateItem`) in `shared/db/queries.ts`. Pure-function metrics (`computeMomentum`, `buildChangesByDay`, `deriveTagsFromState`) live in `shared/utils/competitor-metrics.ts`; SoV and Brand Health utilities (`computeShareOfVoice`, `computeBrandHealthScore`) in `shared/utils/share-of-voice.ts` and `shared/utils/brand-health.ts`; the self-vs-competitor filter helpers (`isCompetitorTarget`, `competitorsOnly`) in `shared/utils/competitor-target.ts`.
 
 ## Pipeline Flow (Step Functions)
 
@@ -259,13 +287,25 @@ The `deep-research` Lambda owns the full per-competitor flow internally — ther
 
 Lambda timeout 5 min, memory 1024 MB (web_search responses can be large).
 
-**Weekly digest** (`Backend/src/functions/scheduled/`):
-1. `get-subscribers` → 2. `aggregate-changes` (top 10 by significance, past 7 days via GSI1) → 3. `generate-summary` (Claude Sonnet) → 4. `render-send-email` (SES)
+**Weekly competitive digest** (`Backend/src/functions/scheduled/`):
+1. `get-subscribers` → 2. `aggregate-changes` (top 10 by significance, past 7 days via GSI1) → 3. `generate-summary` (Claude Sonnet) → 4. `generate-recommendations` (Claude Sonnet) → 5. `render-send-email` (SES). MAP wrapper, maxConcurrency=5.
 
-**Trigger entry points**:
-- Onboarding completion (`api/users/onboard.ts`) starts the ResearchPipeline with all newly-created competitors
-- Manual "Research Now" button (`api/competitors/research.ts`, route `POST /competitors/{id}/research`) starts it for a single competitor
-- No EventBridge schedule for research — it's strictly on-demand
+**Comparative briefing (Phase 24)** — opt-in, separate state machine, same Map shape:
+1. `get-comparative-subscribers` (opt-in + `brandPulse` capability + self-row existence) → 2. `aggregate-brand-coverage` (self + competitor mention counts, sentiment breakdown, SoV) → 3. `generate-comparative-briefing` (Sonnet, soft-degrades on JSON parse failure) → 4. `render-send-comparative-brief` (email-only via `sendEmailNotification`, bypasses `dispatchWeeklyDigest()`).
+
+**Trigger entry points for the research pipeline**:
+- Onboarding completion (`api/users/onboard.ts`) starts the ResearchPipeline with all newly-created competitors AND the self-brand row when `companyWebsite` was provided
+- Manual "Research Now" buttons: `POST /competitors/{id}/research` for a single competitor, `POST /brand/research` for the self-brand row
+- Sunday 6am UTC recurring-research enqueuer (`scheduled/enqueue-recurring-research.ts`) walks the active-competitor index and re-runs research based on each row's `researchCadenceDays` (or the tier default from `PLAN_LIMITS`)
+
+**Other EventBridge schedules** (all in `pipeline.stack.ts`):
+- Mon  8am UTC — WeeklyDigest state machine
+- Mon  9am UTC — `send-saved-view-digests` Lambda (Phase 15)
+- Mon 10am UTC — ComparativeBriefing state machine (Phase 24)
+- Sun  6am UTC — recurring-research enqueuer
+- Daily 3am UTC — `aggregate-ai-costs` (per-user CostDay rollup, drives monthly cost-cap enforcement)
+- Daily 4am UTC — `send-retention-nudges` (Phase 8a, 90-day per-user cooldown)
+- 1st of month 8am UTC — `send-scheduled-reports` (Phase 6c, Command-tier PDF briefing)
 
 ## Pricing Tiers & Plan Limits
 
@@ -279,7 +319,7 @@ Defined in `PLAN_LIMITS` from `shared/types/index.ts`. Enforced in `competitors/
 
 ## Environment Variables
 
-**Backend Lambda** (set via CDK): `TABLE_NAME`, `BUCKET_NAME`, `USER_POOL_ID`, `USER_POOL_CLIENT_ID`, `SECRETS_ARN`, `FRONTEND_URL`, `FROM_EMAIL`. Lambdas that trigger the research state machine (`api/users/onboard.ts`, `api/competitors/research.ts`) get `RESEARCH_PIPELINE_ARN`. Subscription checkout gets `PADDLE_PRICE_SCOUT`/`_STRATEGIST`/`_COMMAND`. (`DAILY_PIPELINE_ARN` is gone with the daily scrape pipeline.)
+**Backend Lambda** (set via CDK): `TABLE_NAME`, `BUCKET_NAME`, `USER_POOL_ID`, `USER_POOL_CLIENT_ID`, `SECRETS_ARN`, `FRONTEND_URL`, `FROM_EMAIL`. Lambdas that trigger the research state machine (`api/users/onboard.ts`, `api/competitors/research.ts`, `api/brand/research.ts`, `api/brand/setup.ts`) get `RESEARCH_PIPELINE_ARN`. Subscription checkout gets `PADDLE_PRICE_SCOUT`/`_STRATEGIST`/`_COMMAND`. (`DAILY_PIPELINE_ARN` is gone with the daily scrape pipeline.)
 
 **CDK deploy** (required for `cdk deploy`): `CDK_DEFAULT_ACCOUNT`, `CDK_DEFAULT_REGION` (defaults to us-east-1), `FRONTEND_URL` (for API CORS — **must match the Amplify URL exactly**, e.g. `https://main.d1zrq9gf129s9u.amplifyapp.com`, or CORS blocks the browser), `FROM_EMAIL`, `PADDLE_PRICE_*`. `bin/app.ts` validates `CDK_DEFAULT_ACCOUNT` and `FRONTEND_URL` at synth time. A populated `Backend/.env` can be sourced with `set -a && source .env && set +a`.
 

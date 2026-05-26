@@ -1,9 +1,12 @@
 import { apiClient } from "./client";
+import { TOS_VERSION, PRIVACY_VERSION } from "@/lib/utils/constants";
 
 export interface SignUpInput {
   email: string;
   password: string;
   name: string;
+  tosVersion?: string;
+  privacyVersion?: string;
 }
 
 export interface SignUpResponse {
@@ -27,7 +30,11 @@ export const authApi = {
   signUp: (data: SignUpInput) =>
     apiClient<SignUpResponse>("/auth/signup", {
       method: "POST",
-      body: data,
+      body: {
+        tosVersion: TOS_VERSION,
+        privacyVersion: PRIVACY_VERSION,
+        ...data,
+      },
       requireAuth: false,
     }),
 

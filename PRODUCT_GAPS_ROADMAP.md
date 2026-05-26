@@ -47,6 +47,7 @@ Every phase respects these rules. They keep the system coherent as scope grows.
 | 8 | Operational maturity | Prompt A/B, churn, retention loops, status page | M | 1 | Yes |
 | 9 | Security & compliance hardening | WAF, throttling, CloudTrail, npm audit, runbooks | M | — | Yes |
 | 10 | Trust & certifications | SOC 2 Type 1 → Type 2, ISO 27001 | XL | 9 | N/A |
+| 11 | Go Live | Parking lot for items only needed at real-customer launch | L | 1–9 | Yes |
 
 Effort: S = single session, M = 1–2 sessions, L = 3+ sessions, XL = external program (months, lawyer/auditor-driven).
 
@@ -530,6 +531,42 @@ Direct lift from `COMPLIANCE_ROADMAP.md` deferred section, organized by impact:
 ### Effort
 
 XL — months of calendar time, mostly process not code. Significant external cost ($15–40k for SOC 2 Type 1, comparable for Type 2).
+
+---
+
+## Phase 11 — Go Live
+
+**Goal**: A parking lot for work that's only useful at real-customer launch. Keeps the dev environment cheap and uncluttered, but ensures nothing falls through the cracks when we open the doors.
+
+**Why this phase exists**: Several Phase 9 / Compliance items either cost real money (WAF + CloudFront ~$15–30/mo, Shield Advanced $3k/mo), require external work (lawyer-finalized policy text), or are pointless without real users (cookie banner, sub-processor notification subscribers). Doing them too early wastes time and money; doing them too late blocks launch. This phase collects them so the trigger conditions are explicit.
+
+**Trigger**: Decision to open public signups OR first enterprise contract requiring full compliance posture.
+
+### Initial population (deferred Phase 9 + Compliance items)
+
+| Item | Why deferred | Cost when un-deferred | Trigger |
+|---|---|---|---|
+| **WAFv2 attach via CloudFront fronting** | $15–30/mo recurring + edge-hop latency; no real attack surface in dev | $15–30/mo at low scale; ~1 session CDK | Public signup open OR SOC 2 prep |
+| **Lawyer policy review** — replace DRAFT placeholders on `/legal/{privacy,terms,aup,dpa}` | $1.5k–5k engagement, only meaningful with real customers | $1.5k–5k one-time | First paid customer OR EU/UK signup |
+| **DPA template finalization** (Compliance Roadmap 3.5) | Bundled with lawyer engagement | included in lawyer engagement | First enterprise prospect |
+| **Sub-processor notification subscription endpoint** (Compliance 2.4) | Pointless without subscribers | ~0.5 session | First paid customer |
+| **Cookie / storage notice banner** (Compliance 2.5) | Only legally required for public/EU users | ~0.25 session | First EU/UK signup OR public launch |
+| **Marketing vs transactional `From:` separation** (Compliance 2.7) | No marketing emails exist yet | ~0.25 session | First marketing campaign |
+| **DPIA for AI research** (Compliance 6.7) | EU-only legal requirement | ~1 session writing + lawyer review | First EU customer |
+| **AWS Shield Advanced** | $3k/mo; only justified at meaningful ARR or active DDoS | $36k/yr | $1M ARR OR active DDoS event |
+| **Require `npm audit` workflow as a merge gate** | Currently runs but isn't a required status check; matters with external contributors | $0 | First external contributor / open repo |
+
+### Operating rule
+
+When a later phase identifies work that's only useful at launch, append it here with a one-line trigger condition rather than scattering "TODO: pre-launch" comments through the codebase.
+
+### Entry criteria (when we open Phase 11)
+
+1. All items above either done or explicitly re-deferred with a written reason.
+2. End-to-end run-through with an external test account that's never seen the system.
+3. Status page green for 7 consecutive days.
+4. Incident runbook table-top exercise completed within the prior 60 days.
+5. `cdk synth` clean, both stacks deployed, no manual console drift.
 
 ---
 

@@ -36,7 +36,11 @@ export type AuditAction =
   | 'api.competitor_created'
   | 'api.competitor_snoozed'
   | 'api.recommendation_updated'
-  | 'saved_view.webhook_matched';
+  | 'saved_view.webhook_matched'
+  | 'auth.signin_succeeded'
+  | 'auth.signin_failed'
+  | 'auth.signup_started'
+  | 'auth.signup_completed';
 
 export interface AuditEvent {
   id: string;

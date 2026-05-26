@@ -1,9 +1,9 @@
 /** @type {import('next').NextConfig} */
 
-// Security headers per OWASP web hardening guidance.
-// CSP starts in report-only mode so we can verify nothing breaks; once
-// stable for 2 weeks, switch the header name to `Content-Security-Policy`
-// (without `-Report-Only`) to enforce.
+// Security headers per OWASP web hardening guidance. CSP is enforced; the
+// allowlist below covers every external resource the app actually loads
+// (Paddle checkout iframes + the API origin). Fonts are bundled via
+// `next/font/local`; there are no third-party CDNs to allow.
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "https://*.execute-api.us-east-1.amazonaws.com";
 const cspDirectives = [
   "default-src 'self'",
@@ -37,9 +37,7 @@ const securityHeaders = [
     value:
       "camera=(), microphone=(), geolocation=(), payment=(self 'https://*.paddle.com'), usb=(), magnetometer=(), gyroscope=(), accelerometer=()",
   },
-  // Report-only for first 2 weeks; flip to `Content-Security-Policy` once
-  // verified that no legitimate flow is blocked.
-  { key: "Content-Security-Policy-Report-Only", value: cspDirectives },
+  { key: "Content-Security-Policy", value: cspDirectives },
 ];
 
 const nextConfig = {
