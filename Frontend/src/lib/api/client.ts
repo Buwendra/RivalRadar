@@ -61,7 +61,11 @@ export async function apiClient<T>(
     body: body ? JSON.stringify(body) : undefined,
   });
 
-  if (response.status === 401) {
+  // Only treat 401 as a session expiry when the caller was sending a token.
+  // On `requireAuth: false` (sign-in, sign-up, public token routes) a 401 is
+  // the server's domain response — e.g. wrong password — and the caller is
+  // expected to surface it inline rather than being bounced to /sign-in.
+  if (response.status === 401 && requireAuth) {
     localStorage.removeItem("rs_access_token");
     localStorage.removeItem("rs_id_token");
     localStorage.removeItem("rs_refresh_token");
@@ -125,7 +129,7 @@ export async function apiClientWithMeta<T>(
     body: body ? JSON.stringify(body) : undefined,
   });
 
-  if (response.status === 401) {
+  if (response.status === 401 && requireAuth) {
     localStorage.removeItem("rs_access_token");
     localStorage.removeItem("rs_id_token");
     localStorage.removeItem("rs_refresh_token");
