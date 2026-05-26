@@ -212,15 +212,12 @@ export class ApiStack extends cdk.Stack {
     addRoute('BrandHealth',    apigatewayv2.HttpMethod.GET,  '/brand/health',    'api/brand/health.ts');
     // Phase 24 — Share of Voice comparative analytics.
     addRoute('AnalyticsShareOfVoice', apigatewayv2.HttpMethod.GET, '/analytics/share-of-voice', 'api/analytics/share-of-voice.ts');
-    const brandSetupFn = addRoute(
-      'BrandSetup',
-      apigatewayv2.HttpMethod.POST,
-      '/brand/setup',
-      'api/brand/setup.ts',
-      true,
-      pipelineEnv
-    );
-    researchStateMachine.grantStartExecution(brandSetupFn);
+    // NOTE: POST /brand/setup is temporarily omitted to keep the API stack
+    // under CloudFormation's 500-resource hard limit. The endpoint is only
+    // needed for legacy users (onboarded pre-Phase 23) to seed their
+    // companyWebsite + self-brand row; new onboards do this in
+    // api/users/onboard.ts. Re-add when the stack is split into nested
+    // stacks or routes are migrated to a sibling stack.
     const brandResearchFn = addRoute(
       'BrandResearch',
       apigatewayv2.HttpMethod.POST,
@@ -411,20 +408,21 @@ export class ApiStack extends cdk.Stack {
 
     // ─── Phase 9: API Gateway Throttling ───
     // Default loose limit (100 req/s, 200 burst) catches runaway client loops
-    // without affecting normal usage. Tight per-route limits (5 req/s,
-    // 10 burst) blunt credential-stuffing + signup-spam attacks against the
-    // unauthenticated endpoints. WAF rate-based rules are deferred to the
-    // Go Live phase (CloudFront fronting required for HTTP API v2).
+    // without affecting normal usage.
+    //
+    // NOTE: per-route stricter throttling (e.g. 5 req/s on /auth/signin) is
+    // NOT possible on API Gateway HTTP API v2 — the `throttlingBurstLimit` /
+    // `throttlingRateLimit` properties on `routeSettings` are REST API v1
+    // only. AWS CFN rejects them on v2 with a Property validation failure.
+    // Real per-route throttling requires either (a) migrating to REST API
+    // v1, or (b) WAFv2 rate-based rules with URI-path scope statements,
+    // which need the API fronted by CloudFront. Both are deferred to the
+    // Go Live phase. Cognito provides default lockout on the signin path
+    // as a partial mitigation today.
     const defaultStage = this.httpApi.defaultStage!.node.defaultChild as apigatewayv2.CfnStage;
     defaultStage.defaultRouteSettings = {
       throttlingBurstLimit: 200,
       throttlingRateLimit: 100,
-    };
-    defaultStage.routeSettings = {
-      'POST /auth/signin': { throttlingRateLimit: 5, throttlingBurstLimit: 10 },
-      'POST /auth/signup': { throttlingRateLimit: 5, throttlingBurstLimit: 10 },
-      'POST /auth/resend-verification': { throttlingRateLimit: 5, throttlingBurstLimit: 10 },
-      'POST /users/me/accept-tos': { throttlingRateLimit: 5, throttlingBurstLimit: 10 },
     };
 
     // ─── Outputs ───
