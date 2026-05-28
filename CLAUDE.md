@@ -4,7 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-RivalScan is an AI-powered competitive intelligence monitoring SaaS for SMBs. It scrapes competitor websites daily, uses Claude AI to analyze changes and their strategic implications, and delivers weekly strategic briefings via email. Priced at $49–$199/month to fill the gap between free tools (Google Alerts) and $20K+/year enterprise platforms (Crayon, Klue).
+RivalScan is an AI-powered competitive intelligence monitoring SaaS for SMBs. It runs Claude-powered deep web research on each competitor, detects strategically significant changes, scores their implications, and delivers weekly strategic briefings via email. Priced at $49–$199/month to fill the gap between free tools (Google Alerts) and $20K+/year enterprise platforms (Crayon, Klue).
+
+**Naming**: the git repo / directory is `RivalRadar`, but the product and all code identifiers (stack names, secret paths, UI copy) use **`RivalScan`** — they refer to the same thing. Use `RivalScan` in code.
+
+> The product no longer scrapes sites on a daily cron. The original Firecrawl daily-snapshot pipeline was replaced by on-demand + scheduled Claude deep research (see "AI Deep Research"); there is no daily scrape Lambda anymore.
 
 ## Tech Stack
 
@@ -31,6 +35,8 @@ Onboard / manual click     → ResearchPipeline SFN     → [DeepResearch (web_s
 Database → Storage → Auth → Email → Pipeline → API (receives `researchStateMachine` ARN) → Monitoring → StatusPage (Phase 8c — public S3+CloudFront `/status` site with auto-updater Lambda).
 Stack naming: `RivalScan-${stage}-${StackType}` (stage from env context: dev/staging/prod).
 
+**Backend layout split**: CDK stack definitions live in `Backend/lib/stacks/*.stack.ts` (infrastructure); Lambda handler source lives in `Backend/src/functions/` (`api/` per-route handlers, `pipeline/` and `scheduled/` for the state-machine/cron Lambdas) with cross-cutting code in `Backend/src/shared/`. References to `api.stack.ts`, `pipeline.stack.ts`, etc. throughout this doc mean files under `lib/stacks/`.
+
 The current product roadmap and design rationale lives in [ROADMAP.md](ROADMAP.md), [PRODUCT_GAPS_ROADMAP.md](PRODUCT_GAPS_ROADMAP.md), [COMPLIANCE_ROADMAP.md](COMPLIANCE_ROADMAP.md), and [PREDICTIONS_AND_TAGS.md](PREDICTIONS_AND_TAGS.md) at the project root. Treat those as the source of truth for what's shipped vs. what's planned.
 
 ## Commands
@@ -40,16 +46,20 @@ The current product roadmap and design rationale lives in [ROADMAP.md](ROADMAP.m
 ```bash
 cd Backend
 npm install                          # Install dependencies
-npx tsc --noEmit                     # Type-check
-npx cdk synth                        # Generate CloudFormation
-npx cdk deploy --all                 # Deploy all stacks
-npx cdk diff                         # Preview changes
-npx vitest                           # Run all tests
-npx vitest --watch                   # Tests in watch mode
+npm run lint                         # Type-check (alias for `tsc --noEmit` — NOT ESLint)
+npx cdk synth                        # Generate CloudFormation  (alias: npm run synth)
+npx cdk deploy --all                 # Deploy all stacks        (alias: npm run deploy)
+npx cdk diff                         # Preview changes          (alias: npm run diff)
+npx vitest                           # Run all tests            (npm test runs `vitest run` once)
+npx vitest --watch                   # Tests in watch mode      (alias: npm run test:watch)
 npx vitest src/path/to/file.test.ts  # Run a single test file
 ```
 
+Heads-up: `npm run lint` on the backend is a **TypeScript type-check** (`tsc --noEmit`), not a linter — there is no ESLint config in `Backend/`. The frontend's `npm run lint` is the real ESLint.
+
 Tests are colocated next to source as `*.test.ts`. `vitest.config.ts` includes both `test/**/*.test.ts` and `src/**/*.test.ts` — if you add tests in a new place, confirm one of those patterns matches.
+
+**`Backend/scripts/`** holds operational/one-off scripts (run with `npx ts-node`, env vars like `TABLE_NAME`/`RESEARCH_PIPELINE_ARN` supplied inline — see each file's `Usage` header): demo + brand + battlecard seeders (`seed-demo-data.ts`, `seed-brand-data.ts`, `seed-battlecards.sh`), research data maintenance (`delete-research.ts`, `trim-research.ts`), and the SOC 2 evidence snapshot (`soc2-evidence-snapshot.sh`). These hit live AWS resources — not part of the test/build loop.
 
 ### Frontend (`Frontend/`)
 
