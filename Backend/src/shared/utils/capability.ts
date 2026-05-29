@@ -31,6 +31,7 @@ export function hasCapability(
     | 'apiAccess'
     | 'comparatorMatrix'
     | 'brandPulse'
+    | 'audioBriefing'
 ): boolean {
   const caps = capabilitiesFor(user);
   return caps[capability] === true;

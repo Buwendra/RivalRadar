@@ -14,6 +14,7 @@ export * from './api-key';
 export * from './notification';
 export * from './battlecard';
 export * from './research-run';
+export * from './audio-briefing';
 
 /** Standard API response envelope */
 export interface ApiResponse<T> {

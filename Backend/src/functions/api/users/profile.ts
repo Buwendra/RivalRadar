@@ -1,8 +1,10 @@
 import { apiHandler, getUserEmail, parseBody, HttpError } from '../../../shared/middleware/handler';
-import { getItem, queryGSI, updateItem } from '../../../shared/db/queries';
-import { userPK, userSK } from '../../../shared/db/keys';
-import { User } from '../../../shared/types';
+import { getItem, queryByPK, queryGSI, updateItem } from '../../../shared/db/queries';
+import { audioBriefingPK, audioBriefingSKPrefix, userPK, userSK } from '../../../shared/db/keys';
+import { AudioBriefing, User } from '../../../shared/types';
 import { hasCapability } from '../../../shared/utils/capability';
+import { refreshAudioBriefingUrl } from '../../../shared/services/audio-briefing-storage';
+import { logger } from '../../../shared/utils/logger';
 import { validate } from '../../../shared/middleware/validation';
 import { z } from 'zod';
 
@@ -63,6 +65,41 @@ export const handler = apiHandler(async (event) => {
       throw new HttpError(404, 'USER_NOT_FOUND', 'User not found');
     }
 
+    // Phase 2 demo-wow — latest audio briefing. Only for tiers that have it.
+    // If the stored presigned URL has < 1h left, re-mint a fresh 7-day one.
+    let audioBriefing:
+      | { url: string; durationSec: number; generatedAt: string }
+      | undefined;
+    if (hasCapability(user, 'audioBriefing')) {
+      try {
+        const { items } = await queryByPK(
+          audioBriefingPK(userId),
+          audioBriefingSKPrefix(),
+          { limit: 1, scanForward: false }
+        );
+        const latest = items[0] as (AudioBriefing & Record<string, unknown>) | undefined;
+        if (latest) {
+          const nowSec = Math.floor(Date.now() / 1000);
+          const oneHour = 60 * 60;
+          let url = latest.presignedUrl;
+          if (!url || (latest.presignedUrlExpiresAt ?? 0) - nowSec < oneHour) {
+            const fresh = await refreshAudioBriefingUrl(latest.s3Key);
+            url = fresh.url;
+          }
+          audioBriefing = {
+            url,
+            durationSec: latest.durationSec,
+            generatedAt: latest.generatedAt,
+          };
+        }
+      } catch (err) {
+        logger.warn('profile_audio_briefing_lookup_failed', {
+          userId,
+          err: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
+
     return {
       statusCode: 200,
       body: {
@@ -90,6 +127,9 @@ export const handler = apiHandler(async (event) => {
           // recent ping (see api/users/ping.ts).
           lastLoginAt: user.lastLoginAt,
           previousLoginAt: user.previousLoginAt,
+          // Phase 2 demo-wow — latest weekly audio briefing. Strategist+.
+          // Undefined when no briefing exists yet or the user is on Scout.
+          ...(audioBriefing ? { audioBriefing } : {}),
         },
       },
     };

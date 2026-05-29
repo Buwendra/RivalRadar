@@ -21,6 +21,7 @@ import { OnboardingChecklistCard } from "@/components/dashboard/onboarding-check
 import { ActiveResearchPanel } from "@/components/dashboard/active-research-panel";
 import { BrandHealthScoreCard } from "@/components/dashboard/brand-health-score-card";
 import { SinceLastLookedCard } from "@/components/dashboard/since-last-looked-card";
+import { AudioBriefingCard } from "@/components/dashboard/audio-briefing-card";
 import { Button } from "@/components/ui/button";
 import { useCapabilities, useCapability } from "@/lib/hooks/use-capability";
 
@@ -91,6 +92,8 @@ export default function DashboardPage() {
       </PageHeader>
 
       <SinceLastLookedCard />
+
+      <AudioBriefingCard />
 
       <ActiveResearchPanel />
 

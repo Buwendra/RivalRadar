@@ -1,6 +1,9 @@
 import { dispatchWeeklyDigest } from '../../shared/services/notifier';
+import { generateAudioBriefing } from '../../shared/services/elevenlabs';
+import { storeAudioBriefing } from '../../shared/services/audio-briefing-storage';
 import { getItem } from '../../shared/db/queries';
 import { userPK, userSK } from '../../shared/db/keys';
+import { hasCapability } from '../../shared/utils/capability';
 import { logger } from '../../shared/utils/logger';
 import type { Recommendation, User } from '../../shared/types';
 
@@ -53,6 +56,47 @@ export const handler = async (event: Event): Promise<{ sent: boolean }> => {
   const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   const dateRange = `${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — ${now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
 
+  // Phase 2 demo-wow: TTS-narrate the strategic summary via ElevenLabs and
+  // embed a "Listen" CTA in the email + persist a row the dashboard reads.
+  // Strategist+ only. Failures (missing API key, ElevenLabs 5xx, etc.) silently
+  // skip — the digest still ships as text-only.
+  const userRecord = await getItem<User & Record<string, unknown>>(
+    userPK(event.userId),
+    userSK()
+  );
+  let audioCta = '';
+  let audioDurationSec: number | undefined;
+  if (userRecord && hasCapability(userRecord, 'audioBriefing') && event.strategicSummary) {
+    const tts = await generateAudioBriefing(event.strategicSummary);
+    if (tts) {
+      try {
+        const stored = await storeAudioBriefing({
+          tenantUserId: event.userId,
+          mp3: tts.mp3,
+          charCount: tts.charCount,
+          durationSec: tts.durationSec,
+        });
+        audioDurationSec = stored.durationSec;
+        const mm = Math.floor(stored.durationSec / 60);
+        const ss = String(stored.durationSec % 60).padStart(2, '0');
+        audioCta = `
+          <div style="background: #1e3a5f; border-radius: 8px; padding: 16px 20px; margin: 16px 0; text-align: center;">
+            <p style="color: #93c5fd; margin: 0 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em;">Listen to your briefing</p>
+            <a href="${stored.presignedUrl}" style="color: white; text-decoration: none; font-size: 16px; font-weight: 500; display: inline-block;">
+              ▶ Play (${mm}:${ss})
+            </a>
+            <p style="color: #93c5fd; margin: 8px 0 0; font-size: 11px;">Tap to listen — link expires in 7 days.</p>
+          </div>`;
+      } catch (err) {
+        logger.warn('audio_briefing_storage_failed', {
+          userId: event.userId,
+          err: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
+  }
+  void audioDurationSec; // recorded on the DDB row; surfaced via /users/me
+
   const changeRows = event.topChanges
     .slice(0, 5)
     .map((c) => {
@@ -85,6 +129,8 @@ export const handler = async (event: Event): Promise<{ sent: boolean }> => {
       <div style="padding: 24px 32px;">
         <p style="color: #6b7280; margin: 0 0 20px;">${dateRange}</p>
         <p>Hi ${event.name},</p>
+
+        ${audioCta}
 
         ${
           (event.topRecommendations ?? []).length > 0
@@ -163,10 +209,6 @@ export const handler = async (event: Event): Promise<{ sent: boolean }> => {
   // Slack / webhook integrations the user has opted in for `weeklyDigest`.
   // Each channel is best-effort; one failure doesn't block another.
   try {
-    const userRecord = await getItem<User & Record<string, unknown>>(
-      userPK(event.userId),
-      userSK()
-    );
     const top = (event.topRecommendations ?? [])[0];
     const dispatchResult = await dispatchWeeklyDigest({
       user: {

@@ -32,6 +32,7 @@ export function useCapability(
     | "apiAccess"
     | "comparatorMatrix"
     | "brandPulse"
+    | "audioBriefing"
 ): boolean {
   const caps = useCapabilities();
   return caps[capability] === true;

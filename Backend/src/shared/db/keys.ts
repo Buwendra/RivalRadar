@@ -136,6 +136,15 @@ export const researchRunSK = (startedAt: string, id: string) =>
   `RUN#${startedAt}#${id}`;
 export const researchRunSKPrefix = () => 'RUN#';
 
+// AudioBriefing — weekly digest TTS narration (Phase 2 demo-wow). Same
+// double-segment SK pattern as Battlecard / ResearchRun. Latest row is
+// read by the profile handler to render the dashboard <audio> card; older
+// rows are retained for 90 days and rotate naturally.
+export const audioBriefingPK = (tenantUserId: string) => `USER#${tenantUserId}`;
+export const audioBriefingSK = (generatedAt: string, id: string) =>
+  `AUDIO#${generatedAt}#${id}`;
+export const audioBriefingSKPrefix = () => 'AUDIO#';
+
 // ─── GSI Key Builders ───
 
 // GSI1: User's changes feed (dashboard)

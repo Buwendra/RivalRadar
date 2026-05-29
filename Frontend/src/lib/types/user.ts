@@ -32,4 +32,15 @@ export interface User {
    * user's first-ever session.
    */
   previousLoginAt?: string;
+  /**
+   * Phase 2 demo-wow — latest weekly audio briefing (Strategist+). Absent
+   * on Scout or when no briefing has been generated for this workspace yet.
+   * The URL is a 7-day presigned S3 link; the profile handler re-mints on
+   * the fly if the stored one is near expiry.
+   */
+  audioBriefing?: {
+    url: string;
+    durationSec: number;
+    generatedAt: string;
+  };
 }

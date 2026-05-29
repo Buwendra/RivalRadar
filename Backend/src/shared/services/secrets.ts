@@ -11,6 +11,13 @@ export interface AppSecrets {
   PADDLE_WEBHOOK_SECRET: string;
   FIRECRAWL_API_KEY: string;
   ANTHROPIC_API_KEY: string;
+  /**
+   * Phase 2 (demo-wow) — ElevenLabs Flash voice for the weekly audio
+   * briefing. OPTIONAL: if missing, audio generation is skipped silently
+   * and the weekly digest still ships as text-only. See
+   * `shared/services/elevenlabs.ts` for the call site.
+   */
+  ELEVENLABS_API_KEY?: string;
 }
 
 export async function getSecret(secretName: string): Promise<AppSecrets> {

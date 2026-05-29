@@ -23,6 +23,8 @@ export interface Capabilities {
   comparatorMatrix: boolean;
   /** Phase 23 — Brand Pulse: self-brand monitoring. Available on all tiers. */
   brandPulse: boolean;
+  /** Phase 2 demo-wow — ElevenLabs TTS narration of the weekly digest. Strategist+. */
+  audioBriefing: boolean;
 }
 
 export const CAPABILITIES: Record<PlanTier, Capabilities> = {
@@ -41,6 +43,7 @@ export const CAPABILITIES: Record<PlanTier, Capabilities> = {
     apiKeys: { max: 0 },
     comparatorMatrix: false,
     brandPulse: true,
+    audioBriefing: false,
   },
   strategist: {
     pdfExports: true,
@@ -57,6 +60,7 @@ export const CAPABILITIES: Record<PlanTier, Capabilities> = {
     apiKeys: { max: 5 },
     comparatorMatrix: true,
     brandPulse: true,
+    audioBriefing: true,
   },
   command: {
     pdfExports: true,
@@ -73,6 +77,7 @@ export const CAPABILITIES: Record<PlanTier, Capabilities> = {
     apiKeys: { max: 25 },
     comparatorMatrix: true,
     brandPulse: true,
+    audioBriefing: true,
   },
 };
 
