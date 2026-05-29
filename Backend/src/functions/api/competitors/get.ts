@@ -134,7 +134,10 @@ export const handler = apiHandler(async (event) => {
 
   const [{ items: changes }, { items: research }] = await Promise.all([
     queryByPK(`COMP#${compId}`, 'CHANGE#', { limit: 30 }),
-    queryByPK(`COMP#${compId}`, 'RESEARCH#', { limit: 10 }),
+    // Phase 3E — bumped 10 → 50 to power the time-machine slider on the
+    // competitor detail page. 50 covers ~1 year of weekly research at no
+    // extra DDB cost (single Query, single page).
+    queryByPK(`COMP#${compId}`, 'RESEARCH#', { limit: 50 }),
   ]);
 
   const pagesToTrack = (competitor.pagesToTrack as string[]) ?? [];

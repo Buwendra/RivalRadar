@@ -17,6 +17,11 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { formatRelativeDate } from "@/lib/utils/format-date";
 import {
+  captionForResearchEvent,
+  isFailureResearchEvent,
+  isTerminalResearchEvent,
+} from "@/lib/utils/research-event-labels";
+import {
   useResearchRun,
   useResearchRunTechnical,
 } from "@/lib/hooks/use-research-runs";
@@ -191,28 +196,39 @@ export function ResearchRunCard({ run, hideCompetitorLink }: ResearchRunCardProp
               <p className="text-xs text-muted-foreground">No events yet.</p>
             ) : (
               <ul className="space-y-1">
-                {events.map((ev, i) => (
-                  <li
-                    key={`${ev.ts}-${i}`}
-                    className={cn(
-                      "flex items-start gap-2 text-xs",
-                      ev.level === "error" && "text-red-300",
-                      ev.level === "warn" && "text-amber-300"
-                    )}
-                  >
-                    <span className="shrink-0 font-mono text-[10px] text-muted-foreground">
-                      {new Date(ev.ts).toLocaleTimeString()}
-                    </span>
-                    <span className="font-mono">{ev.message}</span>
-                    {ev.data && (
-                      <span className="text-muted-foreground">
-                        {Object.entries(ev.data)
-                          .map(([k, v]) => `${k}=${v}`)
-                          .join(" ")}
+                {events.map((ev, i) => {
+                  // The last non-terminal event while the run is still
+                  // running gets the in-progress spinner — that's the
+                  // step Claude is currently working on.
+                  const runIsActive =
+                    run.status === "queued" || run.status === "running";
+                  const isLast = i === events.length - 1;
+                  const isInProgress =
+                    runIsActive &&
+                    isLast &&
+                    !isTerminalResearchEvent(ev.message) &&
+                    !isFailureResearchEvent(ev.message);
+                  return (
+                    <li
+                      key={`${ev.ts}-${i}`}
+                      className={cn(
+                        "flex items-start gap-2 text-xs",
+                        ev.level === "error" && "text-red-300",
+                        ev.level === "warn" && "text-amber-300"
+                      )}
+                    >
+                      <span className="shrink-0 font-mono text-[10px] text-muted-foreground">
+                        {new Date(ev.ts).toLocaleTimeString()}
                       </span>
-                    )}
-                  </li>
-                ))}
+                      <span className="flex items-center gap-1.5">
+                        {isInProgress && (
+                          <Loader2 className="h-3 w-3 shrink-0 animate-spin text-primary" />
+                        )}
+                        <span>{captionForResearchEvent(ev.message, ev.data)}</span>
+                      </span>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>

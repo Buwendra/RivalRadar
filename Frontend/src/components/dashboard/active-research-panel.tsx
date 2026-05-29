@@ -20,7 +20,17 @@ function isRecent(r: ResearchRunSummary): boolean {
   return Date.now() - Date.parse(finishedAt) < RECENT_WINDOW_MS;
 }
 
-export function ActiveResearchPanel() {
+interface ActiveResearchPanelProps {
+  /**
+   * Phase 3D — when set, the panel only shows runs for this competitor.
+   * Used on the competitor detail page so the "live progress" view scopes
+   * to the page the user clicked Research Now from. Omit on the dashboard
+   * for the workspace-wide view.
+   */
+  competitorId?: string;
+}
+
+export function ActiveResearchPanel({ competitorId }: ActiveResearchPanelProps = {}) {
   const { data, isLoading } = useResearchRuns();
   const [recentExpanded, setRecentExpanded] = useState(false);
 
@@ -35,7 +45,9 @@ export function ActiveResearchPanel() {
     );
   }
 
-  const runs = data ?? [];
+  const runs = (data ?? []).filter(
+    (r) => competitorId == null || r.competitorId === competitorId
+  );
   const active = runs.filter(isActive);
   const recent = runs.filter(isRecent);
 

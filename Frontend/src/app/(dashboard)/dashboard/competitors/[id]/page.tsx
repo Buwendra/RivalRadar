@@ -33,16 +33,9 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
 import { SignificanceBadge } from "@/components/dashboard/significance-badge";
 import { ChangeTypeBadge } from "@/components/dashboard/change-type-badge";
 import { ResearchSection } from "@/components/dashboard/research-section";
-import { ResearchCard } from "@/components/dashboard/research-card";
 import { MetricCard } from "@/components/dashboard/metric-card";
 import { ActivitySparkline } from "@/components/dashboard/activity-sparkline";
 import { PageActivityList } from "@/components/dashboard/page-activity-list";
@@ -54,6 +47,7 @@ import { PredictedMovesCard } from "@/components/dashboard/predicted-moves-card"
 import { WinAgainstCard } from "@/components/dashboard/win-against-card";
 import { BattlecardButton } from "@/components/dashboard/battlecard-button";
 import { ResearchRunCard } from "@/components/dashboard/research-run-card";
+import { ActiveResearchPanel } from "@/components/dashboard/active-research-panel";
 import { useResearchRuns } from "@/lib/hooks/use-research-runs";
 import { formatSmartDate } from "@/lib/utils/format-date";
 import type { CompetitorDetailChange, PageType } from "@/lib/types";
@@ -178,6 +172,10 @@ export default function CompetitorDetailPage() {
         </div>
         <CompetitorTagChips tags={competitor.derivedTags} />
       </div>
+
+      {/* Phase 3D — inline live progress when Research Now is in flight for
+          THIS competitor. Self-hides when there's nothing active or recent. */}
+      <ActiveResearchPanel competitorId={id} />
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
@@ -388,38 +386,16 @@ export default function CompetitorDetailPage() {
         </TabsContent>
 
         {/* ─── RESEARCH ─── */}
+        {/* Phase 3E — the in-section TimeMachineSlider now handles historical
+            rewind, so we no longer need the "Earlier research runs"
+            accordion here. ResearchSection owns the selected-finding state
+            so the slider can swap the rendered ResearchCard in-place. */}
         <TabsContent value="research" className="space-y-6">
           <ResearchSection
             competitorId={id}
             competitorUrl={competitor.url}
             research={recentResearch}
           />
-
-          {recentResearch.length > 1 && (
-            <div>
-              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Earlier research runs
-              </h3>
-              <Accordion type="single" collapsible>
-                {recentResearch.slice(1).map((r) => (
-                  <AccordionItem
-                    key={r.id}
-                    value={r.id}
-                    className="border-brand-700"
-                  >
-                    <AccordionTrigger className="text-sm hover:no-underline">
-                      {formatSmartDate(r.generatedAt)} ·{" "}
-                      {r.citations.length} source
-                      {r.citations.length === 1 ? "" : "s"}
-                    </AccordionTrigger>
-                    <AccordionContent>
-                      <ResearchCard finding={r} competitorUrl={competitor.url} />
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
-            </div>
-          )}
         </TabsContent>
 
         {/* ─── RESEARCH HISTORY (Phase 22) ─── */}
