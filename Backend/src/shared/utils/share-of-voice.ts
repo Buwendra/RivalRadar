@@ -15,7 +15,7 @@
 
 import type { ResearchCategory } from '../types';
 
-const CATEGORIES: ResearchCategory[] = ['news', 'product', 'funding', 'hiring', 'social'];
+const CATEGORIES: ResearchCategory[] = ['news', 'product', 'funding', 'hiring', 'social', 'industryContext'];
 
 export interface SoVEntity {
   /** Competitor row id (the `id` field on the Competitor row, NOT the PK). */
@@ -86,6 +86,7 @@ export function computeShareOfVoice(input: {
     funding: new Map(),
     hiring: new Map(),
     social: new Map(),
+    industryContext: new Map(),
   };
   const overallCounts = new Map<string, number>();
   let totalChanges = 0;
@@ -111,6 +112,7 @@ export function computeShareOfVoice(input: {
       funding: buildRows(input.entities, totalsByCategory.funding),
       hiring: buildRows(input.entities, totalsByCategory.hiring),
       social: buildRows(input.entities, totalsByCategory.social),
+      industryContext: buildRows(input.entities, totalsByCategory.industryContext),
     },
   };
 }

@@ -1,4 +1,10 @@
-export type ResearchCategory = "news" | "product" | "funding" | "hiring" | "social";
+export type ResearchCategory =
+  | "news"
+  | "product"
+  | "funding"
+  | "hiring"
+  | "social"
+  | "industryContext";
 
 export interface FindingItem {
   title: string;
@@ -23,4 +29,10 @@ export interface ResearchFinding {
   citations: Citation[];
   searchQueries: string[];
   tokensUsed: number;
+  /**
+   * Per-user-industry label for the `industryContext` category, snapshotted
+   * at research time. Falls back to "Industry Context" when absent (legacy
+   * findings or User.industry was "Other" / unset).
+   */
+  industryContextLabel?: string;
 }

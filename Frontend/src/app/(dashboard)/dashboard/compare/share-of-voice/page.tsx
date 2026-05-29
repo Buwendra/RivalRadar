@@ -30,6 +30,9 @@ const CATEGORY_LABELS: Record<ResearchCategory, string> = {
   funding: "Funding",
   hiring: "Hiring",
   social: "Social",
+  // Workspace-wide view, so use a generic label here even though individual
+  // research findings carry a per-industry label (e.g. "Regulatory & Compliance").
+  industryContext: "Industry",
 };
 
 const ALL_WINDOWS: Array<{ key: ShareOfVoiceWindowKey; days: number; label: string }> = [

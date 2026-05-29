@@ -11,7 +11,6 @@ All application secrets live in **AWS Secrets Manager** under the `rivalscan/api
 | `ANTHROPIC_API_KEY` | console.anthropic.com | Quarterly | Used by every AI helper in `anthropic.ts`. |
 | `PADDLE_SECRET_KEY` | vendors.paddle.com | Quarterly | Used by `paddle.ts` for checkout-session signing. |
 | `PADDLE_WEBHOOK_SECRET` | vendors.paddle.com | Quarterly | Verifies inbound webhook signatures. |
-| `FIRECRAWL_API_KEY` | firecrawl.dev | **Remove next rotation** | Legacy from pre-deep-research era. No longer used. |
 
 Cognito user-pool client secrets are managed by Cognito itself and rotated automatically.
 
@@ -73,6 +72,7 @@ If you suspect a secret is leaked (committed to git, posted in a screenshot, cop
 
 | Date | Secret | Person | Method | Notes |
 |---|---|---|---|---|
+| 2026-05-29 | `FIRECRAWL_API_KEY` | owner | console | Removed — legacy from pre-deep-research era, never referenced by current code. |
 | 2026-04-30 | (initial deploy) | owner | console | First-time provisioning, Phase 1 compliance work. |
 
 Append rows above this line, newest first. Every quarterly + emergency rotation logs here.

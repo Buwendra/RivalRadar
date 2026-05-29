@@ -1,6 +1,6 @@
 "use client";
 
-import { ExternalLink, Newspaper, Package, DollarSign, Users, MessageCircle, ShieldCheck } from "lucide-react";
+import { ExternalLink, Newspaper, Package, DollarSign, Users, MessageCircle, ShieldCheck, Building2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -19,13 +19,32 @@ import {
 import type { ResearchFinding, ResearchCategory, FindingItem, Citation } from "@/lib/types";
 import { AiDisclaimer } from "./ai-disclaimer";
 
-const CATEGORY_META: Record<ResearchCategory, { label: string; Icon: typeof Newspaper }> = {
+// Static metadata for the 5 base categories. `industryContext` is resolved
+// at render time because its label is per-user-industry (carried on the
+// finding as `industryContextLabel`).
+const STATIC_CATEGORY_META: Partial<
+  Record<ResearchCategory, { label: string; Icon: typeof Newspaper }>
+> = {
   news: { label: "News & Press", Icon: Newspaper },
   product: { label: "Product Updates", Icon: Package },
   funding: { label: "Funding & Financials", Icon: DollarSign },
   hiring: { label: "Hiring & Leadership", Icon: Users },
   social: { label: "Social Activity", Icon: MessageCircle },
 };
+
+function resolveCategoryMeta(
+  category: ResearchCategory,
+  finding: ResearchFinding
+): { label: string; Icon: typeof Newspaper } {
+  if (category === "industryContext") {
+    return {
+      label: finding.industryContextLabel ?? "Industry Context",
+      Icon: Building2,
+    };
+  }
+  // STATIC_CATEGORY_META covers the other 5 keys exhaustively.
+  return STATIC_CATEGORY_META[category]!;
+}
 
 const IMPORTANCE_VARIANT: Record<1 | 2 | 3, "secondary" | "default" | "destructive"> = {
   1: "secondary",
@@ -50,12 +69,12 @@ const QUALITY_CLASS: Record<SourceQuality, string> = {
 };
 
 export function ResearchCard({ finding, competitorUrl }: ResearchCardProps) {
-  const totalFindings =
-    finding.categories.news.length +
-    finding.categories.product.length +
-    finding.categories.funding.length +
-    finding.categories.hiring.length +
-    finding.categories.social.length;
+  // Object.values keeps this stable as the ResearchCategory union grows
+  // (today: the 6th `industryContext` bucket).
+  const totalFindings = Object.values(finding.categories).reduce(
+    (n, arr) => n + arr.length,
+    0
+  );
 
   const nonEmptyCategories = (Object.keys(finding.categories) as ResearchCategory[]).filter(
     (cat) => finding.categories[cat].length > 0
@@ -87,7 +106,12 @@ export function ResearchCard({ finding, competitorUrl }: ResearchCardProps) {
         {nonEmptyCategories.length > 0 && (
           <Accordion type="multiple" className="border-t border-brand-700">
             {nonEmptyCategories.map((cat) => (
-              <CategorySection key={cat} category={cat} items={finding.categories[cat]} />
+              <CategorySection
+                key={cat}
+                category={cat}
+                items={finding.categories[cat]}
+                meta={resolveCategoryMeta(cat, finding)}
+              />
             ))}
 
             {dedupedCitations.length > 0 && (
@@ -145,11 +169,13 @@ export function ResearchCard({ finding, competitorUrl }: ResearchCardProps) {
 function CategorySection({
   category,
   items,
+  meta,
 }: {
   category: ResearchCategory;
   items: FindingItem[];
+  meta: { label: string; Icon: typeof Newspaper };
 }) {
-  const { label, Icon } = CATEGORY_META[category];
+  const { label, Icon } = meta;
   return (
     <AccordionItem value={category} className="border-brand-700">
       <AccordionTrigger className="text-sm hover:no-underline">

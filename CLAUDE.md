@@ -37,7 +37,22 @@ Stack naming: `RivalScan-${stage}-${StackType}` (stage from env context: dev/sta
 
 **Backend layout split**: CDK stack definitions live in `Backend/lib/stacks/*.stack.ts` (infrastructure); Lambda handler source lives in `Backend/src/functions/` (`api/` per-route handlers, `pipeline/` and `scheduled/` for the state-machine/cron Lambdas) with cross-cutting code in `Backend/src/shared/`. References to `api.stack.ts`, `pipeline.stack.ts`, etc. throughout this doc mean files under `lib/stacks/`.
 
-The current product roadmap and design rationale lives in [ROADMAP.md](ROADMAP.md), [PRODUCT_GAPS_ROADMAP.md](PRODUCT_GAPS_ROADMAP.md), [COMPLIANCE_ROADMAP.md](COMPLIANCE_ROADMAP.md), and [PREDICTIONS_AND_TAGS.md](PREDICTIONS_AND_TAGS.md) at the project root. Treat those as the source of truth for what's shipped vs. what's planned.
+The current product roadmap and design rationale lives in [docs/roadmaps/ROADMAP.md](docs/roadmaps/ROADMAP.md), [docs/roadmaps/PRODUCT_GAPS_ROADMAP.md](docs/roadmaps/PRODUCT_GAPS_ROADMAP.md), [docs/roadmaps/COMPLIANCE_ROADMAP.md](docs/roadmaps/COMPLIANCE_ROADMAP.md), and [docs/roadmaps/PREDICTIONS_AND_TAGS.md](docs/roadmaps/PREDICTIONS_AND_TAGS.md). Treat those as the source of truth for what's shipped vs. what's planned. The full doc index lives at [docs/README.md](docs/README.md).
+
+## Documentation map
+
+| Where | Purpose |
+|---|---|
+| `/CLAUDE.md` (this file) | Architecture + conventions reference for Claude Code |
+| `/README.md` | Top-level project orientation |
+| `/PRODUCT_OVERVIEW.md` | Public-safe product narrative |
+| `/docs/README.md` | Documentation index |
+| `/docs/roadmaps/` | What's planned + what's shipped (with status badges) |
+| `/docs/runbooks/` | How to operate the system — deploy, test, page response, secret rotation |
+| `/docs/security/` | Security posture, audit material, vendor risk register, change management |
+| `/docs/api/` | Public API reference |
+| `/docs/internal/` | Material intentionally not public (e.g. pricing-value analysis) |
+| `/Frontend/README.md` | Frontend dev guide |
 
 ## Commands
 

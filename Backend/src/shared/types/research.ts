@@ -1,4 +1,16 @@
-export type ResearchCategory = 'news' | 'product' | 'funding' | 'hiring' | 'social';
+/**
+ * 5 base categories captured for every research run plus an industry-aware
+ * 6th bucket. The label of `industryContext` changes per User.industry (e.g.
+ * "Regulatory & Compliance" for Fintech) and is persisted alongside the
+ * finding as `ResearchFinding.industryContextLabel`.
+ */
+export type ResearchCategory =
+  | 'news'
+  | 'product'
+  | 'funding'
+  | 'hiring'
+  | 'social'
+  | 'industryContext';
 
 export type FindingSentiment = 'positive' | 'neutral' | 'negative';
 export type FindingTimeSensitivity = 'breaking' | 'recent' | 'historical';
@@ -72,6 +84,14 @@ export interface ResearchFinding {
   searchQueries: string[];
   tokensUsed: number;
   derivedState?: DerivedState;
+  /**
+   * Display label for the `industryContext` category, snapshotted at research
+   * time from the user's industry config (e.g. "Regulatory & Compliance"
+   * for Fintech). Persisted on the row so historical findings keep their
+   * original label even if the user later changes industry. Absent for
+   * findings generated when `User.industry` was `Other` or unset.
+   */
+  industryContextLabel?: string;
 }
 
 export type ResearchChangeType = 'pricing' | 'feature' | 'messaging' | 'hiring' | 'content';

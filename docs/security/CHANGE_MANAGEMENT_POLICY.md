@@ -56,7 +56,7 @@ Some changes carry extra blast radius. For these, require additional steps:
 | **DynamoDB schema migration** | Pre-deploy: confirm DynamoDB Point-in-Time Recovery is enabled on the table (`aws dynamodb describe-continuous-backups`). Plan a rollback by reverting the schema-affecting code change; data already written under new shape stays — that's the cost of a bad migration. |
 | **IAM policy changes** | Test in dev stage first. Confirm the new policy ID exists. Verify least-privilege via `iam simulate-principal-policy`. |
 | **Payment-flow edits** | Test the full Paddle checkout → webhook → subscription update path in the dev stage with a Paddle sandbox account. |
-| **Secret rotations** | Follow [SECRET_ROTATION_RUNBOOK.md](SECRET_ROTATION_RUNBOOK.md). Rotate in low-traffic windows when possible. |
+| **Secret rotations** | Follow [SECRET_ROTATION_RUNBOOK.md](../runbooks/SECRET_ROTATION_RUNBOOK.md). Rotate in low-traffic windows when possible. |
 | **CDK stack additions** | Verify cross-stack dependency graph is acyclic via `cdk synth --quiet` before merge. |
 | **Cognito user pool changes** | Schema-affecting changes (custom attributes) cannot be removed once added. Verify the change is genuinely needed. |
 | **Frontend public-facing copy** | Cross-check legal pages for compliance language consistency. Privacy Policy / ToS edits should land with `tosVersion` / `privacyVersion` bump (Phase 9a re-consent banner). |

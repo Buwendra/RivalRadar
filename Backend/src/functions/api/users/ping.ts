@@ -11,7 +11,7 @@
  */
 
 import { apiHandler, getUserEmail, HttpError } from '../../../shared/middleware/handler';
-import { queryGSI, updateItem } from '../../../shared/db/queries';
+import { getItem, queryGSI, updateItem } from '../../../shared/db/queries';
 import { userPK, userSK } from '../../../shared/db/keys';
 
 export const handler = apiHandler(async (event) => {
@@ -21,9 +21,16 @@ export const handler = apiHandler(async (event) => {
   if (items.length === 0) throw new HttpError(404, 'USER_NOT_FOUND', 'User not found');
   const userId = (items[0].GSI3SK as string).replace('USER#', '');
 
+  // Read the existing lastLoginAt BEFORE we overwrite it — that becomes the
+  // "since" anchor for the dashboard's "since you last looked" hero card.
+  // First-ever ping has no prior value, so previousLoginAt stays undefined.
+  const existing = await getItem<{ lastLoginAt?: string }>(userPK(userId), userSK());
+  const prior = existing?.lastLoginAt;
+
   const now = new Date().toISOString();
   await updateItem(userPK(userId), userSK(), {
     lastLoginAt: now,
+    ...(prior ? { previousLoginAt: prior } : {}),
     updatedAt: now,
   });
 

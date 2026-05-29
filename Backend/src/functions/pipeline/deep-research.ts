@@ -152,12 +152,12 @@ export const handler = async (event: Event): Promise<Output> => {
         : undefined,
     });
 
-    const findingsCount =
-      current.categories.news.length +
-      current.categories.product.length +
-      current.categories.funding.length +
-      current.categories.hiring.length +
-      current.categories.social.length;
+    // Sum across all category arrays — Object.values is stable as the
+    // ResearchCategory union grows (e.g. the 6th `industryContext` bucket).
+    const findingsCount = Object.values(current.categories).reduce(
+      (n, arr) => n + arr.length,
+      0
+    );
     runEvents.push(
       makeRunEvent('deep_research_completed', {
         findings: findingsCount,
@@ -206,6 +206,10 @@ export const handler = async (event: Event): Promise<Output> => {
       citations: current.citations,
       searchQueries: current.searchQueries,
       tokensUsed: current.tokensUsed,
+      // Snapshot the industry-aware label at write time so historical
+      // findings keep their original label if the user later changes
+      // industry. Omitted when User.industry was 'Other' / unset.
+      ...(current.industryContextLabel ? { industryContextLabel: current.industryContextLabel } : {}),
       ...gsi1ResearchKeys(event.userId, generatedAt),
     });
 
@@ -218,12 +222,10 @@ export const handler = async (event: Event): Promise<Output> => {
         userId: event.userId,
         competitorId: event.competitorId,
         researchId,
-        findingsCount:
-          current.categories.news.length +
-          current.categories.product.length +
-          current.categories.funding.length +
-          current.categories.hiring.length +
-          current.categories.social.length,
+        findingsCount: Object.values(current.categories).reduce(
+          (n, arr) => n + arr.length,
+          0
+        ),
       });
     }
 

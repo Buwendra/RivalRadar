@@ -8,6 +8,8 @@ Phased plan to bring RivalScan to industry-standard compliance posture. Ordered 
 
 ## Status legend
 
+**Priority / type** (original legend):
+
 | Symbol | Meaning |
 |---|---|
 | 🔴 | Required before charging real customers OR exposes material legal risk today |
@@ -17,9 +19,22 @@ Phased plan to bring RivalScan to industry-standard compliance posture. Ordered 
 | 📄 | Policy/legal deliverable — requires lawyer review |
 | 🏛 | External — third-party audit, insurance, certification |
 
+**Shipped status** (added 2026-05-29):
+
+| Symbol | Meaning |
+|---|---|
+| ✅ | Shipped — in production |
+| 🚧 | In flight — partial or actively being built |
+| 📋 | Planned — scheduled, not started |
+| 💤 | Deferred — parked (often to [PRODUCT_GAPS_ROADMAP.md](PRODUCT_GAPS_ROADMAP.md) Phase 11 — Go Live) |
+
+**Last reviewed**: 2026-05-29
+
 ---
 
-## Phase 1 — Misuse defense + AI safety guardrails 🔴 ⚙️
+## ✅ Phase 1 — Misuse defense + AI safety guardrails 🔴 ⚙️
+
+> Shipped. Pre-research classifier (`classifyResearchTarget`), OFAC SDN denylist + drift cron, per-user research rate limit, AI output disclaimers across all surfaces, and `ai_call_completed` log line all live.
 
 **Why first:** Directly addresses the concern that motivated this doc. All technical, ~1 day, eliminates the highest immediate operational risks (researching individuals, AI defamation, runaway cost abuse).
 
@@ -41,7 +56,9 @@ Phased plan to bring RivalScan to industry-standard compliance posture. Ordered 
 
 ---
 
-## Phase 2 — Legal foundations 🔴 📄+⚙️
+## 🚧 Phase 2 — Legal foundations 🔴 📄+⚙️
+
+> Engineering deliverables shipped: policy pages (`/legal/{privacy,terms,aup,sub-processors}`), consent capture at signup, re-consent banner via `POST /users/me/accept-tos`. **Lawyer-finalised policy text pending** — currently DRAFT placeholders. Moved to Phase 11 — Go Live.
 
 **Why second:** Required by every payment processor (Paddle's terms require you to have these), every US state with privacy law (CA, CO, CT, UT, VA), every EU/UK customer (GDPR Art. 13/14 transparency), every B2B sale. Without these, you cannot lawfully accept payments.
 
@@ -65,7 +82,9 @@ Phased plan to bring RivalScan to industry-standard compliance posture. Ordered 
 
 ---
 
-## Phase 3 — Data subject rights 🔴 ⚙️
+## 🚧 Phase 3 — Data subject rights 🔴 ⚙️
+
+> Export (`GET /users/me/export`), erasure (`DELETE /users/me`), rectification (`PUT /users/me`), restriction (`POST /users/me/suspend`) all shipped. **Pending**: DPA template + retention-policy page lawyer-finalised — moved to Phase 11.
 
 **Why third:** GDPR Art. 15-22 + CCPA §1798.100-130 require you to honor user data requests within 30 (CCPA) or 30-90 (GDPR) days. Without API support, every request becomes a manual ticket — feasible at low scale but blocking for any EU/CA customer.
 
@@ -84,7 +103,9 @@ Phased plan to bring RivalScan to industry-standard compliance posture. Ordered 
 
 ---
 
-## Phase 4 — Web app security hardening 🟡 ⚙️
+## 🚧 Phase 4 — Web app security hardening 🟡 ⚙️
+
+> Security headers, Zod input validation, `npm audit` CI + Dependabot, Cognito lockout, AWS Shield Standard, logger redaction all shipped. **Deferred to Phase 11**: WAF attach via CloudFront fronting, per-route auth throttling.
 
 **Why fourth:** OWASP Top 10 hardening reduces breach probability. Not strictly legally required for SaaS at low scale, but if a breach happens you need to demonstrate "reasonable security measures" (CCPA §1798.150) for the safe-harbor defense.
 
@@ -105,7 +126,9 @@ Phased plan to bring RivalScan to industry-standard compliance posture. Ordered 
 
 ---
 
-## Phase 5 — Audit infrastructure & incident response 🟡 ⚙️+📄
+## 🚧 Phase 5 — Audit infrastructure & incident response 🟡 ⚙️+📄
+
+> CloudTrail multi-region with object-lock, `AuditEvent` entity, `INCIDENT_RUNBOOK.md`, status page (Phase 8c), DynamoDB PITR all shipped. **Pending**: quarterly recovery drill schedule; the `dpo@` / `security@` SES aliases.
 
 **Why fifth:** SOC 2 prep work; required by enterprise procurement teams. Without audit trails, breach forensics are impossible.
 
@@ -124,7 +147,9 @@ Phased plan to bring RivalScan to industry-standard compliance posture. Ordered 
 
 ---
 
-## Phase 6 — Operational programs 🟢 📄+⚙️
+## 📋 Phase 6 — Operational programs 🟢 📄+⚙️
+
+> Most items are ongoing process work, not one-shot fixes. `ACCESS_REVIEW_RUNBOOK.md` + `CHANGE_MANAGEMENT_POLICY.md` + `VENDOR_RISK_REGISTER.md` exist; security.txt, DPIA, bug bounty pending.
 
 **Why sixth:** Ongoing programs, not one-shot fixes. Becomes valuable when customer base grows or enterprise sales begin.
 
@@ -144,7 +169,9 @@ Phased plan to bring RivalScan to industry-standard compliance posture. Ordered 
 
 ---
 
-## Phase 7 — Formal certifications 🟢 🏛
+## 💤 Phase 7 — Formal certifications 🟢 🏛
+
+> Deferred to Phase 11 — Go Live (SOC 2 Type II, ISO 27001, pentest, cyber-liability insurance).
 
 **Why last:** Months of effort, $15-50k+ each, but unlock enterprise contracts. Wait until you have ~$500k ARR or a specific deal pulling.
 

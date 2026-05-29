@@ -19,6 +19,9 @@ describe('computeShareOfVoice', () => {
     expect(result.overall.every((r) => r.count === 0 && r.percent === 0)).toBe(true);
     expect(result.byCategory.news).toHaveLength(3);
     expect(result.byCategory.news.every((r) => r.count === 0)).toBe(true);
+    // Sixth bucket exists for the industry-aware category (Phase 23+).
+    expect(result.byCategory.industryContext).toHaveLength(3);
+    expect(result.byCategory.industryContext.every((r) => r.count === 0)).toBe(true);
   });
 
   it('aggregates counts per-category and overall', () => {

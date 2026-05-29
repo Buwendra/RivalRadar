@@ -84,6 +84,12 @@ export const handler = apiHandler(async (event) => {
           // Phase 9a self-suspend — frontend renders the suspend/resume button
           // based on this. Default 'active' if absent (existing accounts).
           status: user.status ?? 'active',
+          // Phase 8a / "Since you last looked" hero card — frontend computes
+          // the change-feed window from previousLoginAt. lastLoginAt is the
+          // current session's anchor; previousLoginAt was bumped by the most
+          // recent ping (see api/users/ping.ts).
+          lastLoginAt: user.lastLoginAt,
+          previousLoginAt: user.previousLoginAt,
         },
       },
     };

@@ -196,26 +196,26 @@ This runbook gets reviewed alongside the secret rotation cadence. Same calendar 
 
 ## Annex A — SOC 2 Trust Service Criteria mapping
 
-> Phase 10a addition. Maps the runbook's common-scenarios + procedures to SOC 2 Trust Service Criteria (TSC) so audit firms can trace coverage. Companion to [SECURITY_QUESTIONNAIRE.md](SECURITY_QUESTIONNAIRE.md) § L (Incident Response) and [SECURITY_OVERVIEW.md](SECURITY_OVERVIEW.md) § Audit logging.
+> Phase 10a addition. Maps the runbook's common-scenarios + procedures to SOC 2 Trust Service Criteria (TSC) so audit firms can trace coverage. Companion to [SECURITY_QUESTIONNAIRE.md](../security/SECURITY_QUESTIONNAIRE.md) § L (Incident Response) and [SECURITY_OVERVIEW.md](../security/SECURITY_OVERVIEW.md) § Audit logging.
 
 | Scenario | Trust Service Criteria | Evidence on file |
 |---|---|---|
 | **AWS account takeover** | CC6.1 (logical access), CC6.6 (boundary protection), CC7.3 (anomaly detection + response) | This runbook § Common scenarios #1; `aws iam get-credential-report` from `Backend/scripts/soc2-evidence-snapshot.sh`; CloudTrail multi-region trail (Phase 9b) for forensic timeline |
 | **Anthropic credential leak** | CC6.1, CC6.3 (access modifications) | [SECRET_ROTATION_RUNBOOK.md](SECRET_ROTATION_RUNBOOK.md) audit log; Secrets Manager `LastRotated` field captured by snapshot script |
 | **Customer data breach** | CC7.4 (response to identified events), CC7.5 (recovery from identified events), GDPR Art. 33 (72-hour notification) | This runbook § Common scenarios #3; Privacy Policy disclosure timeline; AuditEvent log retention 90d (Phase 4b) + CloudTrail 7y (Phase 9b) |
-| **Sub-processor outage** | A1.2 (availability commitments + service-level objectives), CC9.2 (vendor risk management) | This runbook § Common scenarios #4; [VENDOR_RISK_REGISTER.md](VENDOR_RISK_REGISTER.md); Phase 8c status page |
+| **Sub-processor outage** | A1.2 (availability commitments + service-level objectives), CC9.2 (vendor risk management) | This runbook § Common scenarios #4; [VENDOR_RISK_REGISTER.md](../security/VENDOR_RISK_REGISTER.md); Phase 8c status page |
 | **Pipeline runaway / cost spike** | CC7.2 (system monitoring), CC7.3 (anomaly response) | This runbook § Common scenarios #5; Phase 1 cost-cap kill-switch in `enforceResearchEligibility`; CloudWatch alarms on Anthropic spend |
 
 ### TSC categories not covered by this runbook (out-of-scope for incident response)
 
 | TSC | Where it's evidenced |
 |---|---|
-| CC1 (Control Environment) | [CHANGE_MANAGEMENT_POLICY.md](CHANGE_MANAGEMENT_POLICY.md); [SECURITY_OVERVIEW.md](SECURITY_OVERVIEW.md) § Compliance posture |
-| CC2 (Communication & Information) | This runbook § Communications templates; [SECURITY_OVERVIEW.md](SECURITY_OVERVIEW.md); status page |
-| CC5 (Control Activities) | Audit log + role gates (Phase 4b); [ACCESS_REVIEW_RUNBOOK.md](ACCESS_REVIEW_RUNBOOK.md) |
-| CC8 (Change Management) | [CHANGE_MANAGEMENT_POLICY.md](CHANGE_MANAGEMENT_POLICY.md) |
-| C1 (Confidentiality) | [SECURITY_OVERVIEW.md](SECURITY_OVERVIEW.md) § Encryption; [SECURITY_QUESTIONNAIRE.md](SECURITY_QUESTIONNAIRE.md) § H (Cryptography) |
-| P1–P8 (Privacy) | [SECURITY_QUESTIONNAIRE.md](SECURITY_QUESTIONNAIRE.md) § K (Privacy); [`/legal/privacy`](https://app.rivalscan.com/legal/privacy) + GDPR/CCPA self-service surfaces |
+| CC1 (Control Environment) | [CHANGE_MANAGEMENT_POLICY.md](../security/CHANGE_MANAGEMENT_POLICY.md); [SECURITY_OVERVIEW.md](../security/SECURITY_OVERVIEW.md) § Compliance posture |
+| CC2 (Communication & Information) | This runbook § Communications templates; [SECURITY_OVERVIEW.md](../security/SECURITY_OVERVIEW.md); status page |
+| CC5 (Control Activities) | Audit log + role gates (Phase 4b); [ACCESS_REVIEW_RUNBOOK.md](../security/ACCESS_REVIEW_RUNBOOK.md) |
+| CC8 (Change Management) | [CHANGE_MANAGEMENT_POLICY.md](../security/CHANGE_MANAGEMENT_POLICY.md) |
+| C1 (Confidentiality) | [SECURITY_OVERVIEW.md](../security/SECURITY_OVERVIEW.md) § Encryption; [SECURITY_QUESTIONNAIRE.md](../security/SECURITY_QUESTIONNAIRE.md) § H (Cryptography) |
+| P1–P8 (Privacy) | [SECURITY_QUESTIONNAIRE.md](../security/SECURITY_QUESTIONNAIRE.md) § K (Privacy); [`/legal/privacy`](https://app.rivalscan.com/legal/privacy) + GDPR/CCPA self-service surfaces |
 
 ---
 

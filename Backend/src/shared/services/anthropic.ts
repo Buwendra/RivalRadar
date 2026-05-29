@@ -2,6 +2,7 @@ import { createHash } from 'crypto';
 import { getSecret } from './secrets';
 import { generateId } from '../utils/id';
 import { computeAnthropicCostUsd } from '../utils/anthropic-pricing';
+import { getIndustryConfig, type IndustryResearchConfig } from '../utils/industry-research';
 import { getPromptVersion } from './prompt-registry';
 import {
   AiAnalysis,
@@ -612,17 +613,34 @@ Use this prior context to direct your searches toward what's NEW since the prior
 
   const subjectLabel = isSelf ? 'Brand' : 'Competitor';
 
+  // Industry-aware enrichment (see shared/utils/industry-research.ts). The
+  // user's industry — not the competitor's — drives this; a Fintech user
+  // researching a Healthcare competitor still wants the Fintech regulatory
+  // angle on the findings.
+  const industryCfg: IndustryResearchConfig | null = getIndustryConfig(input.userIndustry);
+  const extra = (cat: 'news' | 'product' | 'funding' | 'hiring' | 'social'): string =>
+    industryCfg?.perCategoryGuidance[cat] ? ` ${industryCfg.perCategoryGuidance[cat]}` : '';
+
   const categoryGuidance = isSelf
-    ? `- news: press coverage, mentions in third-party outlets, podcast/blog mentions
-- product: third-party reactions to product launches, reviews, comparisons
-- funding: public commentary on the brand's financial position, analyst notes
-- hiring: external coverage of the brand's hiring or leadership moves, Glassdoor signals
-- social: how the brand is being discussed on LinkedIn / Twitter / community forums — sentiment, viral moments, criticism`
-    : `- news: press releases, announcements, press coverage
-- product: product launches, feature releases, roadmap hints
-- funding: investment rounds, valuation news, financial performance
-- hiring: notable hires, leadership changes, layoffs, headcount signals
-- social: LinkedIn posts from leaders, prominent Twitter/X activity, community buzz`;
+    ? `- news: press coverage, mentions in third-party outlets, podcast/blog mentions.${extra('news')}
+- product: third-party reactions to product launches, reviews, comparisons.${extra('product')}
+- funding: public commentary on the brand's financial position, analyst notes.${extra('funding')}
+- hiring: external coverage of the brand's hiring or leadership moves, Glassdoor signals.${extra('hiring')}
+- social: how the brand is being discussed on LinkedIn / Twitter / community forums — sentiment, viral moments, criticism.${extra('social')}`
+    : `- news: press releases, announcements, press coverage.${extra('news')}
+- product: product launches, feature releases, roadmap hints.${extra('product')}
+- funding: investment rounds, valuation news, financial performance.${extra('funding')}
+- hiring: notable hires, leadership changes, layoffs, headcount signals.${extra('hiring')}
+- social: LinkedIn posts from leaders, prominent Twitter/X activity, community buzz.${extra('social')}`;
+
+  const industryContextGuidanceLine = industryCfg
+    ? `- industryContext (UI label: "${industryCfg.label}"): ${industryCfg.contextGuidance}`
+    : '';
+
+  const industryContextSchemaLine = industryCfg ? `,\n    "industryContext": [...]` : '';
+  const industryContextOmitLine = industryCfg
+    ? `- industryContext must contain ONLY items not already covered by the 5 base categories — do not duplicate.`
+    : `- The user has no industry set; omit "industryContext" or return [].`;
 
   const prompt = `${roleLine}
 
@@ -632,7 +650,7 @@ ${subjectLabel}: ${input.name}
 Website: ${input.url}${input.industry ? `\nIndustry: ${input.industry}` : ''}
 
 Search the web for recent, substantive findings about this ${isSelf ? 'brand' : 'company'}. Cover these categories:
-${categoryGuidance}
+${categoryGuidance}${industryContextGuidanceLine ? `\n${industryContextGuidanceLine}` : ''}
 
 Prioritize the last 30 days. Use up to ${WEB_SEARCH_MAX_USES} targeted searches.
 
@@ -651,7 +669,7 @@ After your searches, respond with ONLY valid JSON in this exact shape — no pro
     "product": [...],
     "funding": [...],
     "hiring": [...],
-    "social": [...]
+    "social": [...]${industryContextSchemaLine}
   },
   "searchQueries": ["the queries you actually ran"],
   "derivedState": {
@@ -670,7 +688,8 @@ Field guidance:
 - sentiment: ${isSelf ? "the EXTERNAL tone toward the brand (positive = favourable coverage, negative = unfavourable)." : "from the COMPETITOR's POV (positive = good for them, negative = bad for them)."}
 - timeSensitivity: breaking = published within last 7 days, recent = last 30 days, historical = older.
 - derivedState: use "unknown" liberally when evidence is thin. Do NOT guess. Every label must be supported by a finding.
-- Omit a category entirely (empty array) if nothing relevant found. Every finding MUST include a sourceUrl from your searches.`;
+- Omit a category entirely (empty array) if nothing relevant found. Every finding MUST include a sourceUrl from your searches.
+${industryContextOmitLine}`;
 
   const response = await callAnthropic(
     secrets.ANTHROPIC_API_KEY,
@@ -811,10 +830,16 @@ Field guidance:
       funding: sanitizeCategory(parsed.categories?.funding),
       hiring: sanitizeCategory(parsed.categories?.hiring),
       social: sanitizeCategory(parsed.categories?.social),
+      // Sixth bucket — empty array when industryCfg is null so the row's
+      // categories Record stays a stable shape across industries.
+      industryContext: sanitizeCategory(parsed.categories?.industryContext),
     },
     citations,
     searchQueries: Array.isArray(parsed.searchQueries) ? parsed.searchQueries.map(String) : [],
     ...(derivedState ? { derivedState } : {}),
+    // Snapshot the label at research time. If the user later changes industry,
+    // historical findings keep their original label.
+    ...(industryCfg ? { industryContextLabel: industryCfg.label } : {}),
     tokensUsed,
   };
 }
@@ -873,7 +898,7 @@ For each new item, analyze its impact. Respond with ONLY valid JSON (no prose, n
       "title": "short headline from the current item",
       "detail": "2-sentence explanation of what's new",
       "sourceUrl": "the sourceUrl from the current item (required)",
-      "category": "news" | "product" | "funding" | "hiring" | "social",
+      "category": "news" | "product" | "funding" | "hiring" | "social" | "industryContext",
       "changeType": "pricing" | "feature" | "messaging" | "hiring" | "content",
       "significanceScore": 1-10,
       "strategicImplication": "what this change means strategically for competitors",

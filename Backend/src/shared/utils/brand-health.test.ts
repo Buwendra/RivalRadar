@@ -26,6 +26,7 @@ function makeFinding(daysAgo: number, sentiments: Array<'positive' | 'neutral' |
       funding: [],
       hiring: [],
       social: [],
+      industryContext: [],
     },
   };
 }

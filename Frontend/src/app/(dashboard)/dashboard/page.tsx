@@ -20,6 +20,7 @@ import { SaveViewDialog } from "@/components/dashboard/save-view-dialog";
 import { OnboardingChecklistCard } from "@/components/dashboard/onboarding-checklist-card";
 import { ActiveResearchPanel } from "@/components/dashboard/active-research-panel";
 import { BrandHealthScoreCard } from "@/components/dashboard/brand-health-score-card";
+import { SinceLastLookedCard } from "@/components/dashboard/since-last-looked-card";
 import { Button } from "@/components/ui/button";
 import { useCapabilities, useCapability } from "@/lib/hooks/use-capability";
 
@@ -88,6 +89,8 @@ export default function DashboardPage() {
           </Button>
         </div>
       </PageHeader>
+
+      <SinceLastLookedCard />
 
       <ActiveResearchPanel />
 

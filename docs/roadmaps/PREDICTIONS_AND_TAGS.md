@@ -1,5 +1,11 @@
 # Predictions & Tags — Ideation
 
+> ✅ **Most of this doc shipped.** Concrete execution + status of each idea here is tracked in [ROADMAP.md](ROADMAP.md) Phases 0–5 (all shipped) plus [PRODUCT_GAPS_ROADMAP.md](PRODUCT_GAPS_ROADMAP.md) Phase 2 (Recommended actions — shipped). This file is retained as a strategy / ideation record only — refer to the roadmaps for the source of truth on what's live.
+
+**Last reviewed**: 2026-05-29
+
+---
+
 Internal strategy doc. What derived intelligence can we extract from the data we already collect, and which layers are worth building first.
 
 ---

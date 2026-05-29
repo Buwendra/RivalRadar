@@ -68,6 +68,13 @@ export interface User {
   // daily send-retention-nudges Lambda after a nudge email goes out and acts
   // as a 90-day cooldown to prevent nudge fatigue.
   lastLoginAt?: string;
+  /**
+   * The value `lastLoginAt` held *before* the current session's ping. Powers
+   * the dashboard "since you last looked" hero card. Undefined on the first
+   * ever session and intentionally NOT updated on every page load — only on
+   * the once-per-session ping.
+   */
+  previousLoginAt?: string;
   lastRetentionNudgeAt?: string;
 
   // Workspace-shared feed threshold (Phase 7b). Stored on the tenant owner's

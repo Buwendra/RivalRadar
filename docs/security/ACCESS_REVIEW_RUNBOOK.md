@@ -1,6 +1,6 @@
 # Access Review Runbook
 
-> Phase 10a. Quarterly procedure to verify who has privileged access to RivalScan's systems. Companion to [SECRET_ROTATION_RUNBOOK.md](SECRET_ROTATION_RUNBOOK.md) (paired cadence). Maps to SOC 2 CC6.2 (provisioning + de-provisioning) and CC6.3 (access modifications).
+> Phase 10a. Quarterly procedure to verify who has privileged access to RivalScan's systems. Companion to [SECRET_ROTATION_RUNBOOK.md](../runbooks/SECRET_ROTATION_RUNBOOK.md) (paired cadence). Maps to SOC 2 CC6.2 (provisioning + de-provisioning) and CC6.3 (access modifications).
 
 ## Cadence
 
@@ -52,8 +52,8 @@ For each row: open the listed source, verify the "Who today" column, take action
 | IAM user with active access keys but no MFA | Disable console access immediately; rotate keys; investigate why MFA was disabled. |
 | Access key not used in 90+ days | Disable. If business owner confirms still needed, rotate + restart the 90-day window. |
 | Unknown collaborator on the GitHub repo | Investigate immediately. Revoke. Audit recent commits for tampering via `git log --since=90.days.ago`. |
-| Unknown member in Paddle / Anthropic console | Treat as potential credential leak. Revoke + rotate the API key/webhook secret + run the [INCIDENT_RUNBOOK.md](INCIDENT_RUNBOOK.md) "Credential leak" playbook. |
-| Secret unrotated >120 days | Trigger the rotation procedure ([SECRET_ROTATION_RUNBOOK.md](SECRET_ROTATION_RUNBOOK.md)) on the next business day. |
+| Unknown member in Paddle / Anthropic console | Treat as potential credential leak. Revoke + rotate the API key/webhook secret + run the [INCIDENT_RUNBOOK.md](../runbooks/INCIDENT_RUNBOOK.md) "Credential leak" playbook. |
+| Secret unrotated >120 days | Trigger the rotation procedure ([SECRET_ROTATION_RUNBOOK.md](../runbooks/SECRET_ROTATION_RUNBOOK.md)) on the next business day. |
 | Customer-facing API key dormant for 12+ months | No action — this is customer state. (Future enhancement: notify the workspace owner.) |
 
 ## Audit log table

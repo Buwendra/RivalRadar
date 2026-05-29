@@ -1,5 +1,15 @@
 # Roadmap — Predictions & Tags (Priority 3)
 
+**Status legend**
+- ✅ Shipped — in production
+- 🚧 In flight — actively being built
+- 📋 Planned — scheduled, not started
+- 💤 Deferred — parked
+
+**Last reviewed**: 2026-05-29
+
+> ✅ **All phases shipped.** Every phase in this roadmap is live in production. Original execution-detailed plan retained below as a record of the build.
+
 Execution-detailed plan to ship the three highest-value intelligence features from [PREDICTIONS_AND_TAGS.md](PREDICTIONS_AND_TAGS.md):
 
 1. **Threat level + momentum** (single most important glance)
@@ -12,20 +22,20 @@ All three depend on richer research output than we collect today, so Phase 0 enr
 
 ## Phase structure at a glance
 
-| # | Phase | Depends on | User-visible outcome | Effort |
-|---|---|---|---|---|
-| 0 | Research prompt enrichment | — | (none — data only) | 0.5 day |
-| 1 | Momentum (rule-based) | Phase 0 not strictly needed, but nice | Momentum chip on Overview + sort | 1 day |
-| 2 | Threat level (Claude synthesis) | Phase 0 | Threat MetricCard, dashboard sorts by threat | 1 day |
-| 3 | Per-competitor tag chips | Phase 0 | Tag row under competitor name | 1 day |
-| 4 | Predicted next moves | Phase 0 + ≥ 2 research runs per competitor | "Predicted Moves" card on Overview | 1 day |
-| 5 | Cross-competitor dashboard polish | Phases 1-4 | Main dashboard shows ranked competitor strip | 0.5-1 day |
+| # | Phase | Status | Depends on | User-visible outcome | Effort |
+|---|---|---|---|---|---|
+| 0 | Research prompt enrichment | ✅ | — | (none — data only) | 0.5 day |
+| 1 | Momentum (rule-based) | ✅ | Phase 0 not strictly needed, but nice | Momentum chip on Overview + sort | 1 day |
+| 2 | Threat level (Claude synthesis) | ✅ | Phase 0 | Threat MetricCard, dashboard sorts by threat | 1 day |
+| 3 | Per-competitor tag chips | ✅ | Phase 0 | Tag row under competitor name | 1 day |
+| 4 | Predicted next moves | ✅ | Phase 0 + ≥ 2 research runs per competitor | "Predicted Moves" card on Overview | 1 day |
+| 5 | Cross-competitor dashboard polish | ✅ | Phases 1-4 | Main dashboard shows ranked competitor strip | 0.5-1 day |
 
 Total: roughly **5 days of focused work**. Each phase ends with a deploy, so partial ship is fine.
 
 ---
 
-## Phase 0 — Research prompt enrichment
+## ✅ Phase 0 — Research prompt enrichment
 
 ### Goal
 Make `deepResearch()` emit a structured **`derivedState`** block alongside the 5 category arrays. This block summarizes what Claude inferred about the competitor's current state (stage, funding posture, strategic direction, tech positioning, hiring mode) while it already has full research context. Free-ish — adds ~300 tokens of output to the existing call.
@@ -131,7 +141,7 @@ None in Phase 0 (intentional — data-only phase).
 
 ---
 
-## Phase 1 — Momentum (rule-based)
+## ✅ Phase 1 — Momentum (rule-based)
 
 ### Goal
 Compute `momentum` per competitor from historical finding + Change counts. Surface on Overview tab as a chip + arrow, and sort the main dashboard competitor list by momentum descending. Zero AI cost — pure TypeScript.
@@ -208,7 +218,7 @@ export interface Competitor {
 
 ---
 
-## Phase 2 — Threat level (Claude synthesis)
+## ✅ Phase 2 — Threat level (Claude synthesis)
 
 ### Goal
 Assign each competitor `'critical' | 'high' | 'medium' | 'low' | 'monitor'` based on their `derivedState` + recent Changes + momentum. Render as a prominent MetricCard on the Overview tab (tone `destructive` for critical/high, `warning` for medium, `default` below). Sort dashboard competitor list by threat desc, with momentum as tie-breaker.
@@ -292,7 +302,7 @@ export interface Competitor {
 
 ---
 
-## Phase 3 — Per-competitor tag chips
+## ✅ Phase 3 — Per-competitor tag chips
 
 ### Goal
 Auto-apply 5-10 descriptive tag chips under the competitor's name in the header, derived from `derivedState` (mostly rule-based) plus a small Haiku pass for nuance (e.g. `just-raised` if fundingState is `recently-raised` AND we have Change with sourceCategory `funding` in last 30 days).
@@ -373,7 +383,7 @@ export interface Competitor {
 
 ---
 
-## Phase 4 — Predicted next moves
+## ✅ Phase 4 — Predicted next moves
 
 ### Goal
 For each competitor with ≥ 2 historical ResearchFindings, generate top 3 predictions about what they'll do in the next 30-90 days. Render on the Overview tab as a dedicated card. Each prediction has probability, reasoning, and a time horizon.
@@ -464,7 +474,7 @@ export interface Competitor {
 
 ---
 
-## Phase 5 — Cross-competitor dashboard polish
+## ✅ Phase 5 — Cross-competitor dashboard polish
 
 ### Goal
 Use all the new per-competitor signals (threat, momentum, tags) to make the main `/dashboard` page answer "who do I worry about today?" at a glance — not just the detail page.

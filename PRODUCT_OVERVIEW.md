@@ -237,7 +237,7 @@ deal signals.
 - **Public API (`/v1`)** — X-API-Key read and write access, for syncing into a
   warehouse, building a custom dashboard, or wiring up automations.
 - **Scheduled reports** — automated monthly executive PDF, delivered on the 1st of every
-  month (Command tier).
+  month (Command tier).Wha
 
 ### Teams and roles
 
