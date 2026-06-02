@@ -1,8 +1,12 @@
 /**
- * Mirror of `Backend/src/shared/types/capabilities.ts`. Keep these two files
- * in lock-step when adding new capabilities. Backend remains the enforcement
- * source of truth — frontend uses this only for UI gating (showing/hiding
- * upgrade prompts, disabling buttons).
+ * AUTO-GENERATED — do not edit by hand.
+ *
+ * Source of truth: Backend/src/shared/types/capabilities.ts
+ * Regenerate via: cd Backend && npx ts-node scripts/generate-frontend-capabilities.ts
+ *
+ * Mirror of the backend Capabilities matrix. Backend remains the
+ * enforcement source of truth — frontend uses this only for UI gating
+ * (showing/hiding upgrade prompts, disabling buttons).
  */
 
 import type { PlanTier } from "@/lib/types";
@@ -21,64 +25,86 @@ export interface Capabilities {
   apiAccess: boolean;
   apiKeys: { max: number };
   comparatorMatrix: boolean;
-  /** Phase 23 — Brand Pulse: self-brand monitoring. Available on all tiers. */
   brandPulse: boolean;
-  /** Phase 2 demo-wow — ElevenLabs TTS narration of the weekly digest. Strategist+. */
   audioBriefing: boolean;
 }
 
 export const CAPABILITIES: Record<PlanTier, Capabilities> = {
-  scout: {
-    pdfExports: false,
-    csvExports: false,
-    slackIntegration: false,
-    webhookIntegration: false,
-    predictedMoves: true,
-    recommendations: { maxVisible: 3 },
-    customRecommendationCategories: false,
-    scheduledReports: false,
-    seats: { max: 1 },
-    savedViews: { max: 0 },
-    apiAccess: false,
-    apiKeys: { max: 0 },
-    comparatorMatrix: false,
-    brandPulse: true,
-    audioBriefing: false,
+  "scout": {
+    "pdfExports": false,
+    "csvExports": false,
+    "slackIntegration": false,
+    "webhookIntegration": false,
+    "predictedMoves": true,
+    "recommendations": {
+      "maxVisible": 3
+    },
+    "customRecommendationCategories": false,
+    "scheduledReports": false,
+    "seats": {
+      "max": 1
+    },
+    "savedViews": {
+      "max": 0
+    },
+    "apiAccess": false,
+    "apiKeys": {
+      "max": 0
+    },
+    "comparatorMatrix": false,
+    "brandPulse": true,
+    "audioBriefing": false
   },
-  strategist: {
-    pdfExports: true,
-    csvExports: true,
-    slackIntegration: true,
-    webhookIntegration: true,
-    predictedMoves: true,
-    recommendations: { maxVisible: 10 },
-    customRecommendationCategories: false,
-    scheduledReports: false,
-    seats: { max: 5 },
-    savedViews: { max: 5 },
-    apiAccess: true,
-    apiKeys: { max: 5 },
-    comparatorMatrix: true,
-    brandPulse: true,
-    audioBriefing: true,
+  "strategist": {
+    "pdfExports": true,
+    "csvExports": true,
+    "slackIntegration": true,
+    "webhookIntegration": true,
+    "predictedMoves": true,
+    "recommendations": {
+      "maxVisible": 10
+    },
+    "customRecommendationCategories": false,
+    "scheduledReports": false,
+    "seats": {
+      "max": 5
+    },
+    "savedViews": {
+      "max": 5
+    },
+    "apiAccess": true,
+    "apiKeys": {
+      "max": 5
+    },
+    "comparatorMatrix": true,
+    "brandPulse": true,
+    "audioBriefing": true
   },
-  command: {
-    pdfExports: true,
-    csvExports: true,
-    slackIntegration: true,
-    webhookIntegration: true,
-    predictedMoves: true,
-    recommendations: { maxVisible: -1 },
-    customRecommendationCategories: true,
-    scheduledReports: true,
-    seats: { max: 25 },
-    savedViews: { max: 25 },
-    apiAccess: true,
-    apiKeys: { max: 25 },
-    comparatorMatrix: true,
-    brandPulse: true,
-    audioBriefing: true,
-  },
+  "command": {
+    "pdfExports": true,
+    "csvExports": true,
+    "slackIntegration": true,
+    "webhookIntegration": true,
+    "predictedMoves": true,
+    "recommendations": {
+      "maxVisible": -1
+    },
+    "customRecommendationCategories": true,
+    "scheduledReports": true,
+    "seats": {
+      "max": 25
+    },
+    "savedViews": {
+      "max": 25
+    },
+    "apiAccess": true,
+    "apiKeys": {
+      "max": 25
+    },
+    "comparatorMatrix": true,
+    "brandPulse": true,
+    "audioBriefing": true
+  }
 };
 
 export function capabilitiesFor(user: { plan?: PlanTier } | null | undefined): Capabilities {
