@@ -1,0 +1,75 @@
+# Run real CI on every PR + push to main: TypeScript type-check, unit tests,
+# ESLint. Companion to npm-audit.yml (security scan); together they form the
+# required-status-check baseline for the branch protection rule on main.
+#
+# CDK synth is intentionally skipped here — it's slow (~5 min) and would
+# blow the free-tier budget on every PR. Run it locally before infra
+# changes via `npx cdk synth`.
+
+name: verify
+
+on:
+  pull_request:
+    paths:
+      - "Backend/**"
+      - "Frontend/**"
+      - ".github/workflows/verify.yml"
+  push:
+    branches: [main]
+    paths:
+      - "Backend/**"
+      - "Frontend/**"
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: Backend/package-lock.json
+
+      - name: Install
+        working-directory: Backend
+        # --no-audit: npm-audit.yml owns audit. --ignore-scripts: defence
+        # against malicious transitive packages running arbitrary postinstall code.
+        run: npm ci --no-audit --ignore-scripts
+
+      - name: Type check
+        working-directory: Backend
+        run: npx tsc --noEmit
+
+      - name: Unit tests
+        working-directory: Backend
+        run: npx vitest run
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: Frontend/package-lock.json
+
+      - name: Install
+        working-directory: Frontend
+        run: npm ci --no-audit --ignore-scripts
+
+      - name: Type check
+        working-directory: Frontend
+        run: npx tsc --noEmit
+
+      - name: Lint
+        working-directory: Frontend
+        run: npm run lint
