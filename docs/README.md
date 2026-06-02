@@ -22,6 +22,12 @@ What's planned, what's shipped, what's deferred. Each roadmap doc carries the st
 | [roadmaps/COMPLIANCE_ROADMAP.md](roadmaps/COMPLIANCE_ROADMAP.md) | Legal / regulatory / security posture — Phases 1–7. Currently: 1 ✅, 2–5 🚧, 6 📋, 7 💤. | Engineering, legal, compliance |
 | [roadmaps/PREDICTIONS_AND_TAGS.md](roadmaps/PREDICTIONS_AND_TAGS.md) | Ideation source for the ROADMAP.md work above. Most ideas have shipped. Retained as a strategy / ideation record. | Product |
 
+## Launch readiness
+
+| Doc | Purpose | Audience |
+|---|---|---|
+| [LAUNCH_ISSUES.md](LAUNCH_ISSUES.md) | Deep-dive on every identified issue that affects opening public signups, with programmatic fix plans (file paths, code outlines, verification, effort). 11 issues across legal, security, ops, and tech debt. | Engineering, product, legal |
+
 ## Runbooks
 
 How to operate the system — deploy, test, page response, secret rotation.
