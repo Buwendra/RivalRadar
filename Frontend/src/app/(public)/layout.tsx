@@ -1,5 +1,6 @@
 import { PublicNavbar } from "@/components/layout/public-navbar";
 import { PublicFooter } from "@/components/layout/public-footer";
+import { CookieNoticeBanner } from "@/components/shared/cookie-notice-banner";
 
 export default function PublicLayout({
   children,
@@ -11,6 +12,7 @@ export default function PublicLayout({
       <PublicNavbar />
       <main className="flex-1">{children}</main>
       <PublicFooter />
+      <CookieNoticeBanner />
     </div>
   );
 }
