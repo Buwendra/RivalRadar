@@ -54,6 +54,38 @@ The current product roadmap and design rationale lives in [docs/roadmaps/ROADMAP
 | `/docs/internal/` | Material intentionally not public (e.g. pricing-value analysis) |
 | `/Frontend/README.md` | Frontend dev guide |
 
+## Master phase timeline
+
+The three roadmap docs each use their own phase numbering (ROADMAP.md 0–5, PRODUCT_GAPS_ROADMAP.md 1–11, COMPLIANCE_ROADMAP.md 1–7), but the code references a single master timeline. This table maps every "Phase N" mentioned anywhere in the codebase to its home roadmap.
+
+| # | Phase | Lives in | Status |
+|---|---|---|---|
+| 0 | Research prompt enrichment | `docs/roadmaps/ROADMAP.md` | ✅ |
+| 1 | Pipeline continuity & cost observability | `docs/roadmaps/PRODUCT_GAPS_ROADMAP.md` | ✅ |
+| 1 (compliance) | Misuse defense + AI safety | `docs/roadmaps/COMPLIANCE_ROADMAP.md` | ✅ |
+| 2 | Momentum / Recommendations | `docs/roadmaps/{ROADMAP,PRODUCT_GAPS_ROADMAP}.md` | ✅ |
+| 3 | Threat level / Multi-channel delivery | `docs/roadmaps/{ROADMAP,PRODUCT_GAPS_ROADMAP}.md` | ✅ |
+| 4a/b/c | Workspaces (tenancy / governance / ownership) | `docs/roadmaps/PRODUCT_GAPS_ROADMAP.md` | ✅ |
+| 5 | Onboarding & analytics events | `docs/roadmaps/PRODUCT_GAPS_ROADMAP.md` | ✅ |
+| 6 / 6a / 6b / 6c | Capability matrix / custom rec categories / PDF exports / scheduled reports | `docs/roadmaps/PRODUCT_GAPS_ROADMAP.md` | ✅ |
+| 7a / 7b | Change notes / Saved views | `docs/roadmaps/PRODUCT_GAPS_ROADMAP.md` | ✅ |
+| 8a / 8b / 8c | Retention nudges / Cancellation feedback / Status page | `docs/roadmaps/PRODUCT_GAPS_ROADMAP.md` | ✅ |
+| 9 | Security hardening (final wave) | `docs/roadmaps/PRODUCT_GAPS_ROADMAP.md` | 🚧 ~80% |
+| 10 | Trust & certifications | `docs/roadmaps/PRODUCT_GAPS_ROADMAP.md` | 💤 |
+| 11 | Public API | (in-code: API key entity + `/v1/*` routes) | ✅ |
+| 13 | API key scopes | (in-code: scope field on ApiKey) | ✅ |
+| 14 | Three-role workspace hierarchy | (in-code: owner / admin / member) | ✅ |
+| 15 | Saved-view subscriptions | (in-code: SavedViewSubscription entity) | ✅ |
+| 18 | In-app notifications | (in-code: Notification entity) | ✅ |
+| 19 / 20 / 21 | Comparator matrix / Battlecards / Win-against tactics | (in-code) | ✅ |
+| 22 | Research-run observability | (in-code: ResearchRun entity) | ✅ |
+| 23 | Brand Pulse (self-brand monitoring) | (in-code) | ✅ |
+| 24 | Comparative analytics (SoV / Brand Health / Comparative Briefing) | (in-code) | ✅ |
+| Phase 11 — Go Live | Parking lot for launch-gated items | `docs/roadmaps/PRODUCT_GAPS_ROADMAP.md` | 🚧 |
+| Demo-wow Phases 1–3 | Since-last-looked / Audio briefing / Live polling + time-machine | (in-code) | ✅ |
+
+Numbering caveat: the in-code phases (11+) were assigned ad-hoc during sprints and don't correspond 1:1 to PRODUCT_GAPS_ROADMAP phases. When in doubt, search the repo for the literal "Phase N" string — every shipped phase is referenced from at least one comment in either `CLAUDE.md` or the source files.
+
 ## Commands
 
 ### Backend (`Backend/`)
