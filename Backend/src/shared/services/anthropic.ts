@@ -4,6 +4,124 @@ import { generateId } from '../utils/id';
 import { computeAnthropicCostUsd } from '../utils/anthropic-pricing';
 import { getIndustryConfig, type IndustryResearchConfig } from '../utils/industry-research';
 import { getPromptVersion } from './prompt-registry';
+import { atomicAdd, getItem, putItem } from '../db/queries';
+import {
+  aiLogPK,
+  aiLogSK,
+  rateLimitPK,
+  rateLimitSK,
+  userPK,
+  userSK,
+} from '../db/keys';
+
+// Issue 8 — Anthropic input-TPM rate-limit bucket
+const TPM_LIMIT = 30_000; // Anthropic org-level
+const TPM_HEADROOM = 5_000; // back off at 25k to leave room for concurrent calls
+const TPM_THRESHOLD = TPM_LIMIT - TPM_HEADROOM;
+
+function currentMinuteKey(): string {
+  return new Date().toISOString().slice(0, 16); // YYYY-MM-DDTHH:MM
+}
+
+/**
+ * Issue 8 — token-bucket pre-check. Fire-and-forget ADD to the per-minute
+ * bucket, then read it. If the bucket is over threshold, sleep to the next
+ * minute boundary and retry once. Fail-open: any DDB error proceeds with
+ * the call (better to risk Anthropic 429 than block on our own tracker).
+ */
+async function awaitRateLimitClearance(estimatedInputTokens: number): Promise<void> {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const minute = currentMinuteKey();
+    const ttl = Math.floor(Date.now() / 1000) + 120;
+    try {
+      await atomicAdd(rateLimitPK(), rateLimitSK(minute), 'tokensUsed', estimatedInputTokens, {
+        minute,
+        expiresAt: ttl,
+      });
+      const row = await getItem<{ tokensUsed?: number }>(
+        rateLimitPK(),
+        rateLimitSK(minute)
+      );
+      const used = row?.tokensUsed ?? 0;
+      if (used <= TPM_THRESHOLD) return;
+      // Over threshold — sleep to the top of the next minute and retry.
+      const msToNextMinute = 60_000 - (Date.now() % 60_000);
+      logger.warn('anthropic_rate_limit_local_throttle', {
+        minute,
+        tokensUsed: used,
+        threshold: TPM_THRESHOLD,
+        sleepMs: msToNextMinute,
+      });
+      await new Promise((r) => setTimeout(r, msToNextMinute));
+    } catch (err) {
+      logger.warn('rate_limit_check_failed', {
+        err: err instanceof Error ? err.message : String(err),
+      });
+      return; // fail-open
+    }
+  }
+}
+
+function estimateInputTokens(body: unknown): number {
+  // Rough: 1 token ≈ 4 chars of serialized request body. Slightly generous
+  // (counts system + tools serialisation) which is fine for headroom.
+  try {
+    return Math.ceil(JSON.stringify(body).length / 4);
+  } catch {
+    return 4_000; // fallback if body can't be serialised (shouldn't happen)
+  }
+}
+
+// Issue 9 — forensic audit log row for every successful (or HTTP-erroring)
+// Anthropic call. Fire-and-forget from `callAnthropic`; failures here log a
+// warning but never propagate to the caller.
+const AILOG_RESPONSE_TRUNCATE = 4096;
+const AILOG_TTL_DAYS = 365;
+
+async function persistAiLog(args: {
+  aiCallId: string;
+  opName: string;
+  model: string;
+  userId: string | null;
+  promptHash: string;
+  status: string;
+  httpStatus: number;
+  durationMs: number;
+  inputTokens: number;
+  outputTokens: number;
+  costUsd: number;
+  responseClone: Response;
+}): Promise<void> {
+  try {
+    const text = await args.responseClone.text();
+    const now = new Date();
+    const createdAt = now.toISOString();
+    const ymm = createdAt.slice(0, 7);
+    await putItem({
+      PK: aiLogPK(ymm),
+      SK: aiLogSK(createdAt, args.aiCallId),
+      aiCallId: args.aiCallId,
+      opName: args.opName,
+      model: args.model,
+      ...(args.userId !== null ? { userId: args.userId } : {}),
+      promptHash: args.promptHash,
+      responseTextTruncated: text.slice(0, AILOG_RESPONSE_TRUNCATE),
+      status: args.status,
+      httpStatus: args.httpStatus,
+      durationMs: args.durationMs,
+      inputTokens: args.inputTokens,
+      outputTokens: args.outputTokens,
+      costUsd: Number(args.costUsd.toFixed(6)),
+      createdAt,
+      expiresAt: Math.floor(now.getTime() / 1000) + AILOG_TTL_DAYS * 86400,
+    });
+  } catch (err) {
+    logger.warn('ailog_write_failed', {
+      aiCallId: args.aiCallId,
+      err: err instanceof Error ? err.message : String(err),
+    });
+  }
+}
 import {
   AiAnalysis,
   ResearchFinding,
@@ -209,6 +327,9 @@ async function callAnthropic(
     userId,
   });
 
+  // Issue 8 — pre-call rate-limit clearance. Fail-open on any DDB error.
+  await awaitRateLimitClearance(estimateInputTokens(body));
+
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -239,6 +360,48 @@ async function callAnthropic(
         outputTokens: usage.outputTokens ?? 0,
         costUsd: Number(costUsd.toFixed(6)),
       });
+
+      // Issue 9 — forensic audit log write (fire-and-forget). Clone the
+      // response BEFORE the caller consumes it, then read the clone's text
+      // for the audit row. Failures here never block the original call.
+      const responseClone = response.clone();
+      void persistAiLog({
+        aiCallId,
+        opName,
+        model,
+        userId,
+        promptHash,
+        status: response.ok ? 'ok' : 'http-error',
+        httpStatus: response.status,
+        durationMs: Date.now() - startedAt,
+        inputTokens: usage.inputTokens ?? 0,
+        outputTokens: usage.outputTokens ?? 0,
+        costUsd,
+        responseClone,
+      });
+
+      // Issue 7 — real-time MTD cost-cap update. Atomic ADD on the User
+      // row so concurrent calls converge correctly. Fire-and-forget; the
+      // nightly aggregator still runs as a reconciliation safety net.
+      if (userId && response.ok && costUsd > 0) {
+        const month = new Date().toISOString().slice(0, 7); // YYYY-MM
+        void atomicAdd(
+          userPK(userId),
+          userSK(),
+          'monthToDateCostUsd',
+          Number(costUsd.toFixed(6)),
+          {
+            monthToDateCostMonth: month,
+            lastAiCallAt: new Date().toISOString(),
+          }
+        ).catch((err) => {
+          logger.warn('cost_cache_update_failed', {
+            aiCallId,
+            userId,
+            err: err instanceof Error ? err.message : String(err),
+          });
+        });
+      }
       return response;
     }
 

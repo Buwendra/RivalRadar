@@ -145,6 +145,20 @@ export const audioBriefingSK = (generatedAt: string, id: string) =>
   `AUDIO#${generatedAt}#${id}`;
 export const audioBriefingSKPrefix = () => 'AUDIO#';
 
+// AILog — forensic audit row per Anthropic call (Issue 9 / Compliance Phase 1.5).
+// Monthly bucketed PK so a defamation-claim drill can scan a single month
+// in one DDB query. 1-year TTL via expiresAt.
+export const aiLogPK = (yyyymm: string) => `AILOG#${yyyymm}`;
+export const aiLogSK = (createdAt: string, aiCallId: string) =>
+  `CALL#${createdAt}#${aiCallId}`;
+export const aiLogSKPrefix = () => 'CALL#';
+
+// RateLimit bucket — Anthropic input-TPM token bucket (Issue 8). One row
+// per minute under a single PK; pre-call ADD writes + read in the same
+// callAnthropic invocation. 2-minute TTL.
+export const rateLimitPK = () => 'RATELIMIT#ANTHROPIC_INPUT_TPM';
+export const rateLimitSK = (minuteKey: string) => `MINUTE#${minuteKey}`;
+
 // ─── GSI Key Builders ───
 
 // GSI1: User's changes feed (dashboard)

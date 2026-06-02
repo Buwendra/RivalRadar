@@ -165,3 +165,43 @@ export async function updateItem(
     })
   );
 }
+
+/**
+ * Atomic increment of one numeric attribute, with optional SETs on others.
+ * Powers the real-time cost-cap update (Issue 7) and the rate-limit token
+ * bucket (Issue 8). DDB's ADD is the only way to safely increment under
+ * concurrent writes — `SET x = x + 1` race-loses.
+ */
+export async function atomicAdd(
+  pk: string,
+  sk: string,
+  attr: string,
+  delta: number,
+  setAttrs: Record<string, unknown> = {}
+): Promise<void> {
+  const names: Record<string, string> = { '#a': attr };
+  const values: Record<string, unknown> = { ':d': delta };
+
+  const setKeys = Object.keys(setAttrs);
+  const setExpr = setKeys
+    .map((_k, i) => `#s${i} = :s${i}`)
+    .join(', ');
+  setKeys.forEach((key, i) => {
+    names[`#s${i}`] = key;
+    values[`:s${i}`] = setAttrs[key];
+  });
+
+  const updateExpression = setExpr
+    ? `ADD #a :d SET ${setExpr}`
+    : `ADD #a :d`;
+
+  await ddb.send(
+    new UpdateCommand({
+      TableName: TABLE_NAME,
+      Key: { PK: pk, SK: sk },
+      UpdateExpression: updateExpression,
+      ExpressionAttributeNames: names,
+      ExpressionAttributeValues: values,
+    })
+  );
+}

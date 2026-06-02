@@ -15,6 +15,8 @@ export * from './notification';
 export * from './battlecard';
 export * from './research-run';
 export * from './audio-briefing';
+export * from './ai-log';
+export * from './rate-limit';
 
 /** Standard API response envelope */
 export interface ApiResponse<T> {
