@@ -9,7 +9,6 @@ const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 export interface AppSecrets {
   PADDLE_SECRET_KEY: string;
   PADDLE_WEBHOOK_SECRET: string;
-  FIRECRAWL_API_KEY: string;
   ANTHROPIC_API_KEY: string;
   /**
    * Phase 2 (demo-wow) — ElevenLabs Flash voice for the weekly audio
@@ -51,7 +50,6 @@ export async function getSecret(secretName: string): Promise<AppSecrets> {
   const required: (keyof AppSecrets)[] = [
     'PADDLE_SECRET_KEY',
     'PADDLE_WEBHOOK_SECRET',
-    'FIRECRAWL_API_KEY',
     'ANTHROPIC_API_KEY',
   ];
   const missing = required.filter((k) => !parsed[k]);

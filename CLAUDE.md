@@ -52,6 +52,7 @@ The current product roadmap and design rationale lives in [docs/roadmaps/ROADMAP
 | `/docs/security/` | Security posture, audit material, vendor risk register, change management |
 | `/docs/api/` | Public API reference |
 | `/docs/internal/` | Material intentionally not public (e.g. pricing-value analysis) |
+| `/docs/LAUNCH_ISSUES.md` | Numbered launch-blocking issues (1–11+) with per-issue fix plans; recent commits reference these by number (e.g. "Issue 7/8/9") |
 | `/Frontend/README.md` | Frontend dev guide |
 
 ## Master phase timeline
@@ -106,7 +107,7 @@ Heads-up: `npm run lint` on the backend is a **TypeScript type-check** (`tsc --n
 
 Tests are colocated next to source as `*.test.ts`. `vitest.config.ts` includes both `test/**/*.test.ts` and `src/**/*.test.ts` — if you add tests in a new place, confirm one of those patterns matches.
 
-**`Backend/scripts/`** holds operational/one-off scripts (run with `npx ts-node`, env vars like `TABLE_NAME`/`RESEARCH_PIPELINE_ARN` supplied inline — see each file's `Usage` header): demo + brand + battlecard seeders (`seed-demo-data.ts`, `seed-brand-data.ts`, `seed-battlecards.sh`), research data maintenance (`delete-research.ts`, `trim-research.ts`), and the SOC 2 evidence snapshot (`soc2-evidence-snapshot.sh`). These hit live AWS resources — not part of the test/build loop.
+**`Backend/scripts/`** holds operational/one-off scripts (run with `npx ts-node`, env vars like `TABLE_NAME`/`RESEARCH_PIPELINE_ARN` supplied inline — see each file's `Usage` header): demo + brand + battlecard seeders (`seed-demo-data.ts`, `seed-brand-data.ts`, `seed-battlecards.sh`), research data maintenance (`delete-research.ts`, `trim-research.ts`), and the SOC 2 evidence snapshot (`soc2-evidence-snapshot.sh`). These hit live AWS resources — not part of the test/build loop. One script is local-only (no AWS): `generate-frontend-capabilities.ts` regenerates the frontend capability mirror from the backend source — run it after editing `shared/types/capabilities.ts` and commit both files together (see "Capability Gating").
 
 ### Frontend (`Frontend/`)
 
@@ -117,6 +118,14 @@ npm run dev              # Dev server (localhost:3000)
 npm run build            # Production build
 npm run lint             # ESLint
 ```
+
+### CI (GitHub Actions)
+
+Two workflows under `.github/workflows/`, forming the required-status-check baseline for the `main` branch-protection rule:
+- **`verify.yml`** — runs on PRs touching `Backend/**` or `Frontend/**` and on push to `main`. Backend job: `tsc --noEmit` + `vitest run`. Frontend job: `tsc --noEmit` + `npm run lint`. Both install with `npm ci --no-audit --ignore-scripts`. **`cdk synth` is intentionally NOT in CI** (too slow/costly) — run it locally before infra changes.
+- **`npm-audit.yml`** — `npm audit --audit-level=high --production` for both dirs on dependency-file PRs + a weekly Sunday 6am UTC scan. Fails only on high/critical CVEs.
+
+Match the CI checks locally before pushing (`npm run lint && npx tsc --noEmit && npx vitest run`) — there's no auto-formatter, so a lint failure blocks merge.
 
 ## Key Patterns & Conventions
 
@@ -192,7 +201,7 @@ Resolution order: email → `callerUserId` (GSI3) → memberships under `USER#<c
 
 Tier-gated features go through `hasCapability(user, 'pdfExports')` from `shared/utils/capability.ts`, fed by the `CAPABILITIES` matrix in `shared/types/capabilities.ts`. The frontend mirrors this manually in `Frontend/src/lib/utils/capabilities.ts` + `lib/hooks/use-capability.ts` — when adding a new capability flag, update **both files** plus the union type on `hasCapability`'s parameter and the `useCapability` hook. Backend remains the enforcement source of truth; frontend uses the mirror only for UI gating (showing/hiding upgrade prompts, disabling buttons).
 
-Current capability flags: `pdfExports`, `csvExports`, `slackIntegration`, `webhookIntegration`, `predictedMoves`, `customRecommendationCategories`, `scheduledReports`, `apiAccess`, `comparatorMatrix`, `brandPulse` (Phase 23 — self-brand monitoring + Phase 24 comparative analytics, true on all tiers). Numeric capacity flags (`recommendations.maxVisible`, `seats.max`, `savedViews.max`, `apiKeys.max`) are read directly from `capabilitiesFor(user)` rather than via the boolean check.
+Current capability flags: `pdfExports`, `csvExports`, `slackIntegration`, `webhookIntegration`, `predictedMoves`, `customRecommendationCategories`, `scheduledReports`, `apiAccess`, `comparatorMatrix`, `brandPulse` (Phase 23 — self-brand monitoring + Phase 24 comparative analytics, true on all tiers), `audioBriefing` (audio version of the weekly digest, Strategist+ only — false on Scout). Numeric capacity flags (`recommendations.maxVisible`, `seats.max`, `savedViews.max`, `apiKeys.max`) are read directly from `capabilitiesFor(user)` rather than via the boolean check.
 
 ### Public API (Phase 11/13)
 
@@ -212,18 +221,25 @@ Uses ULID (`generateId()` in `shared/utils/id.ts`) — time-sortable, conflict-f
 
 ### Secrets
 
-Lazy-loaded singleton with 5-minute TTL cache (`shared/services/secrets.ts`). Pulls from AWS Secrets Manager (`rivalscan/api-keys`): `PADDLE_SECRET_KEY`, `PADDLE_WEBHOOK_SECRET`, `FIRECRAWL_API_KEY`, `ANTHROPIC_API_KEY`.
+Lazy-loaded singleton with 5-minute TTL cache (`shared/services/secrets.ts`). Pulls from AWS Secrets Manager (`rivalscan/api-keys`): `PADDLE_SECRET_KEY`, `PADDLE_WEBHOOK_SECRET`, `ANTHROPIC_API_KEY`, `ELEVENLABS_API_KEY` (optional — weekly audio briefing). (`FIRECRAWL_API_KEY` was removed with the Firecrawl pipeline — no longer required or read.)
 
 ### AI Models & Anthropic call patterns
 
-All Anthropic calls go through `callAnthropic()` in `shared/services/anthropic.ts` — a thin `fetch` wrapper that retries on 429 with backoff (honors `retry-after` header, default 65s, max 2 retries). Use it for any new Claude call you add; do not call `fetch('.../v1/messages')` directly.
+All Anthropic calls go through `callAnthropic()` in `shared/services/anthropic.ts`. Use it for any new Claude call you add; do not call `fetch('.../v1/messages')` directly. Beyond the `fetch`, the wrapper now owns three cross-cutting concerns added in Issues 7/8/9 (see `docs/LAUNCH_ISSUES.md`):
+- **429 retry** with backoff (honors `retry-after` header, default 65s, max 2 retries).
+- **Input-TPM rate-limit bucket** (`awaitRateLimitClearance`) — a per-minute DynamoDB token bucket (`RATELIMIT#ANTHROPIC_INPUT_TPM` / `MINUTE#<key>`) pre-checked before each call. Over the 25k/min threshold (30k org limit − 5k headroom) it sleeps to the next minute boundary and retries once. **Fail-open**: any DDB error proceeds with the call (better to risk a 429 than block on our own tracker).
+- **Real-time cost cap** — `atomicAdd` bumps the per-user `CostDay` rollup as calls complete, so the monthly cap is enforced in real time, not only by the 3am `aggregate-ai-costs` cron.
+- **Forensic AI audit log** (`persistAiLog`) — fire-and-forget row per call (`AILOG#<yyyy-mm>` / `CALL#<ts>#<aiCallId>`) capturing `opName`, `model`, `userId`, `promptHash`, truncated response (4 KB), HTTP status, duration, token counts, and cost. 365-day TTL; write failures log + continue, never propagate.
 
 - **Claude Sonnet 4.5** (alias `claude-sonnet-4-5`):
-  - `deepResearch()` — research with native `web_search_20250305` tool, max 8 uses/run, max_tokens 4096
+  - `deepResearch()` — research with native `web_search_20250305` tool, max 8 uses/run, max_tokens **16384** (raised from 4096 — Phase 0 prompt enrichment's `derivedState` + per-finding metadata blew past the old limit and truncated mid-array; you only pay for tokens actually generated)
   - `detectResearchDeltas()` — compares prior vs current `ResearchFinding`, max_tokens **16384** (large because it generates detailed deltas + impact analysis). Has a `parseDeltasJson()` helper that does **partial JSON recovery** if Claude truncates mid-array — salvages every complete delta object before the cut-off rather than discarding the whole response.
   - `generateWeeklySummary()` — strategic briefing prose for the competitive digest email
   - `generateComparativeBriefing()` — PR-flavoured briefing for the Phase 24 Comparative Briefing email; returns prose + 2–3 suggested narrative angles. max_tokens 1500, ~$0.01–0.02/call. Soft-degrades to raw text if the JSON envelope can't be parsed.
+  - `generateRecommendations()` — Phase 2 strategic recommendations for the weekly digest (separate call from the summary prose)
   - `predictNextMoves()` — forward-looking 30/60/90-day predictions per competitor (~$0.02)
+  - `evaluatePriorPredictions()` — grades the previous run's predictions against what actually happened, feeding `predictionHistory` on the Competitor record
+  - `suggestCompetitors()` — onboarding-time competitor discovery from the user's company/industry
 - **Claude Haiku 4.5** (`claude-haiku-4-5-20251001`):
   - `scoreCompetitorThreat()` — 1-2 sentence threat rationale + level (~$0.002/call)
   - `suggestWinAgainstTactics()` — 3-5 sales-enablement tactics for the battlecard (Phase 21, ~$0.005/call); cached on the Competitor record keyed by `winAgainstTacticsResearchId` so regenerating the same battlecard within one research cycle skips the call.
@@ -306,6 +322,8 @@ Funnel events are emitted as structured JSON via `logger.info(eventName, metadat
 | Battlecard | `USER#<tenantUserId>` | `BATTLECARD#<ts>#<id>` | Phase 20, 30-day TTL, GSI3 token lookup |
 | CancellationFeedback | `CANCEL_FEEDBACK#<token>` | `META` | Phase 8b, token-share |
 | OFAC SDN drift tracker | `OFAC_SDN` | `META` | Compliance Phase 1, drift cron |
+| AI audit log | `AILOG#<yyyy-mm>` | `CALL#<ts>#<aiCallId>` | Issue 9 forensic log, 365-day TTL (written by `callAnthropic`) |
+| Anthropic TPM bucket | `RATELIMIT#ANTHROPIC_INPUT_TPM` | `MINUTE#<key>` | Issue 8 per-minute token bucket, 120s TTL |
 
 The `Snapshot` entity from the original Firecrawl pipeline is no longer written. Old snapshot rows from before the deep-research refactor still exist (and the SK prefix `SNAP#` is reserved) but no code path reads them today.
 
@@ -346,6 +364,8 @@ Lambda timeout 5 min, memory 1024 MB (web_search responses can be large).
 
 **Weekly competitive digest** (`Backend/src/functions/scheduled/`):
 1. `get-subscribers` → 2. `aggregate-changes` (top 10 by significance, past 7 days via GSI1) → 3. `generate-summary` (Claude Sonnet) → 4. `generate-recommendations` (Claude Sonnet) → 5. `render-send-email` (SES). MAP wrapper, maxConcurrency=5.
+
+**Audio briefing (Demo-wow Phase 2):** for `audioBriefing`-capable users (Strategist+), `render-send-email` also synthesizes an audio version of the digest via ElevenLabs Flash (`shared/services/elevenlabs.ts`), stores the MP3 (`shared/services/audio-briefing-storage.ts`), and links it in the email. Gated by the `audioBriefing` capability flag; degrades silently to text-only if `ELEVENLABS_API_KEY` is unset.
 
 **Comparative briefing (Phase 24)** — opt-in, separate state machine, same Map shape:
 1. `get-comparative-subscribers` (opt-in + `brandPulse` capability + self-row existence) → 2. `aggregate-brand-coverage` (self + competitor mention counts, sentiment breakdown, SoV) → 3. `generate-comparative-briefing` (Sonnet, soft-degrades on JSON parse failure) → 4. `render-send-comparative-brief` (email-only via `sendEmailNotification`, bypasses `dispatchWeeklyDigest()`).

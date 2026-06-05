@@ -304,7 +304,10 @@ async function readUsageFromClone(
  * scheduled aggregator queries this event via Logs Insights to build
  * per-user / per-day cost rollups. PII-safe (prompt is hashed, not stored).
  */
-async function callAnthropic(
+// Exported for unit testing of the Issue 7/8/9 hardening (rate-limit bucket,
+// real-time cost cap, forensic audit log). Production callers stay internal —
+// every public helper in this file routes through it.
+export async function callAnthropic(
   apiKey: string,
   body: unknown,
   opName: string,
@@ -383,6 +386,15 @@ async function callAnthropic(
       // Issue 7 — real-time MTD cost-cap update. Atomic ADD on the User
       // row so concurrent calls converge correctly. Fire-and-forget; the
       // nightly aggregator still runs as a reconciliation safety net.
+      //
+      // Deliberate concurrency window: because this ADD is async and the
+      // eligibility check (research-eligibility.ts) reads the cached value,
+      // several runs started in the same instant can each pass the cap check
+      // before any ADD lands. This is bounded in practice by the research
+      // pipeline's MapResearch maxConcurrency:1, the per-day researchPerDay
+      // rate limit, and nightly reconciliation — acceptable for the current
+      // free-trial model. Convert to a conditional/transactional check if a
+      // hard, race-free cap is ever required.
       if (userId && response.ok && costUsd > 0) {
         const month = new Date().toISOString().slice(0, 7); // YYYY-MM
         void atomicAdd(

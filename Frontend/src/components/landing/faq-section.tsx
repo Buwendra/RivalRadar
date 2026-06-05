@@ -9,22 +9,22 @@ const faqs = [
   {
     question: "How does RivalScan detect changes?",
     answer:
-      "We use Firecrawl to scrape your competitor websites daily, converting them to structured content. Our AI then compares each new version against the previous snapshot using advanced diff analysis to detect meaningful changes — from pricing updates to feature launches.",
+      "RivalScan runs Claude-powered deep web research on each competitor, searching the live web across news, product, funding, hiring, and social signals. Each new research run is compared against the previous one to surface meaningful changes — from pricing updates to feature launches — with the supporting sources cited alongside every finding.",
   },
   {
     question: "How accurate is the AI analysis?",
     answer:
-      "Our analysis is powered by Claude AI from Anthropic. Each change is analyzed with a structured framework that identifies change type, significance score (1-10), strategic implications, and recommended actions. We also always show the raw diff alongside the AI analysis so you can verify.",
+      "Our analysis is powered by Claude AI from Anthropic. Each detected change is scored with a structured framework that identifies change type, a significance score (1-10), strategic implications, and recommended actions. Every finding links back to the web sources it was drawn from, so you can always verify the underlying evidence.",
   },
   {
-    question: "What types of pages can I monitor?",
+    question: "What can I monitor?",
     answer:
-      "You can track pricing pages, feature/product pages, homepages, blogs, and careers/job listing pages for each competitor. This gives you a comprehensive view of their strategic moves — from pricing changes to hiring signals.",
+      "RivalScan tracks each competitor across five intelligence categories — news, product, funding, hiring, and social — plus derived signals like momentum, threat level, and strategic direction. It's a comprehensive view of their strategic moves, not just a single web page.",
   },
   {
     question: "How is this different from Google Alerts?",
     answer:
-      "Google Alerts only catches publicly indexed content and often misses subtle changes like pricing tweaks or feature updates. RivalScan directly monitors specific pages daily and uses AI to analyze the strategic significance of each change, delivering actionable insights — not just notifications.",
+      "Google Alerts just forwards keyword matches. RivalScan actively researches each competitor across the web, analyzes the strategic significance of what it finds, and delivers a scored, cited briefing — surfacing pricing shifts, funding events, and hiring signals you'd otherwise miss, not just raw notifications.",
   },
   {
     question: "Can I cancel anytime?",
@@ -34,7 +34,7 @@ const faqs = [
   {
     question: "How quickly will I see my first insights?",
     answer:
-      "After completing the 2-minute onboarding wizard, we immediately scrape your competitors. You'll see your first competitor snapshots within minutes. Meaningful change detection begins the next day when we compare against the initial baseline.",
+      "After completing the 2-minute onboarding wizard, RivalScan immediately kicks off deep research on each competitor you added. Your first cited findings land within minutes, and research re-runs on a recurring schedule (or on demand) to keep your competitive picture current.",
   },
 ];
 

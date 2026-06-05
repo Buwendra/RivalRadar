@@ -123,10 +123,14 @@ export async function enforceResearchEligibility(input: {
     };
   }
 
-  // 1b. Monthly cost cap. Reads the denormalized monthToDateCostUsd cache that
-  // the nightly aggregator writes; up to 24h stale at worst, which is fine in
-  // combination with the synchronous researchPerDay rate-limit below.
-  // The override `monthlyTokenBudget` (per-user) trumps the tier-level cap.
+  // 1b. Monthly cost cap. Reads the denormalized monthToDateCostUsd cache.
+  // Since Issue 7, callAnthropic bumps this cache in real time via atomicAdd
+  // after every successful call, with the nightly aggregator as a reconciliation
+  // safety net — so enforcement is effectively current, not 24h-stale. Combined
+  // with the synchronous researchPerDay rate-limit below this is robust for
+  // honest use (a narrow fire-and-forget concurrency window remains; see the
+  // cost-cap block in anthropic.ts). The per-user `monthlyTokenBudget` override
+  // trumps the tier-level cap.
   const tier: PlanTier = input.user.plan ?? 'scout';
   const tierCostCap = PLAN_LIMITS[tier].monthlyCostCap;
   const userOverride = (input.user as { monthlyTokenBudget?: number }).monthlyTokenBudget;
