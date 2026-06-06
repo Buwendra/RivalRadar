@@ -90,6 +90,16 @@ export class PipelineStack extends cdk.Stack {
     });
     table.grantReadWriteData(this.deepResearchFn);
     apiSecrets.grantRead(this.deepResearchFn);
+    // DeepResearch dispatches immediate critical-change alert emails inline
+    // (dispatchCriticalAlert), so its role needs SES send permission just like
+    // the other email-sending Lambdas below. Without this the alert send fails
+    // with AccessDenied (caught + logged, but the user never gets the alert).
+    this.deepResearchFn.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ['ses:SendEmail', 'ses:SendRawEmail'],
+        resources: ['*'],
+      })
+    );
 
     const sendAlertFn = createPipelineFn('SendAlert', 'pipeline/send-alert.ts');
 
