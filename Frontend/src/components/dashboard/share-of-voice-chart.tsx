@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import type { SoVRow } from "@/lib/types";
+import { ScoreInfo } from "./score-info";
 
 interface ShareOfVoiceChartProps {
   rows: SoVRow[];
@@ -27,6 +28,8 @@ interface ShareOfVoiceChartProps {
   compact?: boolean;
   /** When all rows have count 0, show this message instead of an empty bar. */
   emptyMessage?: string;
+  /** Show the ⓘ "how is this calculated?" link next to the title. */
+  showInfo?: boolean;
 }
 
 const COMPETITOR_PALETTE = [
@@ -49,6 +52,7 @@ export function ShareOfVoiceChart({
   title,
   compact = false,
   emptyMessage = "No mentions in this category yet.",
+  showInfo = false,
 }: ShareOfVoiceChartProps) {
   const total = rows.reduce((sum, r) => sum + r.count, 0);
   const segments = rows.filter((r) => r.count > 0);
@@ -57,7 +61,10 @@ export function ShareOfVoiceChart({
     <div className={cn("space-y-2", compact ? "" : "space-y-3")}>
       {title && (
         <div className="flex items-center justify-between text-xs">
-          <span className="font-medium text-foreground">{title}</span>
+          <span className="flex items-center gap-1 font-medium text-foreground">
+            {title}
+            {showInfo && <ScoreInfo metric="shareOfVoice" />}
+          </span>
           <span className="text-muted-foreground tabular-nums">
             {total} mention{total === 1 ? "" : "s"}
           </span>

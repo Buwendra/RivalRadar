@@ -10,6 +10,7 @@ import {
   GitCompare,
   Sparkles,
   BarChart3,
+  BookOpen,
 } from "lucide-react";
 import { Logo } from "@/components/shared/logo";
 import { Button } from "@/components/ui/button";
@@ -92,6 +93,7 @@ export function DashboardSidebar({ onAddCompetitor }: DashboardSidebarProps) {
           ]
         : undefined,
     },
+    { label: "Methodology", href: "/dashboard/methodology", icon: BookOpen },
     { label: "Settings", href: "/dashboard/settings", icon: Settings },
   ];
 

@@ -182,6 +182,7 @@ export default function YourBrandPage() {
                 momentum={data.momentum}
                 momentumChangePercent={data.momentumChangePercent}
                 size="md"
+                showInfo
               />
             </div>
             <p className="text-xs text-muted-foreground">

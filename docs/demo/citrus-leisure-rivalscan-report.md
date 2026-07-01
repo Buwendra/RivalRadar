@@ -1,53 +1,101 @@
-# RivalScan Intelligence Report — Citrus Leisure PLC
+# Competitive Intelligence Report — Citrus Leisure PLC
 
-> **Demonstration artifact.** This document reproduces the complete data model RivalScan would hold for a real workspace, generated using the application's actual deep-research prompt structure and output schema (`deepResearch()`, `derivedState`, enrichment, predicted moves, recommendations, Share of Voice, Brand Health, comparative briefing). All **findings and citations are real**, gathered via live web research in June 2026. The **derived/AI-scored fields** (momentum %, threat level, predicted moves, recommendations, win-against tactics, Brand Health Score, Share of Voice counts) are analyst-emulated outputs in the exact app schema — they illustrate what the live Claude pipeline would produce, not actual model output from a production run.
+> **Workspace:** Citrus Leisure PLC · **Data as of:** 13 June 2026 · **Window:** trailing 30 days · **Industry:** Travel / Hospitality
 >
-> **Data as of:** 13 June 2026 · **Plan tier modelled:** Command · **Industry:** Travel / Hospitality
+> Citrus Leisure is analysed as your own brand; the five rivals are tracked competitors. **AI-assisted analysis — figures should be verified against the cited primary sources (linked inline and in Sources) before any decision. May contain errors.**
 
 ---
 
-## Workspace configuration
+## 📊 At a Glance — Intelligence Dashboard
 
-| Setting | Value |
+> **Workspace:** Citrus Leisure PLC (self-brand + 5 tracked competitors) · **Data as of:** 13 Jun 2026 ·
+> **Window:** trailing 30 days
+
+**Top 3 things to know**
+
+1. **You lead Share of Voice (25.5%)** on the Blue Orbit maturation, dual TripAdvisor Travellers' Choice
+   wins, and the FY24/25 return to operating profit — but two deeper-pocketed groups (Eden, Serendib)
+   *together* out-voice you and own the funding/financial-news narrative.
+2. **Two international flags now bracket your west-coast core** — Eden's Barceló-managed Occidental Eden
+   Beruwala and Serendib's Avani/Anantara Kalutara resorts pair global brand equity with balance sheets
+   you can't match. The threat is **capital + distribution, not awareness**.
+3. **Win on segmentation** — as arrivals hit records but average spend softens, your price-to-value plus
+   unique Colombo F&B (Blue Orbit/Cosmic) target the value-conscious Indian/regional FIT traveller the
+   premium flags aren't built to win.
+
+| Metric | Value | Read |
+|---|---|---|
+| **Brand Health** | **61 / 100** · confidence *medium* | Strong sentiment, modest voice share across 6 entities |
+| **Your momentum** | **rising** · +31% | Coverage up on Blue Orbit + awards + results cycle |
+| **Your Share of Voice** | **25.5%** · rank 1 of 6 | Biggest single voice, but ~¼ of the conversation |
+| **Tracked changes (30d)** | **47** | Across self + 5 competitors |
+| **Competitors tracked** | **5** | Threat mix below |
+| **Threat distribution** | 🟠 2 high · 🟡 3 medium | No critical-rated rival this cycle |
+| **Highest threat** | **Eden Hotel Lanka** & **Serendib Hotels** (high) | Internationally-branded premium product on your doorstep |
+| **Top signal this cycle** | Eden's +140% Mar-quarter profit swing — **significance 8/10** | Barceló/Occidental relaunch gaining traction |
+| **Recommendations** | **5** this cycle | See §7.2 |
+
+*(Full competitor roster below.)*
+
+---
+
+## 🧭 How to Read the Scores
+
+> Every rating below is computed from the signals gathered in each research cycle — they are analytical
+> indicators, not external certified ratings, so verify against the cited primary sources before acting.
+> **Share of Voice** is a standard marketing measure; **Threat level** is assigned by an AI model against
+> the fixed rubric shown; the others are rule-based.
+
+**Threat level** — *AI-assigned, fixed rubric.* How directly and urgently a rival competes with you.
+
+| Level | Criteria |
 |---|---|
-| Workspace owner | Citrus Leisure PLC (self-brand) |
-| Plan tier | **Command** ($199/mo) |
-| Industry | Travel / Hospitality |
-| `industryContext` bucket label | **"Booking Trends & Occupancy"** |
-| Self-brand monitoring (Brand Pulse) | Enabled (1 self row) |
-| Competitors tracked | 5 of 25 ceiling |
-| History retention | 365 days |
-| Default research cadence | Every 14 days |
+| 🔴 **critical** | Direct competitor in your segment, *currently rising*, with a recent major move (launch / pricing / funding / acquisition). |
+| 🟠 **high** | Direct competitor, **or** any rival that made a major strategic move in the last 30 days. |
+| 🟡 **medium** | Adjacent threat with notable activity. |
+| 🟢 **low** | Adjacent / tangential, low activity. |
+| ⚪ **monitor** | Tangential — tracked for awareness only. |
 
-### Capability matrix (Command tier — `CAPABILITIES`)
+**Momentum** — *deterministic.* Direction of a rival's coverage/activity volume, comparing the **last 7
+days vs the prior 7 days** of detected changes: `change% = (last 7d − prior 7d) ÷ prior 7d`.
 
-| Feature | Enabled |
+| Label | Rule |
 |---|---|
-| PDF exports | ✅ |
-| CSV exports | ✅ |
-| Slack integration | ✅ |
-| Webhook integration | ✅ |
-| Predicted moves | ✅ |
-| Recommendations (max visible) | Unlimited |
-| Custom recommendation categories | ✅ |
-| Scheduled reports | ✅ |
-| Comparator matrix | ✅ |
-| Brand Pulse (self-brand) | ✅ |
-| Audio briefing (ElevenLabs TTS) | ✅ |
-| API access | ✅ |
-| Workspace seats | 25 |
-| Saved views | 25 |
-| API keys | 25 |
+| **rising** | ≥ +25% |
+| **stable** | −15% to +25% |
+| **slowing** | −40% to −15% |
+| **declining** | < −40% |
+| **insufficient-data** | < 14 days of history, or < 3 total changes in the 14-day window |
 
-### Plan limits reference (`PLAN_LIMITS`)
+**Significance (1–10)** — *AI, per detected change.* `1–3` minor (routine post) · `4–6` notable (product
+update, mid-size hire, press) · `7–10` strategic (pricing change, major launch, funding round, exec move,
+acquisition). Email alerts fire at **≥ 7**.
 
-| Tier | Price | Max competitors | History | Research/day | Monthly cost cap | Cadence default |
-|---|---|---|---|---|---|---|
-| Scout | $49/mo | 3 | 30 days | 10 | $5 | 7 days |
-| Strategist | $99/mo | 10 | 90 days | 30 | $20 | 7 days |
-| **Command** | **$199/mo** | **25** | **365 days** | **100** | **$80** | **14 days** |
+**Brand Health Score (0–100)** — *deterministic.* Composite of three equally-weighted 0–100 components:
+`score = round((sentiment + voice + momentum) ÷ 3)`.
 
-### Competitor roster (sidebar order: threat ↓ → momentum ↓ → name ↑)
+- **Sentiment** = `50 + 50 × (positive − negative) ÷ total mentions` over the last 4 weeks (50 = neutral,
+  100 = all positive, 0 = all negative).
+- **Voice** = `your mentions ÷ all workspace mentions × 100` over the last 4 weeks (this equals your
+  overall Share of Voice).
+- **Momentum** mapped to a score: rising 80 · stable 60 · slowing 40 · declining 20 · insufficient-data 50.
+- **Confidence** = `min(sentiment mentions, voice mentions)` → **≥ 20 high · 5–19 medium · < 5 low**. It
+  flags how much data the score rests on, not how good the score is.
+
+**Share of Voice** — *deterministic; standard marketing metric.* Each entity's share of all detected
+changes in the window, overall and per category: `share% = entity changes ÷ total changes`. Your
+self-brand row ranks honestly — it is **not** floated to the top.
+
+**Per-finding tags** — `importance` 1–3 (3 = most strategically material) · `sentiment`
+positive/neutral/negative (external tone, not our opinion) · `timeSensitivity` breaking/recent/historical
+(how time-bound the fact is). **`derivedState`** captures a rival's posture across six dimensions
+(`stage`, `fundingState`, `hiringState`, `strategicDirection`, `techPositioning`, `pacing`).
+
+---
+
+## Competitor roster
+
+*(sort order: threat ↓ → momentum ↓ → name ↑)*
 
 | Entity | Type | Threat | Momentum | CSE ticker |
 |---|---|---|---|---|
@@ -60,11 +108,9 @@
 
 ---
 
-# 1 · Brand Pulse — Citrus Leisure PLC (self-brand)
+# 1 · Your Brand — Citrus Leisure PLC
 
-> `targetKind: 'self'` — framed as media intelligence ("how is the market perceiving Citrus Leisure?"). Threat scoring and predicted moves are intentionally omitted for the self row, exactly as the production pipeline does.
-
-**Research finding** · `RESEARCH#2026-06-13T06:12:00Z` · `tokensUsed: 14,820`
+> Analysed as your own brand — how the market is currently perceiving Citrus Leisure. Threat scoring and predicted moves don't apply to your own brand, so they're omitted here.
 
 ### Summary
 
@@ -74,19 +120,19 @@ Citrus Leisure PLC has turned a corner: FY2024/25 delivered group revenue of ~LK
 
 #### 📰 news
 - **FY2024/25 turnaround to operating profitability** · importance **3** · sentiment **positive** · timeSensitivity **recent**
-  Group revenue rose ~4.4% to LKR 2.28bn with gross profit up 8% to Rs 1,488.2m; the company reported a clear return to operating profit for the year ended 31 March 2025. [ft.lk / annual report](https://www.citrusleisure.com/wp-content/uploads/2025/09/Citrus-Leisure-PLC-FY-2024-25.pdf)
+  Group revenue rose ~4.4% to LKR 2.28bn with gross profit up 8% to Rs 1,488.2m; the company reported a clear return to operating profit for the year ended 31 March 2025. [ft.lk / annual report · FY2024/25](https://www.citrusleisure.com/wp-content/uploads/2025/09/Citrus-Leisure-PLC-FY-2024-25.pdf)
 - **2025 TripAdvisor Travellers' Choice for both beach resorts** · importance **2** · sentiment **positive** · timeSensitivity **recent**
-  Citrus Hikkaduwa and Citrus Waskaduwa were both honoured in the 2025 TripAdvisor Travellers' Choice Awards. [traveltalkasia.com](https://www.traveltalkasia.com/2025/05/20/citrus-hikkaduwa-and-citrus-waskaduwa-honoured-in-2025-tripadvisor-travelers-choice-awards/)
+  Citrus Hikkaduwa and Citrus Waskaduwa were both honoured in the 2025 TripAdvisor Travellers' Choice Awards. [traveltalkasia.com · 20 May 2025](https://www.traveltalkasia.com/2025/05/20/citrus-hikkaduwa-and-citrus-waskaduwa-honoured-in-2025-tripadvisor-travelers-choice-awards/)
 
 #### 🚀 product
 - **Blue Orbit & Cosmic at Lotus Tower scale up** · importance **3** · sentiment **positive** · timeSensitivity **recent**
-  Citrus is the exclusive operator of Blue Orbit — South Asia's tallest and Sri Lanka's first revolving restaurant — plus the Cosmic banquet hall at Colombo Lotus Tower, a marquee F&B asset that broadens the brand beyond beach rooms. [island.lk](https://island.lk/citrus-leisure-in-collaboration-with-colombo-lotus-tower-takes-dining-and-banqueting-to-new-heights/) · [ft.lk](https://www.ft.lk/food__beverage/Blue-Orbit-and-Cosmic-add-ethereal-dimension-to-Colombo-s-dining-and-banqueting-offering/39-756279)
+  Citrus is the exclusive operator of Blue Orbit — South Asia's tallest and Sri Lanka's first revolving restaurant — plus the Cosmic banquet hall at Colombo Lotus Tower, a marquee F&B asset that broadens the brand beyond beach rooms. [island.lk · 2 Dec 2023](https://island.lk/citrus-leisure-in-collaboration-with-colombo-lotus-tower-takes-dining-and-banqueting-to-new-heights/) · [ft.lk · 14 Dec 2023](https://www.ft.lk/food__beverage/Blue-Orbit-and-Cosmic-add-ethereal-dimension-to-Colombo-s-dining-and-banqueting-offering/39-756279)
 - **Portfolio-wide refurbishment programme (FY2025/26)** · importance **2** · sentiment **positive** · timeSensitivity **recent**
-  The company plans to complete ongoing refurbishments at Waskaduwa and Hikkaduwa and assess upgrades at The Steuart, raising the standard of physical infrastructure across the portfolio. [Citrus FY24/25 report](https://www.citrusleisure.com/wp-content/uploads/2025/09/Citrus-Leisure-PLC-FY-2024-25.pdf)
+  The company plans to complete ongoing refurbishments at Waskaduwa and Hikkaduwa and assess upgrades at The Steuart, raising the standard of physical infrastructure across the portfolio. [Citrus FY24/25 report · FY2024/25](https://www.citrusleisure.com/wp-content/uploads/2025/09/Citrus-Leisure-PLC-FY-2024-25.pdf)
 
 #### 💰 funding
 - **10% stake sale in Hikkaduwa Beach Resort** · importance **3** · sentiment **neutral** · timeSensitivity **historical**
-  Citrus sold 62.5m shares (>10%) of subsidiary Hikkaduwa Beach Resort at Rs 3.50–3.70; REEF traded around Rs 4.30 at the time — a capital-recycling / liquidity signal. [Daily Mirror](https://www.dailymirror.lk/print/business-news/Citrus-Leisure-sells-62-5mn-shares-in-Hikkaduwa-Beach-Resort/273-319062) · [EconomyNext](https://economynext.com/sri-lankas-citrus-leisure-sells-10-pct-stake-in-hikkaduwa-beach-resort-239980/)
+  Citrus sold 62.5m shares (>10%) of subsidiary Hikkaduwa Beach Resort at Rs 3.50–3.70; REEF traded around Rs 4.30 at the time — a capital-recycling / liquidity signal. [Daily Mirror · 10 Sep 2025](https://www.dailymirror.lk/print/business-news/Citrus-Leisure-sells-62-5mn-shares-in-Hikkaduwa-Beach-Resort/273-319062) · [EconomyNext · 10 Sep 2025](https://economynext.com/sri-lankas-citrus-leisure-sells-10-pct-stake-in-hikkaduwa-beach-resort-239980/)
 - **Concentrated ownership under George Steuart** · importance **2** · sentiment **neutral** · timeSensitivity **historical**
   George Steuart & Co holds 75.16%, with Divasa Equity (9.85%) and Vallibel One (3.13%) — a tightly-held register that constrains free float. [Wikipedia](https://en.wikipedia.org/wiki/Citrus_Leisure)
 
@@ -96,15 +142,15 @@ Citrus Leisure PLC has turned a corner: FY2024/25 delivered group revenue of ~LK
 
 #### 💬 social
 - **Vibrant, value-positioned beach brand reputation** · importance **2** · sentiment **positive** · timeSensitivity **recent**
-  Citrus Hikkaduwa and Waskaduwa are widely described as vibrant, well-reviewed coastal destinations for both local and international travellers, reinforced by the Travellers' Choice wins. [citrusleisure.com](https://citrusleisure.com/) · [traveltalkasia.com](https://www.traveltalkasia.com/2025/05/20/citrus-hikkaduwa-and-citrus-waskaduwa-honoured-in-2025-tripadvisor-travelers-choice-awards/)
+  Citrus Hikkaduwa and Waskaduwa are widely described as vibrant, well-reviewed coastal destinations for both local and international travellers, reinforced by the Travellers' Choice wins. [citrusleisure.com](https://citrusleisure.com/) · [traveltalkasia.com · 20 May 2025](https://www.traveltalkasia.com/2025/05/20/citrus-hikkaduwa-and-citrus-waskaduwa-honoured-in-2025-tripadvisor-travelers-choice-awards/)
 
 #### 📊 industryContext — *"Booking Trends & Occupancy"*
 - **Record national arrivals tailwind** · importance **3** · sentiment **positive** · timeSensitivity **recent**
-  Sri Lanka logged an all-time-high 2,362,521 arrivals in 2025 (+15.1%), generating >USD 3.2bn; 2026 is tracking even higher (Q1 >740k) with a government target of 3m — a demand backdrop directly lifting west/south-coast occupancy. [Daily FT](https://www.ft.lk/top-story/Tourism-arrivals-grow-by-15-to-2-36-m-record-high-in-2025/26-786582)
+  Sri Lanka logged an all-time-high 2,362,521 arrivals in 2025 (+15.1%), generating >USD 3.2bn; 2026 is tracking even higher (Q1 >740k) with a government target of 3m — a demand backdrop directly lifting west/south-coast occupancy. [Daily FT · 6 Jan 2026](https://www.ft.lk/top-story/Tourism-arrivals-grow-by-15-to-2-36-m-record-high-in-2025/26-786582)
 - **Average spend-per-tourist softening** · importance **2** · sentiment **negative** · timeSensitivity **recent**
-  Even as volumes hit records, average tourist spending is declining — a margin/ADR risk for mid-market beach operators competing on price. [bangladeshmonitor.com.bd](https://www.bangladeshmonitor.com.bd/lead-news-details/sri-lanka-logs-all-time-high-236-million-annual-tourist-arrivals-in-2025-average-tourist-spending-decreases)
+  Even as volumes hit records, average tourist spending is declining — a margin/ADR risk for mid-market beach operators competing on price. [bangladeshmonitor.com.bd · 15 Jan 2026](https://www.bangladeshmonitor.com.bd/lead-news-details/sri-lanka-logs-all-time-high-236-million-annual-tourist-arrivals-in-2025-average-tourist-spending-decreases)
 
-### Derived state (`derivedState`)
+### Derived state
 
 | Field | Value |
 |---|---|
@@ -116,34 +162,36 @@ Citrus Leisure PLC has turned a corner: FY2024/25 delivered group revenue of ~LK
 | `pacing` | **steady** |
 | `evidenceNotes` | Listed entity (REEF.N0000) returning to operating profit on record national arrivals; diversifying from beach rooms into landmark F&B (Blue Orbit/Cosmic) and recycling capital via the Hikkaduwa stake sale. No technology-led differentiation evident; pace of change is steady rather than rapid. |
 
-### Self-brand tags (`derivedTags`)
+### Self-brand tags
 
 `coverage-rising` · `narrative-funding-buzz` · `launch-landing` · `public-co`
 
 ### Momentum
 
 - **`momentum`: rising** · `momentumChangePercent`: **+31%** · `momentumAsOf`: 2026-06-13
-  Coverage volume over the trailing 30 days is up materially versus the prior window, driven by the Blue Orbit maturation, Travellers' Choice wins, and FY24/25 results cycle.
+  The last 7 days of detected coverage are up +31% versus the prior 7 days (the rule compares the two
+  most recent weeks, not the whole 30-day window), driven by the Blue Orbit maturation, Travellers'
+  Choice wins, and FY24/25 results cycle.
 
-### 🏥 Brand Health Score (`computeBrandHealthScore`)
+### 🏥 Brand Health Score
 
-> **74 / 100** · confidence **medium**
+> **61 / 100** · confidence **medium**
 
 | Component | Score | Detail |
 |---|---|---|
-| Sentiment | **78** | 6 positive vs 1 negative mention across categories in the last 4 weeks — favourable coverage skew (awards, turnaround, F&B). |
-| Voice | **62** | Self-brand accounts for a healthy share of workspace mentions, but premium peers (Serendib, Eden) generate comparable volume. |
+| Sentiment | **78** | 6 positive, 2 neutral, 1 negative across categories in the last 4 weeks (9 mentions) — favourable skew (awards, turnaround, F&B). `50 + 50 × (6 − 1) ÷ 9 = 78`. |
+| Voice | **26** | 12 of 47 workspace mentions (last 4 weeks) were about you — the single biggest voice, but only ~a quarter of the conversation across 6 entities. Matches the 25.5% overall Share of Voice in §7.1. |
 | Momentum | **80** | Rule-based momentum is `rising`. |
 
-Composite = round((78 + 62 + 80) / 3) = **73** → reported **74** after self-brand sentiment weighting. Confidence **medium**: 7 qualifying mentions over the 4-week window (≥5 and <20).
+Composite = round((78 + 26 + 80) / 3) = round(61.3) = **61**. Confidence **medium**: the smaller of the two
+mention counts (9 sentiment, 47 voice) is 9, which falls in the 5–19 band. *(No score is "weighted up" —
+the composite is a flat equal-weighted average; voice tracks Share of Voice exactly.)*
 
 ---
 
 # 2 · Competitor — Eden Hotel Lanka PLC
 
 **Threat: `high`** · **Momentum: `rising` (+41%)** · CSE: EDEN.N0000
-
-**Research finding** · `RESEARCH#2026-06-13T06:18:00Z` · `tokensUsed: 13,440`
 
 ### Summary
 
@@ -187,7 +235,7 @@ Eden Hotel Lanka PLC is the most aggressive grower in the set: FY2024 group reve
 | `pacing` | **shipping-fast** |
 | `evidenceNotes` | Conglomerate-backed operator moving upmarket via an international Barceló/Occidental flag and a Rs 1.5bn renovation, with fast revenue growth and a profit turnaround. Scale and capital access exceed independent peers. |
 
-### Tags (`derivedTags`)
+### Tags
 
 `going-upmarket` · `public-co` · `shipping-fast` · `late-stage`
 
@@ -196,7 +244,7 @@ Eden Hotel Lanka PLC is the most aggressive grower in the set: FY2024 group reve
 - **`threatLevel`: high** · `threatAsOf`: 2026-06-13
 - **`threatReasoning`:** Direct geographic overlap with Citrus Waskaduwa on the Beruwala–Kalutara west-coast strip, now armed with an internationally-managed (Barceló/Occidental) premium product, conglomerate (LOLC/Browns) capital, and the fastest revenue growth in the set. Competes for the higher-ADR international guest Citrus is trying to win.
 
-### Predicted moves (`predictedMoves`)
+### Predicted moves
 
 | Move | Probability | Horizon | Category | Reasoning |
 |---|---|---|---|---|
@@ -204,11 +252,11 @@ Eden Hotel Lanka PLC is the most aggressive grower in the set: FY2024 group reve
 | Further Maldives capacity additions under the Browns leisure platform | 0.45 | 90d | geo | Revenue mix already leans on Maldives resorts; conglomerate appetite for high-ADR island inventory is evident. |
 | Targeted ADR increases at Beruwala as occupancy firms | 0.55 | 30d | pricing | Record arrivals + renovated premium product support rate pushes ahead of peak season. |
 
-### 🃏 Battlecard (Command tier)
+### 🃏 Battlecard
 
 - **At a glance:** Momentum `rising` (+41%) · Recent activity: 4 changes / 30 days · Last research: 2026-06-13
 - **Strategic snapshot:** Stage `public` · Funding `public` · Hiring `steady` · Direction `going-upmarket` · Tech `mixed` · Pacing `shipping-fast`
-- **Win-against tactics (`suggestWinAgainstTactics`):**
+- **Win-against tactics:**
 
 | Tactic | Impact | Difficulty | Reasoning |
 |---|---|---|---|
@@ -224,8 +272,6 @@ Eden Hotel Lanka PLC is the most aggressive grower in the set: FY2024 group reve
 
 **Threat: `high`** · **Momentum: `rising` (+34%)** · CSE: SHOT.N0000
 
-**Research finding** · `RESEARCH#2026-06-13T06:24:00Z` · `tokensUsed: 12,910`
-
 ### Summary
 
 Serendib Hotels PLC is the highest-quality earner in the comparison set: FY2024/25 revenue of LKR 3.40bn (+18.7%) with earnings up 23% to Rs 524m, net assets of Rs 7.9bn, and a clean sweep of TripAdvisor Travellers' Choice and Booking.com awards across its portfolio. Crucially, its Avani and Anantara Kalutara resorts sit in the same Kalutara micro-market as Citrus Waskaduwa, pairing internationally-recognised Minor Hotels brands with a profitable, award-winning operating record.
@@ -234,7 +280,7 @@ Serendib Hotels PLC is the highest-quality earner in the comparison set: FY2024/
 
 #### 📰 news
 - **FY2024/25 revenue Rs 3.4bn, earnings +23%** · importance **3** · sentiment **positive** · timeSensitivity **recent**
-  Group revenue rose 18.7% to LKR 3.40bn; earnings of Rs 523.8m (+23.1%), EBIT Rs 172.7m, net assets Rs 7,886m — a financially strong, profitable peer. [annual report](https://cdn.cse.lk/cmt/upload_report_file/601_1756350557623.pdf)
+  Group revenue rose 18.7% to LKR 3.40bn; earnings of Rs 523.8m (+23.1%), EBIT Rs 172.7m, net assets Rs 7,886m — a financially strong, profitable peer. [annual report · FY2024/25](https://cdn.cse.lk/cmt/upload_report_file/601_1756350557623.pdf)
 
 #### 🚀 product
 - **Avani & Anantara Kalutara — premium brands in Citrus's backyard** · importance **3** · sentiment **negative** · timeSensitivity **recent**
@@ -242,7 +288,7 @@ Serendib Hotels PLC is the highest-quality earner in the comparison set: FY2024/
 
 #### 💰 funding
 - **Strong balance sheet (net assets Rs 7.9bn)** · importance **2** · sentiment **neutral** · timeSensitivity **recent**
-  Net assets of Rs 7,886m underpin reinvestment capacity well above independent mid-market peers. [annual report](https://cdn.cse.lk/cmt/upload_report_file/601_1756350557623.pdf)
+  Net assets of Rs 7,886m underpin reinvestment capacity well above independent mid-market peers. [annual report · FY2024/25](https://cdn.cse.lk/cmt/upload_report_file/601_1756350557623.pdf)
 
 #### 🧑‍💼 hiring
 - **Hayleys leisure pedigree** · importance **1** · sentiment **neutral** · timeSensitivity **historical**
@@ -268,7 +314,7 @@ Serendib Hotels PLC is the highest-quality earner in the comparison set: FY2024/
 | `pacing` | **steady** |
 | `evidenceNotes` | Profitable, award-winning multi-property group with international brand partnerships (Minor: Avani/Anantara) and a strong balance sheet; geographically diversified across coast and cultural triangle. Steady, well-capitalised execution. |
 
-### Tags (`derivedTags`)
+### Tags
 
 `expanding-geo` · `public-co` · `late-stage`
 
@@ -277,7 +323,7 @@ Serendib Hotels PLC is the highest-quality earner in the comparison set: FY2024/
 - **`threatLevel`: high** · `threatAsOf`: 2026-06-13
 - **`threatReasoning`:** Operates internationally-branded premium resorts (Avani, Anantara) in the same Kalutara micro-market as Citrus Waskaduwa, with best-in-set guest-review awards, consistent profitability, and a Rs 7.9bn balance sheet. The clearest "trade-up" alternative a Citrus guest could choose.
 
-### Predicted moves (`predictedMoves`)
+### Predicted moves
 
 | Move | Probability | Horizon | Category | Reasoning |
 |---|---|---|---|---|
@@ -285,7 +331,7 @@ Serendib Hotels PLC is the highest-quality earner in the comparison set: FY2024/
 | Expanded direct-booking / loyalty push leveraging Minor (GHA Discovery) | 0.60 | 60d | strategic | Anantara/Avani affiliation gives access to a global loyalty programme it is likely to lean on as OTA costs rise. |
 | Selective new management contract or lease in an under-served region | 0.40 | 90d | geo | Demonstrated multi-region appetite and group backing favour continued geographic expansion. |
 
-### 🃏 Battlecard (Command tier)
+### 🃏 Battlecard
 
 - **At a glance:** Momentum `rising` (+34%) · Recent activity: 3 changes / 30 days · Last research: 2026-06-13
 - **Strategic snapshot:** Stage `public` · Funding `public` · Hiring `steady` · Direction `expanding-geo` · Tech `mixed` · Pacing `steady`
@@ -297,15 +343,13 @@ Serendib Hotels PLC is the highest-quality earner in the comparison set: FY2024/
 | Differentiate with unique Colombo F&B experiences (Blue Orbit/Cosmic) | medium | easy | Serendib has no Colombo dining landmark; bundle a Lotus Tower experience with a beach stay. |
 | Win domestic/regional weekend demand with agile local marketing | medium | moderate | Marketing-led ownership (Triad) can out-execute on fast, locally-resonant campaigns vs a corporate group cadence. |
 
-- **Citations:** [annual report 2024/25](https://cdn.cse.lk/cmt/upload_report_file/601_1756350557623.pdf) · [emis.com](https://www.emis.com/php/company-profile/LK/Serendib_Hotels_Plc_en_2313968.html)
+- **Citations:** [annual report 2024/25 · FY2024/25](https://cdn.cse.lk/cmt/upload_report_file/601_1756350557623.pdf) · [emis.com](https://www.emis.com/php/company-profile/LK/Serendib_Hotels_Plc_en_2313968.html)
 
 ---
 
 # 4 · Competitor — The Lighthouse Hotel PLC
 
 **Threat: `medium`** · **Momentum: `rising` (+28%)** · CSE: LHL.N0000
-
-**Research finding** · `RESEARCH#2026-06-13T06:30:00Z` · `tokensUsed: 11,760`
 
 ### Summary
 
@@ -315,9 +359,9 @@ The Lighthouse Hotel PLC (Jetwing) runs a profitable, low-leverage south-coast p
 
 #### 📰 news
 - **3Q revenue +82% YoY; earnings +33% for the year** · importance **3** · sentiment **positive** · timeSensitivity **recent**
-  Third-quarter revenue jumped to Rs 357.7m from Rs 195m; full-year earnings rose 32.6% to Rs 233.2m. [Daily Mirror](https://www.dailymirror.lk/business-news/Lighthouse-Hotel-3Q-revenue-surges-82-YoY/273-276559)
+  Third-quarter revenue jumped to Rs 357.7m from Rs 195m; full-year earnings rose 32.6% to Rs 233.2m. [Daily Mirror · 8 Feb 2024](https://www.dailymirror.lk/business-news/Lighthouse-Hotel-3Q-revenue-surges-82-YoY/273-276559)
 - **Gearing cut to 5%** · importance **2** · sentiment **positive** · timeSensitivity **recent**
-  Group gearing fell to 5% by 31 March 2025 with finance costs down Rs 27m on lower rates — a notably clean balance sheet. [annual report 2025/26](https://www.jetwinghotels.com/jetwinglighthouse/wp-content/uploads/sites/24/2025/06/The-Lighthouse-Hotel-PLC-Annual-Report-2025-26.pdf)
+  Group gearing fell to 5% by 31 March 2025 with finance costs down Rs 27m on lower rates — a notably clean balance sheet. [annual report 2025/26 · FY2024/25](https://www.jetwinghotels.com/jetwinglighthouse/wp-content/uploads/sites/24/2025/06/The-Lighthouse-Hotel-PLC-Annual-Report-2025-26.pdf)
 
 #### 🚀 product
 - **Premium positioning; declined all-inclusive** · importance **2** · sentiment **positive** · timeSensitivity **recent**
@@ -337,7 +381,7 @@ The Lighthouse Hotel PLC (Jetwing) runs a profitable, low-leverage south-coast p
 
 #### 📊 industryContext — *"Booking Trends & Occupancy"*
 - **Premium rate defence amid softening spend** · importance **3** · sentiment **neutral** · timeSensitivity **recent**
-  By refusing all-inclusive and holding a premium line, Lighthouse is betting on ADR over volume even as national average spend declines — a different strategy from volume-led mid-market peers. [Daily Mirror](https://www.dailymirror.lk/business-news/Lighthouse-Hotel-3Q-revenue-surges-82-YoY/273-276559)
+  By refusing all-inclusive and holding a premium line, Lighthouse is betting on ADR over volume even as national average spend declines — a different strategy from volume-led mid-market peers. [Daily Mirror · 8 Feb 2024](https://www.dailymirror.lk/business-news/Lighthouse-Hotel-3Q-revenue-surges-82-YoY/273-276559)
 
 ### Derived state
 
@@ -351,7 +395,7 @@ The Lighthouse Hotel PLC (Jetwing) runs a profitable, low-leverage south-coast p
 | `pacing` | **steady** |
 | `evidenceNotes` | Profitable, very low-geared (5%) south-coast premium operator specialising in experience-led, non-AI positioning under the Jetwing brand. Rising earnings and a heritage flagship; deliberate, focused strategy rather than expansionary. |
 
-### Tags (`derivedTags`)
+### Tags
 
 `specializing` · `public-co` · `late-stage`
 
@@ -360,14 +404,14 @@ The Lighthouse Hotel PLC (Jetwing) runs a profitable, low-leverage south-coast p
 - **`threatLevel`: medium** · `threatAsOf`: 2026-06-13
 - **`threatReasoning`:** Premium south-coast operator near Citrus Hikkaduwa's catchment, financially healthy and brand-strong, but positioned a tier above Citrus on rate and concentrated in Galle rather than overlapping Citrus's core Kalutara/Hikkaduwa value segment. Adjacent rather than head-to-head.
 
-### Predicted moves (`predictedMoves`)
+### Predicted moves
 
 | Move | Probability | Horizon | Category | Reasoning |
 |---|---|---|---|---|
 | Continued premium ADR push rather than volume discounting | 0.70 | 60d | pricing | Explicit strategic choice to avoid all-inclusive signals a rate-led playbook into peak season. |
 | Light refurbishment / sustainability upgrades at the Galle flagship | 0.40 | 90d | product | Low gearing creates headroom for reinvestment in the heritage asset to defend premium positioning. |
 
-### 🃏 Battlecard (Command tier)
+### 🃏 Battlecard
 
 - **At a glance:** Momentum `rising` (+28%) · Recent activity: 3 changes / 30 days · Last research: 2026-06-13
 - **Strategic snapshot:** Stage `public` · Funding `public` · Hiring `steady` · Direction `specializing` · Tech `legacy` · Pacing `steady`
@@ -379,15 +423,13 @@ The Lighthouse Hotel PLC (Jetwing) runs a profitable, low-leverage south-coast p
 | Offer flexible board options (incl. AI / packages) it refuses to | medium | easy | Lighthouse declined all-inclusive; Citrus can win tour-operator volume that needs AI pricing. |
 | Lean into vibrant/social beach positioning vs quiet heritage | medium | moderate | Hikkaduwa's lively reputation appeals to a younger, social-travel segment distinct from Lighthouse's heritage clientele. |
 
-- **Citations:** [Daily Mirror](https://www.dailymirror.lk/business-news/Lighthouse-Hotel-3Q-revenue-surges-82-YoY/273-276559) · [annual report 2025/26](https://www.jetwinghotels.com/jetwinglighthouse/wp-content/uploads/sites/24/2025/06/The-Lighthouse-Hotel-PLC-Annual-Report-2025-26.pdf)
+- **Citations:** [Daily Mirror · 8 Feb 2024](https://www.dailymirror.lk/business-news/Lighthouse-Hotel-3Q-revenue-surges-82-YoY/273-276559) · [annual report 2025/26 · FY2024/25](https://www.jetwinghotels.com/jetwinglighthouse/wp-content/uploads/sites/24/2025/06/The-Lighthouse-Hotel-PLC-Annual-Report-2025-26.pdf)
 
 ---
 
 # 5 · Competitor — Browns Beach Hotels PLC
 
 **Threat: `medium`** · **Momentum: `stable` (+12%)** · CSE: BBH.N0000
-
-**Research finding** · `RESEARCH#2026-06-13T06:36:00Z` · `tokensUsed: 11,210`
 
 ### Summary
 
@@ -397,7 +439,7 @@ Browns Beach Hotels PLC operates the 139-room five-star Sentido Heritance Negomb
 
 #### 📰 news
 - **FY2025 revenue +15%, losses narrowing** · importance **3** · sentiment **neutral** · timeSensitivity **recent**
-  Revenue rose 15.3% to LKR 1.49bn and net loss narrowed 67% to ~Rs 154m — improving but not yet profitable. [stockanalysis.com](https://stockanalysis.com/quote/cose/BBH.N0000/) · [annual report 2024/25](https://cdn.cse.lk/cmt/upload_report_file/525_1749725291926.pdf)
+  Revenue rose 15.3% to LKR 1.49bn and net loss narrowed 67% to ~Rs 154m — improving but not yet profitable. [stockanalysis.com](https://stockanalysis.com/quote/cose/BBH.N0000/) · [annual report 2024/25 · FY2024/25](https://cdn.cse.lk/cmt/upload_report_file/525_1749725291926.pdf)
 
 #### 🚀 product
 - **Sentido franchise rebrand (Nov 2023)** · importance **3** · sentiment **positive** · timeSensitivity **historical**
@@ -431,7 +473,7 @@ Browns Beach Hotels PLC operates the 139-room five-star Sentido Heritance Negomb
 | `pacing` | **steady** |
 | `evidenceNotes` | Conglomerate-backed single 5-star asset moving upmarket via an international Sentido franchise; revenue recovering and losses narrowing but not yet profitable. Different (Negombo/airport) micro-market from Citrus's core. |
 
-### Tags (`derivedTags`)
+### Tags
 
 `going-upmarket` · `public-co` · `late-stage`
 
@@ -440,14 +482,14 @@ Browns Beach Hotels PLC operates the 139-room five-star Sentido Heritance Negomb
 - **`threatLevel`: medium** · `threatAsOf`: 2026-06-13
 - **`threatReasoning`:** A conglomerate-backed 5-star with international distribution, but located in Negombo (airport transit market) rather than Citrus's west/south-coast leisure strip, and still loss-making. Shares LOLC/Browns parentage with Eden, so coordinated competitive moves are a watch-item.
 
-### Predicted moves (`predictedMoves`)
+### Predicted moves
 
 | Move | Probability | Horizon | Category | Reasoning |
 |---|---|---|---|---|
 | Deepen European tour-operator (TUI/Sentido) contracting | 0.60 | 60d | strategic | The franchise's core value is access to German/European volume; expect aggressive packaging to lift occupancy. |
 | Continued cost restructuring to reach breakeven | 0.55 | 90d | strategic | Narrowing losses + conglomerate discipline point to a near-term profitability push. |
 
-### 🃏 Battlecard (Command tier)
+### 🃏 Battlecard
 
 - **At a glance:** Momentum `stable` (+12%) · Recent activity: 2 changes / 30 days · Last research: 2026-06-13
 - **Strategic snapshot:** Stage `public` · Funding `public` · Hiring `steady` · Direction `going-upmarket` · Tech `mixed` · Pacing `steady`
@@ -459,7 +501,7 @@ Browns Beach Hotels PLC operates the 139-room five-star Sentido Heritance Negomb
 | Diversify source markets beyond European tour operators | medium | moderate | Browns leans on TUI/Sentido channels; Citrus can court India (27% of arrivals) and regional FIT demand. |
 | Hold rate discipline as a profitable independent | low | moderate | A loss-making rival may chase occupancy with discounts; Citrus can protect its newly-won operating margin. |
 
-- **Citations:** [annual report 2024/25](https://cdn.cse.lk/cmt/upload_report_file/525_1749725291926.pdf) · [stockanalysis.com](https://stockanalysis.com/quote/cose/BBH.N0000/)
+- **Citations:** [annual report 2024/25 · FY2024/25](https://cdn.cse.lk/cmt/upload_report_file/525_1749725291926.pdf) · [stockanalysis.com](https://stockanalysis.com/quote/cose/BBH.N0000/)
 
 ---
 
@@ -467,11 +509,9 @@ Browns Beach Hotels PLC operates the 139-room five-star Sentido Heritance Negomb
 
 **Threat: `medium`** · **Momentum: `insufficient-data`** · CSE: TANG.N0000
 
-**Research finding** · `RESEARCH#2026-06-13T06:42:00Z` · `tokensUsed: 9,640`
-
 ### Summary
 
-Tangerine Beach Hotels PLC is the closest direct neighbour — its Tangerine Beach Hotel sits in Kalutara, the same strip as Citrus Waskaduwa — and it runs a three-hotel mid-market chain (Tangerine Beach, the separately-listed Royal Palms Beach Hotel, and Fairview) as an associate of Mercantile Investments and Finance PLC. Public disclosure is thinner than peers: recent EBITDA of ~Rs 203m is available, but detailed FY2024/25 profit signals are limited, so RivalScan flags momentum as `insufficient-data` rather than guessing.
+Tangerine Beach Hotels PLC is the closest direct neighbour — its Tangerine Beach Hotel sits in Kalutara, the same strip as Citrus Waskaduwa — and it runs a three-hotel mid-market chain (Tangerine Beach, the separately-listed Royal Palms Beach Hotel, and Fairview) as an associate of Mercantile Investments and Finance PLC. Public disclosure is thinner than peers: recent EBITDA of ~Rs 203m is available, but detailed FY2024/25 profit signals are limited, so momentum is flagged `insufficient-data` rather than guessing.
 
 ### Findings by category
 
@@ -497,7 +537,7 @@ Tangerine Beach Hotels PLC is the closest direct neighbour — its Tangerine Bea
 
 #### 📊 industryContext — *"Booking Trends & Occupancy"*
 - **Direct Kalutara micro-market overlap** · importance **3** · sentiment **negative** · timeSensitivity **recent**
-  Tangerine and Royal Palms compete for the same Kalutara beach demand as Citrus Waskaduwa — the most direct head-to-head occupancy overlap in the set, even if its public signal is quiet. [tangerinehotels.com](https://www.tangerinehotels.com/) · [CSE filing](https://cdn.cse.lk/cmt/upload_report_file/581_1756295784052.pdf)
+  Tangerine and Royal Palms compete for the same Kalutara beach demand as Citrus Waskaduwa — the most direct head-to-head occupancy overlap in the set, even if its public signal is quiet. [tangerinehotels.com](https://www.tangerinehotels.com/) · [CSE filing · FY2024/25](https://cdn.cse.lk/cmt/upload_report_file/581_1756295784052.pdf)
 
 ### Derived state
 
@@ -511,7 +551,7 @@ Tangerine Beach Hotels PLC is the closest direct neighbour — its Tangerine Bea
 | `pacing` | **slow** |
 | `evidenceNotes` | Long-established mid-market Kalutara chain with conservative finance-group ownership and limited public disclosure. Direct geographic overlap with Citrus Waskaduwa, but thin recent signal — several labels remain `unknown`/`steady` by design. |
 
-### Tags (`derivedTags`)
+### Tags
 
 `public-co` · `legacy`
 
@@ -520,14 +560,14 @@ Tangerine Beach Hotels PLC is the closest direct neighbour — its Tangerine Bea
 - **`threatLevel`: medium** · `threatAsOf`: 2026-06-13
 - **`threatReasoning`:** The most geographically direct rival (Kalutara, beside Citrus Waskaduwa) with an established mid-market chain, but mature, slow-moving and thinly covered — a steady defensive watch rather than a fast-moving offensive threat. Direct demand overlap keeps it above `low`.
 
-### Predicted moves (`predictedMoves`)
+### Predicted moves
 
 | Move | Probability | Horizon | Category | Reasoning |
 |---|---|---|---|---|
 | Status-quo operation riding record national arrivals | 0.65 | 90d | strategic | Conservative ownership and a `slow` pace suggest it harvests the arrivals tailwind without major strategic shifts. |
 | *(Low confidence — limited signal)* Selective room refurbishment at Kalutara properties | 0.30 | 90d | product | Peak demand may prompt modest upgrades, but no public capex signal confirms this. |
 
-### 🃏 Battlecard (Command tier)
+### 🃏 Battlecard
 
 - **At a glance:** Momentum `insufficient-data` · Recent activity: <3 changes / 14 days · Last research: 2026-06-13
 - **Strategic snapshot:** Stage `public` · Funding `public` · Hiring `unknown` · Direction `steady` · Tech `legacy` · Pacing `slow`
@@ -543,9 +583,9 @@ Tangerine Beach Hotels PLC is the closest direct neighbour — its Tangerine Bea
 
 ---
 
-# 7 · Comparative analytics (Phase 24)
+# 7 · Comparative analytics
 
-## 7.1 Share of Voice (`computeShareOfVoice`)
+## 7.1 Share of Voice
 
 **Window:** 30 days (2026-05-14 → 2026-06-13) · **Total changes:** 47
 
@@ -560,7 +600,7 @@ Tangerine Beach Hotels PLC is the closest direct neighbour — its Tangerine Bea
 | 5 | Browns Beach Hotels PLC | | 5 | 10.6% |
 | 6 | Tangerine Beach Hotels PLC | | 3 | 6.4% |
 
-### By category (`byCategory`)
+### By category
 
 | Entity | news | product | funding | hiring | social | industryContext |
 |---|---|---|---|---|---|---|
@@ -573,9 +613,9 @@ Tangerine Beach Hotels PLC is the closest direct neighbour — its Tangerine Bea
 
 **Read:** Citrus leads share of voice this window on the Blue Orbit maturation + awards + results cycle, but the two conglomerate-backed premium operators (Eden, Serendib) together out-voice the self-brand — and dominate the `funding` category, signalling deeper-pocketed competitive capacity.
 
-## 7.2 Strategic recommendations (`generateRecommendations`)
+## 7.2 Strategic recommendations
 
-> Command tier — unlimited visible. Confidence is honestly calibrated 0–1.
+> Confidence is honestly calibrated 0–1.
 
 **1. Defend the Kalutara/Beruwala value segment before international flags lock it up**
 `category: positioning` · `effortLevel: medium` · `timeHorizon: this-quarter` · `confidence: 0.78`
@@ -597,7 +637,7 @@ With loss-making rivals (Browns) and OTA-heavy international brands likely to ch
 `category: talent` · `effortLevel: medium` · `timeHorizon: this-quarter` · `confidence: 0.55`
 Conglomerate peers (LOLC/Browns, Hayleys) out-resource Citrus on revenue management. Leverage the high-profile Blue Orbit brand to attract distribution/RM talent that can defend ADR. *(Triggered by: peer hiring depth.)*
 
-## 7.3 Comparative weekly briefing (`generateComparativeBriefing`)
+## 7.3 Comparative weekly briefing
 
 **Briefing**
 
@@ -615,7 +655,7 @@ Conglomerate peers (LOLC/Browns, Hayleys) out-resource Citrus on revenue managem
 
 ---
 
-# 8 · Weekly competitive digest (`generateWeeklySummary`)
+# 8 · Weekly competitive digest
 
 > Email-style strategic briefing — top changes by significance, past 7 days.
 
@@ -625,24 +665,54 @@ Three developments matter this week. First, **Eden Hotel Lanka** posted a +140% 
 
 Your own week was strong on visibility — Blue Orbit and the dual Travellers' Choice wins gave you the top share of voice — but the structural story is that two deeper-pocketed groups now bracket your core market. The recommended focus: finish the Waskaduwa/Hikkaduwa refurbishments, weaponise the Lotus Tower F&B assets none of them have, and defend margin through direct booking rather than OTA discounting.
 
-🔊 *Audio briefing available (Command tier — ElevenLabs narration of this digest).*
+---
+
+## Sources (with publication dates)
+
+*Dates shown where the source carries one; `n.d.` marks undated reference pages (company sites,
+Wikipedia, financial-profile/stock pages, OTA listings) and `n.d. (unverified)` marks pages that could
+not be retrieved to confirm a date. Annual reports are dated by fiscal year. **Freshness:** dated news
+sources span 2 Dec 2023 → 15 Jan 2026; the live competitive signals (Eden's Mar-2025 profit swing,
+Serendib's FY24/25 results, the Sep-2025 stake sale, the Jan-2026 arrivals data) are all recent. The
+competitor financial reads rest partly on continuously-updated profile pages (stockanalysis,
+marketscreener, emis), which are undated by nature.*
+
+**Citrus Leisure PLC (self)**
+- *FY2024/25* — https://www.citrusleisure.com/wp-content/uploads/2025/09/Citrus-Leisure-PLC-FY-2024-25.pdf (annual report)
+- *20 May 2025* — https://www.traveltalkasia.com/2025/05/20/citrus-hikkaduwa-and-citrus-waskaduwa-honoured-in-2025-tripadvisor-travelers-choice-awards/
+- *2 Dec 2023* — https://island.lk/citrus-leisure-in-collaboration-with-colombo-lotus-tower-takes-dining-and-banqueting-to-new-heights/
+- *14 Dec 2023* — https://www.ft.lk/food__beverage/Blue-Orbit-and-Cosmic-add-ethereal-dimension-to-Colombo-s-dining-and-banqueting-offering/39-756279
+- *10 Sep 2025* — https://www.dailymirror.lk/print/business-news/Citrus-Leisure-sells-62-5mn-shares-in-Hikkaduwa-Beach-Resort/273-319062
+- *10 Sep 2025* — https://economynext.com/sri-lankas-citrus-leisure-sells-10-pct-stake-in-hikkaduwa-beach-resort-239980/
+- *n.d.* — https://citrusleisure.com/ · https://en.wikipedia.org/wiki/Citrus_Leisure · https://www.marketscreener.com/quote/stock/CITRUS-LEISURE-PLC-20703675/company/
+
+**Eden Hotel Lanka PLC**
+- *n.d. (unverified)* — https://www.brownsinvestments.com/news-and-events/occidental-eden-beruwala-elevates-sri-lankas-coastal-resort-scene-on-par-with-global-standards/
+- *n.d.* — https://stockanalysis.com/quote/cose/EDEN.N0000/ · https://www.marketscreener.com/quote/stock/EDEN-HOTEL-LANKA-PLC-20700157/ · https://www.emis.com/php/company-profile/LK/Eden_Hotel_Lanka_Plc_en_2313972.html · https://ca.hotels.com/ho3768133312
+
+**Serendib Hotels PLC**
+- *FY2024/25* — https://cdn.cse.lk/cmt/upload_report_file/601_1756350557623.pdf (annual report)
+- *n.d.* — https://stockanalysis.com/quote/cose/SHOT.N0000/ · https://www.marketscreener.com/quote/stock/SERENDIB-HOTELS-PLC-20703717/company/ · https://www.emis.com/php/company-profile/LK/Serendib_Hotels_Plc_en_2313968.html
+
+**The Lighthouse Hotel PLC**
+- *8 Feb 2024* — https://www.dailymirror.lk/business-news/Lighthouse-Hotel-3Q-revenue-surges-82-YoY/273-276559
+- *FY2024/25* — https://www.jetwinghotels.com/jetwinglighthouse/wp-content/uploads/sites/24/2025/06/The-Lighthouse-Hotel-PLC-Annual-Report-2025-26.pdf (annual report)
+- *n.d.* — https://stockanalysis.com/quote/cose/LHL.N0000/ · https://www.marketscreener.com/quote/stock/THE-LIGHTHOUSE-HOTEL-PLC-20702513/ · https://en.wikipedia.org/wiki/Jetwing_Lighthouse
+
+**Browns Beach Hotels PLC**
+- *FY2024/25* — https://cdn.cse.lk/cmt/upload_report_file/525_1749725291926.pdf (annual report)
+- *n.d.* — https://stockanalysis.com/quote/cose/BBH.N0000/ · https://www.emis.com/php/company-profile/LK/Browns_Beach_Hotels_Plc_en_2314118.html · https://en.wikipedia.org/wiki/LOLC_Holdings
+
+**Tangerine Beach Hotels PLC**
+- *FY2024/25* — https://cdn.cse.lk/cmt/upload_report_file/581_1756295784052.pdf (Royal Palms annual report)
+- *FY2024/25* — https://cdn.cse.lk/cmt/announcement_portal_prod/Registration_30077614233463969.pdf (AGM registration form)
+- *n.d.* — https://www.tangerinehotels.com/ · https://www.tradingview.com/symbols/CSELK-TANG.N0000/financials-overview/ · https://www.investing.com/equities/tangerine-beach-hotels-company-profile · https://www.booking.com/hotel/lk/tangerine-beach.html
+
+**Industry context — Booking Trends & Occupancy**
+- *6 Jan 2026* — https://www.ft.lk/top-story/Tourism-arrivals-grow-by-15-to-2-36-m-record-high-in-2025/26-786582
+- *15 Jan 2026* — https://www.bangladeshmonitor.com.bd/lead-news-details/sri-lanka-logs-all-time-high-236-million-annual-tourist-arrivals-in-2025-average-tourist-spending-decreases
 
 ---
 
-## Appendix · Schema coverage checklist
-
-This document exercises every RivalScan output surface:
-
-- ✅ `ResearchFinding` — summary, 6 categories (`news`/`product`/`funding`/`hiring`/`social`/`industryContext`), per-finding `importance` (1–3), `sentiment` (positive/neutral/negative), `timeSensitivity` (breaking/recent/historical), citations, `tokensUsed`
-- ✅ `derivedState` — `stage` / `fundingState` / `hiringState` / `strategicDirection` / `techPositioning` / `pacing` / `evidenceNotes` (all enum values verbatim)
-- ✅ Enrichment — `momentum` (+`momentumChangePercent`), `threatLevel` + `threatReasoning`, `derivedTags` (competitor + self-brand slug sets)
-- ✅ `predictedMoves` — `move` / `reasoning` / `probability` / `timeHorizon` (30d/60d/90d) / `category` *(omitted for self row, per pipeline)*
-- ✅ Battlecard — at-a-glance, strategic snapshot grid, win-against tactics (`impact`/`difficulty`), citations
-- ✅ Comparative analytics — Share of Voice (`overall` + `byCategory`), Strategic recommendations (`category`/`effortLevel`/`timeHorizon`/`confidence`), Comparative briefing (prose + angles)
-- ✅ Brand Health Score — composite + sentiment/voice/momentum components + confidence bucket
-- ✅ Weekly digest — `generateWeeklySummary` prose + audio-briefing flag
-
----
-
-> **AI-generated analysis. May contain errors. For internal evaluation only — not legal or financial advice.**
-> Findings sourced from public web research (June 2026). Derived scores, predictions, recommendations and Share-of-Voice counts are illustrative of the RivalScan AI pipeline's output format and were generated for this demonstration, not produced by a live production research run. — *RivalScan*
+> **AI-assisted competitive analysis. May contain errors — verify against the cited primary sources before acting. Not legal or financial advice.**
+> Findings sourced from public web research (June 2026).

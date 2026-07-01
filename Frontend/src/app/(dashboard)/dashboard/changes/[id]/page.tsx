@@ -10,6 +10,7 @@ import { DiffViewer } from "@/components/dashboard/diff-viewer";
 import { FeedbackButtons } from "@/components/dashboard/feedback-buttons";
 import { ChangeNotesSection } from "@/components/dashboard/change-notes-section";
 import { SignificanceBadge } from "@/components/dashboard/significance-badge";
+import { CitationList } from "@/components/dashboard/citation-list";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -46,7 +47,7 @@ export default function ChangeDetailPage() {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <PageHeader title={change.competitorName ?? "Change Detail"}>
-          <SignificanceBadge score={change.significance} />
+          <SignificanceBadge score={change.significance} showInfo />
         </PageHeader>
       </div>
 
@@ -65,6 +66,18 @@ export default function ChangeDetailPage() {
       </div>
 
       <AiAnalysisPanel analysis={change.aiAnalysis} />
+
+      {change.citations && change.citations.length > 0 && (
+        <>
+          <Separator className="bg-brand-700" />
+          <div className="space-y-2">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              Sources
+            </h2>
+            <CitationList citations={change.citations} />
+          </div>
+        </>
+      )}
 
       <Separator className="bg-brand-700" />
 

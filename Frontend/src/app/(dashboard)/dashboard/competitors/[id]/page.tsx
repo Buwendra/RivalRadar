@@ -236,6 +236,7 @@ export default function CompetitorDetailPage() {
                 <MomentumChip
                   momentum={competitor.momentum}
                   momentumChangePercent={competitor.momentumChangePercent}
+                  showInfo
                 />
               </div>
               <ActivitySparkline data={stats.changesByDay} />

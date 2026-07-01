@@ -918,7 +918,23 @@ ${industryContextOmitLine}`;
     if (block.type === 'web_search_tool_result' && Array.isArray(block.content)) {
       for (const r of block.content) {
         if (r?.url && !citationMap.has(r.url)) {
-          citationMap.set(r.url, { url: r.url, title: r.title ?? r.url, accessedAt: now });
+          // Best-effort publish date: Anthropic's web_search results sometimes
+          // carry a `page_age` hint (e.g. "April 4, 2025"). Parse it when it's
+          // an absolute date; relative strings ("3 days ago") yield NaN and are
+          // skipped, leaving publishedAt unset rather than guessed.
+          let publishedAt: string | undefined;
+          const rawPageAge = (r as { page_age?: unknown }).page_age;
+          const pageAge = typeof rawPageAge === 'string' ? rawPageAge : undefined;
+          if (pageAge) {
+            const parsed = Date.parse(pageAge);
+            if (!isNaN(parsed)) publishedAt = new Date(parsed).toISOString();
+          }
+          citationMap.set(r.url, {
+            url: r.url,
+            title: r.title ?? r.url,
+            accessedAt: now,
+            ...(publishedAt ? { publishedAt } : {}),
+          });
         }
       }
     }

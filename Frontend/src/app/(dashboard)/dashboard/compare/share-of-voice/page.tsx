@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ShareOfVoiceChart } from "@/components/dashboard/share-of-voice-chart";
+import { ScoreInfo } from "@/components/dashboard/score-info";
 import { PLAN_LIMITS } from "@/lib/utils/plan-limits";
 import type { ResearchCategory, ShareOfVoiceWindowKey } from "@/lib/types";
 
@@ -104,7 +105,10 @@ export default function ShareOfVoicePage() {
               <Card className="border-brand-700 bg-brand-900">
                 <CardContent className="space-y-3 p-5">
                   <div className="flex items-center justify-between">
-                    <h2 className="text-sm font-semibold">Overall coverage</h2>
+                    <h2 className="flex items-center gap-1.5 text-sm font-semibold">
+                      Overall coverage
+                      <ScoreInfo metric="shareOfVoice" />
+                    </h2>
                     <span className="text-xs text-muted-foreground">
                       {data.totalChanges} mentions across the workspace
                     </span>

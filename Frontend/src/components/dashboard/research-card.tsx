@@ -1,6 +1,6 @@
 "use client";
 
-import { ExternalLink, Newspaper, Package, DollarSign, Users, MessageCircle, ShieldCheck, Building2 } from "lucide-react";
+import { ExternalLink, Newspaper, Package, DollarSign, Users, MessageCircle, Building2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -9,15 +9,11 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { cn } from "@/lib/utils";
 import { formatSmartDate } from "@/lib/utils/format-date";
-import {
-  scoreSource,
-  dedupeCitations,
-  type SourceQuality,
-} from "@/lib/utils/source-quality";
+import { dedupeCitations } from "@/lib/utils/source-quality";
 import type { ResearchFinding, ResearchCategory, FindingItem, Citation } from "@/lib/types";
 import { AiDisclaimer } from "./ai-disclaimer";
+import { CitationList } from "./citation-list";
 
 // Static metadata for the 5 base categories. `industryContext` is resolved
 // at render time because its label is per-user-industry (carried on the
@@ -61,12 +57,6 @@ interface ResearchCardProps {
    */
   competitorUrl?: string;
 }
-
-const QUALITY_CLASS: Record<SourceQuality, string> = {
-  high: "text-primary hover:underline font-medium",
-  medium: "text-primary hover:underline",
-  low: "text-primary/60 hover:underline opacity-70",
-};
 
 export function ResearchCard({ finding, competitorUrl }: ResearchCardProps) {
   // Object.values keeps this stable as the ResearchCategory union grows
@@ -123,38 +113,11 @@ export function ResearchCard({ finding, competitorUrl }: ResearchCardProps) {
                   </span>
                 </AccordionTrigger>
                 <AccordionContent>
-                  <ul className="space-y-1 pt-1">
-                    {dedupedCitations.map((citation) => {
-                      const quality = scoreSource(citation.url, competitorUrl);
-                      return (
-                        <li key={citation.url} className="flex items-baseline gap-1.5 text-xs">
-                          {quality === "high" && (
-                            <ShieldCheck
-                              className="h-3 w-3 flex-shrink-0 text-emerald-400"
-                              aria-label="Reputable source"
-                            />
-                          )}
-                          <a
-                            href={citation.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={cn("flex-1 truncate", QUALITY_CLASS[quality])}
-                            title={quality === "low" ? "Low-signal source — verify before relying on this" : undefined}
-                          >
-                            {citation.title}
-                          </a>
-                          {citation.occurrences > 1 && (
-                            <Badge
-                              variant="outline"
-                              className="h-4 flex-shrink-0 px-1 text-[10px] tabular-nums"
-                            >
-                              ×{citation.occurrences}
-                            </Badge>
-                          )}
-                        </li>
-                      );
-                    })}
-                  </ul>
+                  <CitationList
+                    citations={finding.citations as Citation[]}
+                    competitorUrl={competitorUrl}
+                    className="pt-1"
+                  />
                 </AccordionContent>
               </AccordionItem>
             )}

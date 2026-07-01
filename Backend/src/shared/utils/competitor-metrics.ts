@@ -6,17 +6,21 @@ import type { Momentum, ThreatLevel, DerivedState } from '../types';
  * Input is a 30-day series of change counts (as produced by `computeStats`
  * in `functions/api/competitors/get.ts`), oldest first and newest last.
  *
- * Buckets:
- *   pct >= +25%   → rising
- *   pct in [-15, +25) → stable
+ * The most recent 7 days are compared against a *smoothed prior baseline* — the
+ * average weekly rate over all earlier days in the window — rather than a single
+ * noisy prior week. Additive (Laplace-style) smoothing then divides by
+ * `(baseline + ALPHA)` so a tiny baseline (e.g. 1 change/week) can't turn a
+ * normal week into a wild percentage; established baselines are barely affected.
+ *
+ * Buckets (unchanged):
+ *   pct >= +25%        → rising
+ *   pct in [-15, +25)  → stable
  *   pct in [-40, -15)  → slowing
- *   pct < -40%    → declining
+ *   pct < -40%         → declining
  *
  * Guardrails:
  *   - Fewer than 14 days of input → insufficient-data.
- *   - Total changes across the 14-day window < 3 → insufficient-data.
- *   - Prior window zero but current positive → rising (capped at +999%).
- *   - Current zero but prior positive → declining (-100%).
+ *   - Total changes across the whole window < 3 → insufficient-data.
  */
 export function computeMomentum(input: {
   changesByDay: Array<{ date: string; count: number }>;
@@ -30,22 +34,20 @@ export function computeMomentum(input: {
   const sum = (start: number, end: number) =>
     series.slice(start, end).reduce((acc, d) => acc + (d.count ?? 0), 0);
 
-  const current7d = sum(n - 7, n);
-  const prior7d = sum(n - 14, n - 7);
-  const total = current7d + prior7d;
-
-  if (total < 3) {
+  const totalAll = sum(0, n);
+  if (totalAll < 3) {
     return { momentum: 'insufficient-data', momentumChangePercent: 0 };
   }
 
-  if (prior7d === 0) {
-    return { momentum: 'rising', momentumChangePercent: 999 };
-  }
-  if (current7d === 0) {
-    return { momentum: 'declining', momentumChangePercent: -100 };
-  }
+  const current7d = sum(n - 7, n);
+  const priorAll = totalAll - current7d;
+  const priorWeeks = (n - 7) / 7;
+  const priorWeeklyAvg = priorWeeks > 0 ? priorAll / priorWeeks : 0;
 
-  const pct = Math.round(((current7d - prior7d) / prior7d) * 100);
+  // Additive smoothing — see the doc comment above. ALPHA acts as one "phantom"
+  // change/week of baseline, capping the ratio's sensitivity to small counts.
+  const ALPHA = 2;
+  const pct = Math.round(((current7d - priorWeeklyAvg) / (priorWeeklyAvg + ALPHA)) * 100);
 
   if (pct >= 25) return { momentum: 'rising', momentumChangePercent: pct };
   if (pct >= -15) return { momentum: 'stable', momentumChangePercent: pct };

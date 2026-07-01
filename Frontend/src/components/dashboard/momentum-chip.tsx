@@ -3,6 +3,7 @@
 import { TrendingUp, TrendingDown, Minus, MoreHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Momentum } from "@/lib/types";
+import { ScoreInfo } from "./score-info";
 
 const CONFIG: Record<
   Momentum,
@@ -50,6 +51,8 @@ interface MomentumChipProps {
   momentumChangePercent?: number;
   size?: "sm" | "md";
   className?: string;
+  /** Append the ⓘ "how is this calculated?" link (off by default to keep lists clean). */
+  showInfo?: boolean;
 }
 
 function formatPercent(pct: number): string {
@@ -63,6 +66,7 @@ export function MomentumChip({
   momentumChangePercent,
   size = "md",
   className,
+  showInfo = false,
 }: MomentumChipProps) {
   const cfg = CONFIG[momentum ?? "insufficient-data"];
   const Icon = cfg.icon;
@@ -94,6 +98,7 @@ export function MomentumChip({
           · {formatPercent(momentumChangePercent!)}
         </span>
       )}
+      {showInfo && <ScoreInfo metric="momentum" className="ml-0.5" />}
     </span>
   );
 }

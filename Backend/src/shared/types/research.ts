@@ -27,7 +27,13 @@ export interface FindingItem {
 export interface Citation {
   url: string;
   title: string;
+  /** When RivalScan read the source (always present). */
   accessedAt: string;
+  /**
+   * The source's own publication date, ISO, when the web-search result exposes
+   * a parseable one (best-effort — many results don't, so this is often unset).
+   */
+  publishedAt?: string;
 }
 
 export type DerivedStage = 'early' | 'growth' | 'late' | 'public' | 'declining' | 'unknown';

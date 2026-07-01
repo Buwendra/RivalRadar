@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { ThreatLevel } from "@/lib/types";
 import { AiDisclaimer } from "./ai-disclaimer";
+import { ScoreInfo } from "./score-info";
 
 const CONFIG: Record<
   ThreatLevel,
@@ -64,8 +65,9 @@ export function ThreatCard({ threatLevel, reasoning }: ThreatCardProps) {
       <Card className="border-brand-700 bg-brand-900">
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
-            <span className="text-xs uppercase tracking-wide text-muted-foreground">
+            <span className="flex items-center gap-1 text-xs uppercase tracking-wide text-muted-foreground">
               Threat
+              <ScoreInfo metric="threat" />
             </span>
             <Eye className="h-4 w-4 text-muted-foreground" />
           </div>

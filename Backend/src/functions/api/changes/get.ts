@@ -40,6 +40,8 @@ export const handler = apiHandler(async (event) => {
         aiAnalysis: change.aiAnalysis,
         feedbackHelpful: change.feedbackHelpful,
         detectedAt: change.detectedAt,
+        sourceCategory: change.sourceCategory,
+        citations: change.citations ?? [],
       },
     },
   };

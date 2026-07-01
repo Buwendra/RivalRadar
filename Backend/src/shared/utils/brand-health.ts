@@ -24,6 +24,16 @@ import type {
 const SENTIMENT_WINDOW_WEEKS = 4;
 const VOICE_WINDOW_WEEKS = 4;
 
+/**
+ * Small-sample regularisation for the sentiment component. The net-sentiment
+ * estimate is shrunk toward the neutral midpoint (50) by a factor of
+ * n / (n + k): with few mentions the score stays close to neutral, and it
+ * approaches the raw value as evidence accumulates. k = 5 lines up with the
+ * "medium confidence" threshold — at 5 mentions the estimate is ~half-trusted.
+ * (Voice is NOT shrunk: a low share of voice is a real signal, not uncertainty.)
+ */
+const SENTIMENT_SHRINK_K = 5;
+
 export type HealthConfidence = 'low' | 'medium' | 'high';
 
 export interface BrandHealthComponent {
@@ -129,7 +139,10 @@ function computeSentimentComponent(
     };
   }
   const raw = 50 + 50 * ((positive - negative) / total);
-  const score = Math.max(0, Math.min(100, Math.round(raw)));
+  // Shrink toward neutral for small samples so a couple of mentions can't swing
+  // the score to an extreme; converges on `raw` as the sample grows.
+  const shrunk = 50 + (raw - 50) * (total / (total + SENTIMENT_SHRINK_K));
+  const score = Math.max(0, Math.min(100, Math.round(shrunk)));
   return {
     score,
     detail: `${total} mention${total === 1 ? '' : 's'}: ${positive} positive, ${neutral} neutral, ${negative} negative.`,

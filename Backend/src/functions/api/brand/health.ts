@@ -16,7 +16,7 @@ import {
   getRequestedWorkspaceId,
 } from '../../../shared/middleware/tenant';
 import { computeBrandHealthScore } from '../../../shared/utils/brand-health';
-import type { Momentum, ResearchFinding } from '../../../shared/types';
+import type { Momentum, ResearchFinding, Citation } from '../../../shared/types';
 import { loadSelfBrand, loadUserForBrand, assertBrandPulseCapability } from './_shared';
 
 const HEALTH_WINDOW_DAYS = 28; // matches the 4-week window used in the score formula
@@ -72,8 +72,26 @@ export const handler = apiHandler(async (event) => {
     momentum,
   });
 
+  // Surface the sources behind the score — deduped across the in-window self
+  // findings, most-recent first, capped so the UI stays tidy.
+  const sources = collectSources(selfFindings, 8);
+
   return {
     statusCode: 200,
-    body: { data: score },
+    body: { data: { ...score, sources } },
   };
 });
+
+/** Dedupe citations by URL across findings, newest first, capped at `limit`. */
+function collectSources(findings: ResearchFinding[], limit: number): Citation[] {
+  const byUrl = new Map<string, Citation>();
+  for (const f of findings) {
+    for (const c of f.citations ?? []) {
+      if (c?.url && !byUrl.has(c.url)) byUrl.set(c.url, c);
+    }
+  }
+  const dateOf = (c: Citation) => Date.parse(c.publishedAt ?? c.accessedAt ?? '') || 0;
+  return Array.from(byUrl.values())
+    .sort((a, b) => dateOf(b) - dateOf(a))
+    .slice(0, limit);
+}

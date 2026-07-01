@@ -13,6 +13,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AiDisclaimer } from "./ai-disclaimer";
+import { ScoreInfo } from "./score-info";
+import { CitationList } from "./citation-list";
 import { useBrandHealth } from "@/lib/hooks/use-brand";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow, parseISO } from "date-fns";
@@ -73,8 +75,9 @@ export function BrandHealthScoreCard({ size = "default" }: BrandHealthScoreCardP
               {data.score}
             </div>
             <div className="flex flex-col">
-              <span className="text-xs uppercase tracking-wide text-muted-foreground">
+              <span className="flex items-center gap-1 text-xs uppercase tracking-wide text-muted-foreground">
                 Brand Health
+                <ScoreInfo metric="brandHealth" />
               </span>
               <span className="text-xs text-muted-foreground">{formatAsOf(data.asOf)}</span>
             </div>
@@ -96,7 +99,10 @@ export function BrandHealthScoreCard({ size = "default" }: BrandHealthScoreCardP
       <CardContent className="space-y-5 p-5">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h2 className="text-sm font-semibold">Brand Health Score</h2>
+            <h2 className="flex items-center gap-1.5 text-sm font-semibold">
+              Brand Health Score
+              <ScoreInfo metric="brandHealth" />
+            </h2>
             <p className="mt-1 text-xs text-muted-foreground">{formatAsOf(data.asOf)}</p>
           </div>
           <Badge
@@ -120,6 +126,13 @@ export function BrandHealthScoreCard({ size = "default" }: BrandHealthScoreCardP
           <ComponentRow label="Share of voice" component={data.components.voice} />
           <ComponentRow label="Momentum" component={data.components.momentum} />
         </div>
+
+        {data.sources && data.sources.length > 0 && (
+          <div className="space-y-1.5 border-t border-brand-700 pt-3">
+            <p className="text-xs font-medium text-muted-foreground">Sources behind this score</p>
+            <CitationList citations={data.sources} />
+          </div>
+        )}
 
         <AiDisclaimer />
       </CardContent>

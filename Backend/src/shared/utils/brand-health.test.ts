@@ -47,7 +47,8 @@ describe('computeBrandHealthScore', () => {
     expect(result.confidence).toBe('low');
   });
 
-  it('scores all-positive sentiment near 100', () => {
+  it('shrinks small-sample all-positive sentiment toward neutral', () => {
+    // 5 positive mentions: raw 100, shrunk by 5/(5+5)=0.5 → 50 + 50*0.5 = 75.
     const result = computeBrandHealthScore({
       selfFindings: [makeFinding(3, ['positive', 'positive', 'positive', 'positive', 'positive'])],
       workspaceChanges: [],
@@ -55,10 +56,23 @@ describe('computeBrandHealthScore', () => {
       momentum: 'stable',
       now: NOW,
     });
-    expect(result.components.sentiment.score).toBe(100);
+    expect(result.components.sentiment.score).toBe(75);
   });
 
-  it('scores all-negative sentiment near 0', () => {
+  it('approaches the raw extreme as the sample grows', () => {
+    // 30 positive mentions: raw 100, shrunk by 30/35 ≈ 0.857 → ~93.
+    const result = computeBrandHealthScore({
+      selfFindings: [makeFinding(3, Array(30).fill('positive'))],
+      workspaceChanges: [],
+      selfCompetitorId: 'self-1',
+      momentum: 'stable',
+      now: NOW,
+    });
+    expect(result.components.sentiment.score).toBeGreaterThanOrEqual(90);
+  });
+
+  it('shrinks small-sample all-negative sentiment toward neutral', () => {
+    // 3 negative mentions: raw 0, shrunk by 3/(3+5)=0.375 → 50 − 50*0.375 = 31.
     const result = computeBrandHealthScore({
       selfFindings: [makeFinding(2, ['negative', 'negative', 'negative'])],
       workspaceChanges: [],
@@ -66,7 +80,7 @@ describe('computeBrandHealthScore', () => {
       momentum: 'stable',
       now: NOW,
     });
-    expect(result.components.sentiment.score).toBe(0);
+    expect(result.components.sentiment.score).toBe(31);
   });
 
   it('weights voice by share of workspace mentions', () => {

@@ -86,4 +86,6 @@ export interface BrandHealthScore {
   };
   confidence: BrandHealthConfidence;
   asOf: string;
+  /** Sources behind the score (deduped, most-recent first). */
+  sources?: Citation[];
 }
