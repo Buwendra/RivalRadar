@@ -41,6 +41,12 @@ export interface BrandHealthComponent {
   score: number;
   /** Human-readable one-line explanation surfaced in the UI tooltip. */
   detail: string;
+  /**
+   * Mention volume backing this component. Feeds the confidence bucket
+   * structurally — never parsed back out of the human-readable `detail`
+   * (a rewording of that copy once silently pinned confidence to 'low').
+   */
+  total: number;
 }
 
 export interface BrandHealthScore {
@@ -96,16 +102,11 @@ export function computeBrandHealthScore(input: BrandHealthInput): BrandHealthSco
     score: composite,
     components: { sentiment, voice, momentum },
     confidence: computeConfidence({
-      sentimentTotal: parseTotal(sentiment.detail),
-      voiceTotal: parseTotal(voice.detail),
+      sentimentTotal: sentiment.total,
+      voiceTotal: voice.total,
     }),
     asOf,
   };
-}
-
-function parseTotal(detail: string): number {
-  const m = detail.match(/(\d+)\s+mention/);
-  return m ? Number(m[1]) : 0;
 }
 
 function computeSentimentComponent(
@@ -136,6 +137,7 @@ function computeSentimentComponent(
     return {
       score: 50,
       detail: '0 mentions in the last 4 weeks — neutral default.',
+      total: 0,
     };
   }
   const raw = 50 + 50 * ((positive - negative) / total);
@@ -146,6 +148,7 @@ function computeSentimentComponent(
   return {
     score,
     detail: `${total} mention${total === 1 ? '' : 's'}: ${positive} positive, ${neutral} neutral, ${negative} negative.`,
+    total,
   };
 }
 
@@ -167,12 +170,14 @@ function computeVoiceComponent(
     return {
       score: 50,
       detail: '0 mentions across the workspace in the last 4 weeks.',
+      total: 0,
     };
   }
   const score = Math.round((selfCount / total) * 100);
   return {
     score,
     detail: `${selfCount} of ${total} workspace mention${total === 1 ? '' : 's'} were about you.`,
+    total,
   };
 }
 
@@ -181,6 +186,9 @@ function computeMomentumComponent(m: Momentum | undefined): BrandHealthComponent
   return {
     score: MOMENTUM_SCORE[key],
     detail: momentumDetail(key),
+    // Momentum is an enum mapping, not a mention count — it doesn't gate
+    // confidence, so its volume is not meaningful. Kept 0 for shape parity.
+    total: 0,
   };
 }
 

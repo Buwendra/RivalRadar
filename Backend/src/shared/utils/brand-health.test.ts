@@ -146,4 +146,60 @@ describe('computeBrandHealthScore', () => {
     });
     expect(result.confidence).toBe('low');
   });
+
+  // Regression: confidence used to be regex-parsed out of the human-readable
+  // detail strings; a rewording of the voice copy stopped the regex matching
+  // and pinned confidence to 'low' forever. These prove the upper buckets are
+  // actually reachable from real volume.
+  it('reaches medium confidence at 5+ mentions on both components', () => {
+    const changes = Array.from({ length: 8 }, (_, i) => ({
+      competitorId: i < 5 ? 'self-1' : 'comp-1',
+      detectedAt: NOW.toISOString(),
+    }));
+    const result = computeBrandHealthScore({
+      selfFindings: [makeFinding(1, ['positive', 'positive', 'neutral', 'neutral', 'negative'])],
+      workspaceChanges: changes,
+      selfCompetitorId: 'self-1',
+      momentum: 'stable',
+      now: NOW,
+    });
+    expect(result.components.sentiment.total).toBe(5);
+    expect(result.components.voice.total).toBe(8);
+    expect(result.confidence).toBe('medium');
+  });
+
+  it('reaches high confidence at 20+ mentions on both components', () => {
+    const sentiments = Array.from({ length: 22 }, (_, i) =>
+      i % 3 === 0 ? ('positive' as const) : ('neutral' as const)
+    );
+    const changes = Array.from({ length: 25 }, (_, i) => ({
+      competitorId: i < 10 ? 'self-1' : 'comp-1',
+      detectedAt: NOW.toISOString(),
+    }));
+    const result = computeBrandHealthScore({
+      selfFindings: [makeFinding(1, sentiments)],
+      workspaceChanges: changes,
+      selfCompetitorId: 'self-1',
+      momentum: 'rising',
+      now: NOW,
+    });
+    expect(result.confidence).toBe('high');
+  });
+
+  it('confidence is gated by the smaller of the two volumes', () => {
+    // 25 sentiment mentions but only 3 workspace changes → still low.
+    const sentiments = Array.from({ length: 25 }, () => 'neutral' as const);
+    const result = computeBrandHealthScore({
+      selfFindings: [makeFinding(1, sentiments)],
+      workspaceChanges: [
+        { competitorId: 'self-1', detectedAt: NOW.toISOString() },
+        { competitorId: 'comp-1', detectedAt: NOW.toISOString() },
+        { competitorId: 'comp-1', detectedAt: NOW.toISOString() },
+      ],
+      selfCompetitorId: 'self-1',
+      momentum: 'rising',
+      now: NOW,
+    });
+    expect(result.confidence).toBe('low');
+  });
 });

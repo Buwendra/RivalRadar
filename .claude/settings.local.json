@@ -148,7 +148,8 @@
       "Bash(node -e ' *)",
       "Bash(grep -rn \"CHANGE#\\\\${\" src/functions/ --include=\"*.ts\")",
       "Bash(echo \"EXIT:$?\")",
-      "Bash(MSYS_NO_PATHCONV=1 npx cdk synth --quiet)"
+      "Bash(MSYS_NO_PATHCONV=1 npx cdk synth --quiet)",
+      "Bash(echo \"TSC_EXIT:$?\")"
     ]
   }
 }

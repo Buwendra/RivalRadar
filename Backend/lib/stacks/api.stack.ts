@@ -118,6 +118,8 @@ export class ApiStack extends cdk.Stack {
     // ─── Auth Routes (public) ───
     addRoute('AuthSignup', apigatewayv2.HttpMethod.POST, '/auth/signup', 'api/auth/signup.ts', false);
     addRoute('AuthSignin', apigatewayv2.HttpMethod.POST, '/auth/signin', 'api/auth/signin.ts', false);
+    // Public by necessity: the caller's id token is expired when they hit this.
+    addRoute('AuthRefresh', apigatewayv2.HttpMethod.POST, '/auth/refresh', 'api/auth/refresh.ts', false);
     addRoute('AuthResendVerification', apigatewayv2.HttpMethod.POST, '/auth/resend-verification', 'api/auth/resend-verification.ts', false);
 
     const pipelineEnv = {

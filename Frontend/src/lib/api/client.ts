@@ -1,5 +1,7 @@
 import { API_URL } from "@/lib/utils/constants";
 import type { ApiResponse } from "@/lib/types";
+import { clearTokens } from "@/lib/auth/token-storage";
+import { refreshSession } from "@/lib/auth/token-refresh";
 
 export class ApiClientError extends Error {
   constructor(
@@ -20,14 +22,8 @@ interface RequestOptions {
   requireAuth?: boolean;
 }
 
-export async function apiClient<T>(
-  endpoint: string,
-  options: RequestOptions = {}
-): Promise<T> {
-  const { method = "GET", body, params, requireAuth = true } = options;
-
+function buildUrl(endpoint: string, params?: RequestOptions["params"]): string {
   let url = `${API_URL}${endpoint}`;
-
   if (params) {
     const searchParams = new URLSearchParams();
     Object.entries(params).forEach(([key, value]) => {
@@ -36,106 +32,68 @@ export async function apiClient<T>(
     const qs = searchParams.toString();
     if (qs) url += `?${qs}`;
   }
-
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-
-  if (requireAuth) {
-    const token = localStorage.getItem("rs_id_token");
-    if (!token) {
-      window.location.href = "/sign-in";
-      throw new ApiClientError("UNAUTHENTICATED", 401, "Not authenticated");
-    }
-    headers["Authorization"] = `Bearer ${token}`;
-
-    const workspaceId = localStorage.getItem("rs_current_workspace_id");
-    if (workspaceId) {
-      headers["X-Workspace-Id"] = workspaceId;
-    }
-  }
-
-  const response = await fetch(url, {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
-  });
-
-  // Only treat 401 as a session expiry when the caller was sending a token.
-  // On `requireAuth: false` (sign-in, sign-up, public token routes) a 401 is
-  // the server's domain response — e.g. wrong password — and the caller is
-  // expected to surface it inline rather than being bounced to /sign-in.
-  if (response.status === 401 && requireAuth) {
-    localStorage.removeItem("rs_access_token");
-    localStorage.removeItem("rs_id_token");
-    localStorage.removeItem("rs_refresh_token");
-    localStorage.removeItem("rs_expires_at");
-    window.location.href = "/sign-in";
-    throw new ApiClientError("UNAUTHENTICATED", 401, "Session expired");
-  }
-
-  const json = (await response.json()) as ApiResponse<T>;
-
-  if (json.error) {
-    throw new ApiClientError(
-      json.error.code,
-      response.status,
-      json.error.message,
-      json.error.details
-    );
-  }
-
-  return json.data as T;
+  return url;
 }
 
-export async function apiClientWithMeta<T>(
+/** Redirect to sign-in, preserving the page the user was on (AuthGuard parity). */
+function redirectToSignIn(): void {
+  const returnTo = window.location.pathname + window.location.search;
+  window.location.href = `/sign-in?redirect=${encodeURIComponent(returnTo)}`;
+}
+
+function authHeaders(requireAuth: boolean): Record<string, string> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (!requireAuth) return headers;
+
+  const token = localStorage.getItem("rs_id_token");
+  if (!token) {
+    redirectToSignIn();
+    throw new ApiClientError("UNAUTHENTICATED", 401, "Not authenticated");
+  }
+  headers["Authorization"] = `Bearer ${token}`;
+
+  const workspaceId = localStorage.getItem("rs_current_workspace_id");
+  if (workspaceId) {
+    headers["X-Workspace-Id"] = workspaceId;
+  }
+  return headers;
+}
+
+/**
+ * Shared request core for both client variants.
+ *
+ * 401 handling (authed requests only — on `requireAuth: false` a 401 is the
+ * server's domain response, e.g. wrong password, surfaced to the caller):
+ * attempt ONE single-flight token refresh and replay the request with the
+ * fresh token. Only when refresh fails — or the replay still 401s — is the
+ * session truly over: clear tokens and bounce to sign-in with a return path.
+ * Before this, every id-token expiry (~1h) hard-logged the user out even
+ * though a valid 30-day refresh token sat unused in storage.
+ */
+async function request<T>(
   endpoint: string,
-  options: RequestOptions = {}
+  options: RequestOptions
 ): Promise<ApiResponse<T>> {
   const { method = "GET", body, params, requireAuth = true } = options;
-
-  let url = `${API_URL}${endpoint}`;
-
-  if (params) {
-    const searchParams = new URLSearchParams();
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined) searchParams.set(key, String(value));
-    });
-    const qs = searchParams.toString();
-    if (qs) url += `?${qs}`;
-  }
-
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-
-  if (requireAuth) {
-    const token = localStorage.getItem("rs_id_token");
-    if (!token) {
-      window.location.href = "/sign-in";
-      throw new ApiClientError("UNAUTHENTICATED", 401, "Not authenticated");
-    }
-    headers["Authorization"] = `Bearer ${token}`;
-
-    const workspaceId = localStorage.getItem("rs_current_workspace_id");
-    if (workspaceId) {
-      headers["X-Workspace-Id"] = workspaceId;
-    }
-  }
-
-  const response = await fetch(url, {
+  const url = buildUrl(endpoint, params);
+  const init = (headers: Record<string, string>): RequestInit => ({
     method,
     headers,
     body: body ? JSON.stringify(body) : undefined,
   });
 
+  let response = await fetch(url, init(authHeaders(requireAuth)));
+
   if (response.status === 401 && requireAuth) {
-    localStorage.removeItem("rs_access_token");
-    localStorage.removeItem("rs_id_token");
-    localStorage.removeItem("rs_refresh_token");
-    localStorage.removeItem("rs_expires_at");
-    window.location.href = "/sign-in";
-    throw new ApiClientError("UNAUTHENTICATED", 401, "Session expired");
+    const refreshed = await refreshSession();
+    if (refreshed) {
+      response = await fetch(url, init(authHeaders(requireAuth)));
+    }
+    if (!refreshed || response.status === 401) {
+      clearTokens();
+      redirectToSignIn();
+      throw new ApiClientError("UNAUTHENTICATED", 401, "Session expired");
+    }
   }
 
   const json = (await response.json()) as ApiResponse<T>;
@@ -150,4 +108,19 @@ export async function apiClientWithMeta<T>(
   }
 
   return json;
+}
+
+export async function apiClient<T>(
+  endpoint: string,
+  options: RequestOptions = {}
+): Promise<T> {
+  const json = await request<T>(endpoint, options);
+  return json.data as T;
+}
+
+export async function apiClientWithMeta<T>(
+  endpoint: string,
+  options: RequestOptions = {}
+): Promise<ApiResponse<T>> {
+  return request<T>(endpoint, options);
 }

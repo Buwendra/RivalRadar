@@ -21,11 +21,22 @@ const signInSchema = z.object({
 
 type SignInFormData = z.infer<typeof signInSchema>;
 
+/**
+ * Only same-origin paths are honoured as post-sign-in destinations. A full
+ * URL (`https://evil.example`) or protocol-relative `//evil.example` in
+ * `?redirect=` would otherwise let a crafted sign-in link forward a freshly
+ * authenticated user to an attacker page.
+ */
+function safeRedirectPath(raw: string | null): string {
+  if (raw && raw.startsWith("/") && !raw.startsWith("//")) return raw;
+  return "/dashboard";
+}
+
 function SignInForm() {
   const { signIn } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirect = searchParams.get("redirect") ?? "/dashboard";
+  const redirect = safeRedirectPath(searchParams.get("redirect"));
   const [error, setError] = useState<string | null>(null);
 
   const {
