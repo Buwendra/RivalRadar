@@ -114,6 +114,13 @@ export interface Competitor {
   researchCadenceDays?: number;
   lastRecurringResearchAt?: string;
 
+  // Stamped by deep-research.ts in the core path of every successful run
+  // (any trigger — onboarding, manual, recurring). The authoritative
+  // "when was this competitor last researched" signal the recurring
+  // enqueuer keys its cadence off. Distinct from `momentumAsOf`, which only
+  // moves when the best-effort enrichment block succeeds.
+  lastResearchedAt?: string;
+
   // Snooze (Phase 7a). When set + in the future, the competitor is fully
   // silenced: recurring research skips it, aggregate-changes filters out
   // its changes from the weekly digest, real-time critical alerts are

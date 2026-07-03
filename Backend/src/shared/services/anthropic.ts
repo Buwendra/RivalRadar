@@ -4,7 +4,7 @@ import { generateId } from '../utils/id';
 import { computeAnthropicCostUsd } from '../utils/anthropic-pricing';
 import { getIndustryConfig, type IndustryResearchConfig } from '../utils/industry-research';
 import { getPromptVersion } from './prompt-registry';
-import { atomicAdd, getItem, putItem } from '../db/queries';
+import { atomicAdd, atomicAddGuarded, getItem, putItem } from '../db/queries';
 import {
   aiLogPK,
   aiLogSK,
@@ -364,11 +364,13 @@ export async function callAnthropic(
         costUsd: Number(costUsd.toFixed(6)),
       });
 
-      // Issue 9 — forensic audit log write (fire-and-forget). Clone the
-      // response BEFORE the caller consumes it, then read the clone's text
-      // for the audit row. Failures here never block the original call.
+      // Issue 9 — forensic audit log write. Clone the response BEFORE the
+      // caller consumes it, then read the clone's text for the audit row.
+      // Awaited (a Lambda can freeze the moment the handler returns, losing
+      // in-flight writes) but failure-isolated: persistAiLog catches its own
+      // errors, so it can slow a call by one DDB write, never fail it.
       const responseClone = response.clone();
-      void persistAiLog({
+      await persistAiLog({
         aiCallId,
         opName,
         model,
@@ -383,29 +385,27 @@ export async function callAnthropic(
         responseClone,
       });
 
-      // Issue 7 — real-time MTD cost-cap update. Atomic ADD on the User
-      // row so concurrent calls converge correctly. Fire-and-forget; the
-      // nightly aggregator still runs as a reconciliation safety net.
+      // Issue 7 — real-time MTD cost-cap update, guarded by the calendar
+      // month: while the row's monthToDateCostMonth matches, the cost is
+      // atomically ADDed; on the first call of a new month the counter is
+      // RESET instead of accumulating June's total into July (the old
+      // atomicAdd+SET pattern silently relabelled the stale total). Awaited
+      // for the same Lambda-freeze reason as the audit log, but soft-failed.
       //
-      // Deliberate concurrency window: because this ADD is async and the
-      // eligibility check (research-eligibility.ts) reads the cached value,
-      // several runs started in the same instant can each pass the cap check
-      // before any ADD lands. This is bounded in practice by the research
-      // pipeline's MapResearch maxConcurrency:1, the per-day researchPerDay
-      // rate limit, and nightly reconciliation — acceptable for the current
-      // free-trial model. Convert to a conditional/transactional check if a
-      // hard, race-free cap is ever required.
+      // Deliberate concurrency window: the eligibility check
+      // (research-eligibility.ts) reads the cached value, so several runs
+      // started in the same instant can each pass the cap check before any
+      // ADD lands. Bounded in practice by MapResearch maxConcurrency:1, the
+      // per-day researchPerDay rate limit, and nightly reconciliation.
       if (userId && response.ok && costUsd > 0) {
         const month = new Date().toISOString().slice(0, 7); // YYYY-MM
-        void atomicAdd(
+        await atomicAddGuarded(
           userPK(userId),
           userSK(),
           'monthToDateCostUsd',
           Number(costUsd.toFixed(6)),
-          {
-            monthToDateCostMonth: month,
-            lastAiCallAt: new Date().toISOString(),
-          }
+          { attr: 'monthToDateCostMonth', value: month },
+          { lastAiCallAt: new Date().toISOString() }
         ).catch((err) => {
           logger.warn('cost_cache_update_failed', {
             aiCallId,

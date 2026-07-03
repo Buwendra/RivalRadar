@@ -28,7 +28,7 @@ import {
   GetQueryResultsCommand,
   type ResultField,
 } from '@aws-sdk/client-cloudwatch-logs';
-import { putItem, getItem, updateItem } from '../../shared/db/queries';
+import { putItem, getItem, queryByPK, updateItem } from '../../shared/db/queries';
 import { costDayPK, costDaySK, userPK, userSK } from '../../shared/db/keys';
 import { logger } from '../../shared/utils/logger';
 
@@ -198,16 +198,28 @@ async function writeCostDay(
   });
 }
 
-async function updateUserMonthToDate(
-  userId: string,
-  forDate: string,
-  costToAdd: number
-): Promise<void> {
-  // Cheap read-then-write. Race window is tolerable because this Lambda
-  // runs once per day, single-instance.
-  const month = forDate.slice(0, 7); // 'YYYY-MM'
+/**
+ * Nightly reconciliation of the real-time cost cache.
+ *
+ * The cache (`User.monthToDateCostUsd`) is maintained in real time by
+ * `callAnthropic` (month-guarded atomic ADD). This job does NOT add to it —
+ * doing so double-counted every dollar. Instead it recomputes the current
+ * month's authoritative total from the CostDay rows (derived from actual
+ * call logs) and raises the cache to that floor if it has drifted below
+ * (e.g. a real-time write was lost).
+ *
+ * `max(cache, Σ CostDay)` rather than a blind SET because at 3am the cache
+ * may already contain today's 00:00–03:00 real-time spend, which is not in
+ * any CostDay row yet — overwriting would discard it.
+ */
+export async function reconcileUserMonthToDate(userId: string): Promise<void> {
+  const month = new Date().toISOString().slice(0, 7); // current 'YYYY-MM'
 
-  const userRecord = await getItem<Record<string, unknown>>(userPK(userId), userSK());
+  const [userRecord, costDays] = await Promise.all([
+    getItem<Record<string, unknown>>(userPK(userId), userSK()),
+    queryByPK(costDayPK(userId), `COST#${month}`, { scanForward: true }),
+  ]);
+
   if (!userRecord) {
     logger.warn('aggregate-ai-costs: user record missing — skipping monthToDate update', {
       userId,
@@ -215,17 +227,24 @@ async function updateUserMonthToDate(
     return;
   }
 
+  const monthFloor = costDays.items.reduce(
+    (sum, row) => sum + (typeof row.totalCostUsd === 'number' ? row.totalCostUsd : 0),
+    0
+  );
+
   const cachedMonth =
     typeof userRecord.monthToDateCostMonth === 'string'
       ? userRecord.monthToDateCostMonth
       : undefined;
   const cachedCost =
-    typeof userRecord.monthToDateCostUsd === 'number' ? userRecord.monthToDateCostUsd : 0;
+    cachedMonth === month && typeof userRecord.monthToDateCostUsd === 'number'
+      ? userRecord.monthToDateCostUsd
+      : 0;
 
-  const newMonthToDate = cachedMonth === month ? cachedCost + costToAdd : costToAdd;
+  const reconciled = Math.max(cachedCost, monthFloor);
 
   await updateItem(userPK(userId), userSK(), {
-    monthToDateCostUsd: Number(newMonthToDate.toFixed(6)),
+    monthToDateCostUsd: Number(reconciled.toFixed(6)),
     monthToDateCostMonth: month,
     updatedAt: new Date().toISOString(),
   });
@@ -270,7 +289,8 @@ export const handler = async (): Promise<{
   let totalCostUsd = 0;
   for (const [userId, agg] of byUser) {
     await writeCostDay(userId, window.date, agg);
-    await updateUserMonthToDate(userId, window.date, agg.totalCostUsd);
+    // Reconcile AFTER the CostDay write so yesterday's row is in the floor sum.
+    await reconcileUserMonthToDate(userId);
     totalCalls += agg.totalCalls;
     totalCostUsd += agg.totalCostUsd;
   }

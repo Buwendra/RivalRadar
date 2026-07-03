@@ -56,16 +56,18 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 /**
  * Resolve the timestamp of the most recent research for a competitor.
- * `momentumAsOf` is updated by `deep-research.ts` on every successful
- * enrichment pass, so it tracks "any research run" regardless of trigger.
- * Falls back to `lastRecurringResearchAt`, then `updatedAt`, then 0
- * (treats brand-new competitors with no prior research as immediately due).
+ * `lastResearchedAt` is stamped by `deep-research.ts` in the core path of
+ * every successful run (any trigger). `momentumAsOf` is the legacy proxy for
+ * rows researched before that field existed; `lastRecurringResearchAt` marks
+ * enqueue time. `updatedAt` is deliberately NOT consulted — it moves on
+ * unrelated edits (rename, snooze, battlecard cache), which used to postpone
+ * a due competitor by a whole cadence.
  */
 function lastResearchedAt(c: Competitor & Record<string, unknown>): number {
   const candidates = [
+    (c as { lastResearchedAt?: string }).lastResearchedAt,
     c.momentumAsOf,
     (c as { lastRecurringResearchAt?: string }).lastRecurringResearchAt,
-    c.updatedAt,
   ];
   let best = 0;
   for (const ts of candidates) {
@@ -208,6 +210,10 @@ export const handler = async (): Promise<EnqueueResult> => {
               name: c.name,
               url: c.url,
               industry: (c as { industry?: string }).industry,
+              // Phase 23 — without this, recurring runs treated the
+              // workspace's own brand as a competitor: wrong prompt framing,
+              // a threatLevel written onto the self row, self-predictions.
+              targetKind: c.targetKind ?? 'competitor',
             })),
           }),
         })

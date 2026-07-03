@@ -26,12 +26,22 @@ interface Event {
   name: string;
   topChanges: AggregatedChange[];
   competitorSnapshots?: CompetitorSnapshot[];
+  /** Set upstream by aggregate-changes when the user has no competitors. */
+  skip?: boolean;
 }
 
 /**
  * Step Function Lambda: Generate weekly strategic summary using Claude Sonnet.
+ *
+ * Soft-degrades on AI failure (mirrors generate-comparative-briefing.ts):
+ * a 529/timeout for one subscriber must never abort the whole digest Map,
+ * and a changes-only fallback digest beats no digest.
  */
 export const handler = async (event: Event): Promise<Event & { strategicSummary: string }> => {
+  if (event.skip) {
+    return { ...event, strategicSummary: '' };
+  }
+
   if (event.topChanges.length === 0) {
     return {
       ...event,
@@ -57,13 +67,24 @@ export const handler = async (event: Event): Promise<Event & { strategicSummary:
     });
   }
 
-  const summary = await generateWeeklySummary({
-    changes: event.topChanges,
-    userId: event.userId,
-    userCompanyName,
-    userIndustry,
-    competitorSnapshots: event.competitorSnapshots,
-  });
+  let summary: string;
+  try {
+    summary = await generateWeeklySummary({
+      changes: event.topChanges,
+      userId: event.userId,
+      userCompanyName,
+      userIndustry,
+      competitorSnapshots: event.competitorSnapshots,
+    });
+  } catch (err) {
+    logger.warn('GenerateSummary: AI summary failed — sending changes-only digest', {
+      userId: event.userId,
+      error: String(err),
+    });
+    summary =
+      'Your strategic briefing could not be generated this week. ' +
+      'The most significant competitor changes are listed below.';
+  }
 
   logger.info('GenerateSummary completed', {
     userId: event.userId,

@@ -4,15 +4,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 // pricing util, id, logger, and prompt-registry stay real (pure / harmless).
 vi.mock('../db/queries', () => ({
   atomicAdd: vi.fn(),
+  atomicAddGuarded: vi.fn(),
   getItem: vi.fn(),
   putItem: vi.fn(),
 }));
 
 import { callAnthropic } from './anthropic';
-import { atomicAdd, getItem, putItem } from '../db/queries';
+import { atomicAdd, atomicAddGuarded, getItem, putItem } from '../db/queries';
 import { userPK, userSK, rateLimitPK } from '../db/keys';
 
 const mockAtomicAdd = vi.mocked(atomicAdd);
+const mockAtomicAddGuarded = vi.mocked(atomicAddGuarded);
 const mockGetItem = vi.mocked(getItem);
 const mockPutItem = vi.mocked(putItem);
 const mockFetch = vi.fn();
@@ -37,6 +39,7 @@ beforeEach(() => {
   vi.stubGlobal('fetch', mockFetch);
   // Default: rate-limit bucket well under threshold, writes succeed.
   mockAtomicAdd.mockResolvedValue(undefined as never);
+  mockAtomicAddGuarded.mockResolvedValue(undefined as never);
   mockGetItem.mockResolvedValue({ tokensUsed: 100 } as never);
   mockPutItem.mockResolvedValue(undefined as never);
 });
@@ -99,12 +102,16 @@ describe('callAnthropic — Issue 7 (real-time cost cap)', () => {
 
     await callAnthropic('key', BODY, 'unit-test', { userId: 'u-1' });
 
-    expect(mockAtomicAdd).toHaveBeenCalledWith(
+    expect(mockAtomicAddGuarded).toHaveBeenCalledWith(
       userPK('u-1'),
       userSK(),
       'monthToDateCostUsd',
       expect.closeTo(0.0035, 6),
-      expect.objectContaining({ monthToDateCostMonth: expect.any(String) })
+      expect.objectContaining({
+        attr: 'monthToDateCostMonth',
+        value: expect.stringMatching(/^\d{4}-\d{2}$/),
+      }),
+      expect.objectContaining({ lastAiCallAt: expect.any(String) })
     );
   });
 
@@ -113,10 +120,7 @@ describe('callAnthropic — Issue 7 (real-time cost cap)', () => {
 
     await callAnthropic('key', BODY, 'unit-test'); // no context.userId
 
-    const userCostCalls = mockAtomicAdd.mock.calls.filter(
-      (c) => c[2] === 'monthToDateCostUsd'
-    );
-    expect(userCostCalls).toHaveLength(0);
+    expect(mockAtomicAddGuarded).not.toHaveBeenCalled();
   });
 });
 

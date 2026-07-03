@@ -1,4 +1,4 @@
-import { getItem, queryGSI, queryByPK } from '../../shared/db/queries';
+import { getItem, queryGSI, queryByPK, skPrefixRange } from '../../shared/db/queries';
 import { competitorPK, userPK, userSK } from '../../shared/db/keys';
 import { logger } from '../../shared/utils/logger';
 import { isSnoozed } from '../../shared/utils/snooze';
@@ -40,6 +40,14 @@ export const handler = async (
   name: string;
   topChanges: AggregatedChange[];
   competitorSnapshots: CompetitorSnapshot[];
+  /**
+   * True when the user has no competitor rows under their own userId — i.e.
+   * workspace MEMBERS (whose data lives under the tenant's id) and empty /
+   * cancelled accounts. Downstream steps pass it through and
+   * render-send-email skips SES entirely, instead of mailing a misleading
+   * "your competitive landscape appears stable" ghost digest.
+   */
+  skip?: boolean;
 }> => {
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
@@ -47,8 +55,9 @@ export const handler = async (
   // (with current enrichment fields for cross-portfolio context) + user record
   // (for the Phase 7b feed threshold).
   const [changesResult, competitorsResult, tenantUser] = await Promise.all([
-    queryGSI('GSI1', 'GSI1PK', event.userId, `CHANGE#${sevenDaysAgo}`, {
+    queryGSI('GSI1', 'GSI1PK', event.userId, undefined, {
       skName: 'GSI1SK',
+      skBetween: skPrefixRange('CHANGE#', sevenDaysAgo),
       limit: 50,
       scanForward: false,
     }),
@@ -68,6 +77,22 @@ export const handler = async (
       .filter((c) => c.targetKind === 'self')
       .map((c) => c.id as string)
   );
+
+  // No competitors tracked under this userId → nothing to digest. Applies to
+  // workspace members and empty accounts; see the `skip` doc above.
+  if (competitorRows.length === 0) {
+    logger.info('AggregateChanges: no competitors — digest will be skipped', {
+      userId: event.userId,
+    });
+    return {
+      userId: event.userId,
+      email: event.email,
+      name: event.name,
+      topChanges: [],
+      competitorSnapshots: [],
+      skip: true,
+    };
+  }
 
   // Build a snooze map by competitor name so we can drop changes from
   // currently-snoozed competitors before they leak into the digest. Keying

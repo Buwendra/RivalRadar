@@ -26,7 +26,7 @@ import { ScanCommand } from '@aws-sdk/lib-dynamodb';
 import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { ddb, TABLE_NAME } from '../../shared/db/client';
-import { queryByPK, queryGSI, updateItem } from '../../shared/db/queries';
+import { queryByPK, queryGSI, skPrefixRange, updateItem } from '../../shared/db/queries';
 import {
   userPK,
   userSK,
@@ -120,8 +120,9 @@ async function generateAndSendForUser(
   try {
     const [competitorsResult, changesResult, recsResult] = await Promise.all([
       queryByPK(competitorPK(user.userId), 'COMP#', { scanForward: true }),
-      queryGSI('GSI1', 'GSI1PK', user.userId, `CHANGE#${windowStart.toISOString()}`, {
+      queryGSI('GSI1', 'GSI1PK', user.userId, undefined, {
         skName: 'GSI1SK',
+        skBetween: skPrefixRange('CHANGE#', windowStart.toISOString()),
         limit: 100,
         scanForward: false,
       }),

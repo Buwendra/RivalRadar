@@ -139,6 +139,19 @@ export class PipelineStack extends cdk.Stack {
       outputPath: '$.Payload',
     });
 
+    // Per-SUBSCRIBER fault isolation. The catch must live INSIDE the iterator
+    // (on each task, landing on a Pass): a catch on the Map state itself only
+    // keeps the execution from being marked failed — the remaining items are
+    // still aborted, so one poisoned user would cost everyone else their
+    // digest. With this, a failed step resolves that one iteration and the
+    // Map moves on.
+    const subscriberFailed = new sfn.Pass(this, 'SubscriberDigestFailed', {
+      comment: 'One subscriber digest failed — swallowed so the rest of the batch continues',
+    });
+    for (const task of [aggregateTask, summaryTask, recommendationsTask, emailTask]) {
+      task.addCatch(subscriberFailed, { resultPath: '$.error' });
+    }
+
     const perSubscriberChain = aggregateTask.next(summaryTask).next(recommendationsTask).next(emailTask);
 
     const mapSubscribers = new sfn.Map(this, 'MapSubscribers', {
@@ -204,6 +217,18 @@ export class PipelineStack extends cdk.Stack {
       'RenderSendComparativeBriefTask',
       { lambdaFunction: renderSendComparativeBriefFn, outputPath: '$.Payload' }
     );
+
+    // Same per-iteration fault isolation as the weekly digest Map above.
+    const comparativeSubscriberFailed = new sfn.Pass(this, 'ComparativeSubscriberFailed', {
+      comment: 'One comparative briefing failed — swallowed so the rest of the batch continues',
+    });
+    for (const task of [
+      aggregateBrandCoverageTask,
+      generateComparativeBriefingTask,
+      renderSendComparativeBriefTask,
+    ]) {
+      task.addCatch(comparativeSubscriberFailed, { resultPath: '$.error' });
+    }
 
     const perComparativeSubscriberChain = aggregateBrandCoverageTask
       .next(generateComparativeBriefingTask)

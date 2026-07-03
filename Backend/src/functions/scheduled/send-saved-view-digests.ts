@@ -19,6 +19,7 @@ import {
   getItem,
   queryByPK,
   queryGSI,
+  skPrefixRange,
   updateItem,
 } from '../../shared/db/queries';
 import {
@@ -220,8 +221,9 @@ export const handler = async (): Promise<DigestResult> => {
 
       // Last-7-days changes via GSI1 (mirrors aggregate-changes.ts).
       const [changesResult, competitorsResult] = await Promise.all([
-        queryGSI('GSI1', 'GSI1PK', tenantUserId, `CHANGE#${sevenDaysAgo}`, {
+        queryGSI('GSI1', 'GSI1PK', tenantUserId, undefined, {
           skName: 'GSI1SK',
+          skBetween: skPrefixRange('CHANGE#', sevenDaysAgo),
           limit: 200,
           scanForward: false,
         }),

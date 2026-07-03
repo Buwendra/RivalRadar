@@ -23,6 +23,8 @@ interface Event {
   topChanges: AggregatedChange[];
   strategicSummary: string;
   topRecommendations?: Recommendation[];
+  /** Set upstream by aggregate-changes when the user has no competitors. */
+  skip?: boolean;
 }
 
 const BADGE_COLORS: Record<string, string> = {
@@ -51,7 +53,18 @@ const TIME_HORIZON_LABELS: Record<string, string> = {
 /**
  * Step Function Lambda: Render weekly digest email and send via SES.
  */
-export const handler = async (event: Event): Promise<{ sent: boolean }> => {
+export const handler = async (
+  event: Event
+): Promise<{ sent: boolean; skipped?: boolean }> => {
+  // Upstream determined this user gets no digest (no competitors — workspace
+  // members and empty/cancelled accounts). Never mail a ghost digest.
+  if (event.skip) {
+    logger.info('RenderSendEmail: skipped — user has no competitors', {
+      userId: event.userId,
+    });
+    return { sent: false, skipped: true };
+  }
+
   const now = new Date();
   const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   const dateRange = `${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — ${now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
@@ -59,11 +72,20 @@ export const handler = async (event: Event): Promise<{ sent: boolean }> => {
   // Phase 2 demo-wow: TTS-narrate the strategic summary via ElevenLabs and
   // embed a "Listen" CTA in the email + persist a row the dashboard reads.
   // Strategist+ only. Failures (missing API key, ElevenLabs 5xx, etc.) silently
-  // skip — the digest still ships as text-only.
-  const userRecord = await getItem<User & Record<string, unknown>>(
-    userPK(event.userId),
-    userSK()
-  );
+  // skip — the digest still ships as text-only. The user load itself is also
+  // guarded: audio is an enhancement, a DDB blip must not kill the email.
+  let userRecord: (User & Record<string, unknown>) | null = null;
+  try {
+    userRecord = await getItem<User & Record<string, unknown>>(
+      userPK(event.userId),
+      userSK()
+    );
+  } catch (err) {
+    logger.warn('RenderSendEmail: user load failed — sending text-only digest', {
+      userId: event.userId,
+      error: String(err),
+    });
+  }
   let audioCta = '';
   let audioDurationSec: number | undefined;
   if (userRecord && hasCapability(userRecord, 'audioBriefing') && event.strategicSummary) {

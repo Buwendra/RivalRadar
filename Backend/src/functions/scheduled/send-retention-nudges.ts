@@ -19,7 +19,7 @@
 
 import { ScanCommand } from '@aws-sdk/lib-dynamodb';
 import { ddb, TABLE_NAME } from '../../shared/db/client';
-import { queryGSI, updateItem } from '../../shared/db/queries';
+import { queryGSI, skPrefixRange, updateItem } from '../../shared/db/queries';
 import { userPK, userSK } from '../../shared/db/keys';
 import { sendEmail } from '../../shared/services/ses';
 import { logger } from '../../shared/utils/logger';
@@ -109,13 +109,12 @@ async function buildAndSendNudge(
 
   let changeCount = 0;
   try {
-    const { items } = await queryGSI(
-      'GSI1',
-      'GSI1PK',
-      candidate.userId,
-      `CHANGE#${lookbackStart}`,
-      { skName: 'GSI1SK', limit: 50, scanForward: false }
-    );
+    const { items } = await queryGSI('GSI1', 'GSI1PK', candidate.userId, undefined, {
+      skName: 'GSI1SK',
+      skBetween: skPrefixRange('CHANGE#', lookbackStart),
+      limit: 50,
+      scanForward: false,
+    });
     changeCount = items.length;
   } catch (err) {
     logger.warn('retention_nudge: change-count query failed — sending generic copy', {

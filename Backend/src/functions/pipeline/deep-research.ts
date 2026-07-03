@@ -305,6 +305,24 @@ export const handler = async (event: Event): Promise<Output> => {
       }
     }
 
+    // Stamp research recency in the CORE path — the recurring-research
+    // enqueuer keys its cadence off this field. Deliberately not inside the
+    // enrichment block below: enrichment is best-effort and its momentumAsOf
+    // doesn't move when enrichment fails, which used to make failed-enrichment
+    // runs look stale (or, via the old updatedAt fallback, fresh forever).
+    // Best-effort: a lost stamp only means one redundant re-research next
+    // cycle, never data corruption.
+    try {
+      await updateItem(competitorPK(event.userId), competitorSK(event.competitorId), {
+        lastResearchedAt: generatedAt,
+      });
+    } catch (err) {
+      logger.warn('deep-research: lastResearchedAt stamp failed — continuing', {
+        competitorId: event.competitorId,
+        error: String(err),
+      });
+    }
+
     // Phase 17 — fan-out matching saved views to the workspace's webhook
     // integration. Walks the workspace's saved views, filters to those with
     // webhookOnMatch=true, dispatches one HMAC-signed POST per (change,view)

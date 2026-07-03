@@ -19,7 +19,7 @@
 import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { apiHandler, getUserEmail, HttpError } from '../../../shared/middleware/handler';
-import { getItem, queryByPK, queryGSI } from '../../../shared/db/queries';
+import { getItem, queryByPK, queryGSI, skPrefixRange } from '../../../shared/db/queries';
 import {
   userPK,
   userSK,
@@ -69,8 +69,9 @@ export const handler = apiHandler(async (event) => {
   // Parallel data fetch
   const [competitorsResult, changesResult, recsResult] = await Promise.all([
     queryByPK(competitorPK(userId), 'COMP#', { scanForward: true }),
-    queryGSI('GSI1', 'GSI1PK', userId, `CHANGE#${weekStart.toISOString()}`, {
+    queryGSI('GSI1', 'GSI1PK', userId, undefined, {
       skName: 'GSI1SK',
+      skBetween: skPrefixRange('CHANGE#', weekStart.toISOString()),
       limit: 50,
       scanForward: false,
     }),

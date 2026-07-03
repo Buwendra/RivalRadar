@@ -59,11 +59,18 @@ interface Event {
   topChanges: AggregatedChange[];
   competitorSnapshots: CompetitorSnapshot[];
   strategicSummary: string;
+  /** Set upstream by aggregate-changes when the user has no competitors. */
+  skip?: boolean;
 }
 
 type Output = Event & { topRecommendations: Recommendation[] };
 
 export const handler = async (event: Event): Promise<Output> => {
+  // Upstream said this user gets no digest at all (no competitors).
+  if (event.skip) {
+    return { ...event, topRecommendations: [] };
+  }
+
   // Empty digest → skip generation cleanly. Don't emit a "nothing to do"
   // recommendation — the email already says no significant changes detected.
   if (event.topChanges.length === 0 && event.competitorSnapshots.length === 0) {
@@ -136,21 +143,35 @@ export const handler = async (event: Event): Promise<Output> => {
   // Build the prompt input. `changeId` is optional on AggregatedChange today
   // (aggregate-changes doesn't surface it) but we plumb it through for future
   // wiring without breaking the generator now.
-  const recs = await generateRecommendations({
-    userId: event.userId,
-    userCompanyName,
-    userIndustry,
-    ...(customCategories ? { customCategories } : {}),
-    weeklyChanges: event.topChanges.map((c) => ({
-      competitorName: c.competitorName,
-      summary: c.summary,
-      significanceScore: c.significanceScore,
-      changeType: c.changeType,
-      changeId: c.changeId,
-    })),
-    competitorSnapshots: competitorsForPrompt,
-    strategicSummary: event.strategicSummary,
-  });
+  //
+  // Best-effort for real: an AI failure here degrades to a recommendations-
+  // free digest instead of throwing and killing this subscriber's iteration
+  // (the file header always promised this; the call used to sit outside the
+  // guard).
+  let recs: Awaited<ReturnType<typeof generateRecommendations>>;
+  try {
+    recs = await generateRecommendations({
+      userId: event.userId,
+      userCompanyName,
+      userIndustry,
+      ...(customCategories ? { customCategories } : {}),
+      weeklyChanges: event.topChanges.map((c) => ({
+        competitorName: c.competitorName,
+        summary: c.summary,
+        significanceScore: c.significanceScore,
+        changeType: c.changeType,
+        changeId: c.changeId,
+      })),
+      competitorSnapshots: competitorsForPrompt,
+      strategicSummary: event.strategicSummary,
+    });
+  } catch (err) {
+    logger.warn('GenerateRecommendations: AI call failed — sending digest without recommendations', {
+      userId: event.userId,
+      error: String(err),
+    });
+    return { ...event, topRecommendations: [] };
+  }
 
   if (recs.length === 0) {
     logger.info('GenerateRecommendations: no recommendations produced for user', {

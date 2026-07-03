@@ -57,7 +57,47 @@ export async function deleteItem(pk: string, sk: string): Promise<void> {
   );
 }
 
-/** Query items by PK with optional SK prefix */
+/**
+ * Highest code point that can appear in our sort keys. Used as the inclusive
+ * upper bound of a prefix-scoped range so a `>=` query cannot bleed into the
+ * next SK namespace (e.g. `GSI1SK >= 'CHANGE#<iso>'` alone would also match
+ * every `REC#`/`RESEARCH#` row, because those sort after all `CHANGE#…`).
+ */
+const SK_RANGE_MAX = '￿';
+
+/**
+ * Build an `skBetween` range meaning "every key under `prefix` from `since`
+ * onward" — e.g. `skPrefixRange('CHANGE#', sevenDaysAgoIso)` matches
+ * `CHANGE#<sevenDaysAgo>` … `CHANGE#<latest>` and nothing outside `CHANGE#`.
+ */
+export function skPrefixRange(prefix: string, since: string): [string, string] {
+  return [`${prefix}${since}`, `${prefix}${SK_RANGE_MAX}`];
+}
+
+function buildSkCondition(
+  skAttr: string,
+  skPrefix?: string,
+  skBetween?: [string, string]
+): { condition: string; values: Record<string, unknown> } {
+  if (skPrefix && skBetween) {
+    throw new Error('skPrefix and skBetween are mutually exclusive');
+  }
+  if (skBetween) {
+    return {
+      condition: ` AND ${skAttr} BETWEEN :skLo AND :skHi`,
+      values: { ':skLo': skBetween[0], ':skHi': skBetween[1] },
+    };
+  }
+  if (skPrefix) {
+    return {
+      condition: ` AND begins_with(${skAttr}, :skPrefix)`,
+      values: { ':skPrefix': skPrefix },
+    };
+  }
+  return { condition: '', values: {} };
+}
+
+/** Query items by PK with optional SK prefix or SK range */
 export async function queryByPK(
   pk: string,
   skPrefix?: string,
@@ -65,16 +105,15 @@ export async function queryByPK(
     limit?: number;
     scanForward?: boolean;
     cursor?: string;
+    /** Inclusive SK range (use `skPrefixRange()` to build). Exclusive with skPrefix. */
+    skBetween?: [string, string];
   }
 ): Promise<{ items: Record<string, unknown>[]; cursor?: string }> {
+  const sk = buildSkCondition('SK', skPrefix, options?.skBetween);
   const params: Record<string, unknown> = {
     TableName: TABLE_NAME,
-    KeyConditionExpression: skPrefix
-      ? 'PK = :pk AND begins_with(SK, :skPrefix)'
-      : 'PK = :pk',
-    ExpressionAttributeValues: skPrefix
-      ? { ':pk': pk, ':skPrefix': skPrefix }
-      : { ':pk': pk },
+    KeyConditionExpression: `PK = :pk${sk.condition}`,
+    ExpressionAttributeValues: { ':pk': pk, ...sk.values },
     ScanIndexForward: options?.scanForward ?? false,
   };
 
@@ -95,7 +134,7 @@ export async function queryByPK(
   };
 }
 
-/** Query a GSI */
+/** Query a GSI with optional SK prefix or SK range */
 export async function queryGSI(
   indexName: string,
   pkName: string,
@@ -106,19 +145,18 @@ export async function queryGSI(
     limit?: number;
     scanForward?: boolean;
     cursor?: string;
+    /** Inclusive SK range (use `skPrefixRange()` to build). Exclusive with skPrefix. */
+    skBetween?: [string, string];
   }
 ): Promise<{ items: Record<string, unknown>[]; cursor?: string }> {
   const skName = options?.skName ?? `${pkName.replace('PK', 'SK')}`;
+  const sk = buildSkCondition(skName, skPrefix, options?.skBetween);
 
   const params: Record<string, unknown> = {
     TableName: TABLE_NAME,
     IndexName: indexName,
-    KeyConditionExpression: skPrefix
-      ? `${pkName} = :pk AND begins_with(${skName}, :skPrefix)`
-      : `${pkName} = :pk`,
-    ExpressionAttributeValues: skPrefix
-      ? { ':pk': pkValue, ':skPrefix': skPrefix }
-      : { ':pk': pkValue },
+    KeyConditionExpression: `${pkName} = :pk${sk.condition}`,
+    ExpressionAttributeValues: { ':pk': pkValue, ...sk.values },
     ScanIndexForward: options?.scanForward ?? false,
   };
 
@@ -172,6 +210,64 @@ export async function updateItem(
  * bucket (Issue 8). DDB's ADD is the only way to safely increment under
  * concurrent writes — `SET x = x + 1` race-loses.
  */
+/**
+ * Atomic increment scoped to a guard window (month, day, …).
+ *
+ * ADDs `delta` to `attr` only while `guard.attr === guard.value` still holds
+ * on the row; when the guard has moved on (new month/day) or was never set,
+ * the counter is atomically RESET to `delta` and the guard re-stamped.
+ * This is what `atomicAdd`-with-a-SET-guard gets wrong: a plain ADD keeps
+ * accumulating across the boundary while the SET silently relabels the stale
+ * total as belonging to the new window.
+ */
+export async function atomicAddGuarded(
+  pk: string,
+  sk: string,
+  attr: string,
+  delta: number,
+  guard: { attr: string; value: unknown },
+  setAttrs: Record<string, unknown> = {}
+): Promise<void> {
+  const names: Record<string, string> = { '#a': attr, '#g': guard.attr };
+  const values: Record<string, unknown> = { ':d': delta, ':g': guard.value };
+
+  const setKeys = Object.keys(setAttrs);
+  const extraSet = setKeys.map((_k, i) => `, #s${i} = :s${i}`).join('');
+  setKeys.forEach((key, i) => {
+    names[`#s${i}`] = key;
+    values[`:s${i}`] = setAttrs[key];
+  });
+
+  try {
+    await ddb.send(
+      new UpdateCommand({
+        TableName: TABLE_NAME,
+        Key: { PK: pk, SK: sk },
+        UpdateExpression: `ADD #a :d SET #g = :g${extraSet}`,
+        ConditionExpression: '#g = :g',
+        ExpressionAttributeNames: names,
+        ExpressionAttributeValues: values,
+      })
+    );
+  } catch (err: unknown) {
+    if (!(err instanceof Error && err.name === 'ConditionalCheckFailedException')) {
+      throw err;
+    }
+    // Window rolled over (or first write ever): reset the counter for the new
+    // window. If two writers race here, last-writer-wins loses one delta —
+    // acceptable for rollup caches that are reconciled nightly.
+    await ddb.send(
+      new UpdateCommand({
+        TableName: TABLE_NAME,
+        Key: { PK: pk, SK: sk },
+        UpdateExpression: `SET #a = :d, #g = :g${extraSet}`,
+        ExpressionAttributeNames: names,
+        ExpressionAttributeValues: values,
+      })
+    );
+  }
+}
+
 export async function atomicAdd(
   pk: string,
   sk: string,

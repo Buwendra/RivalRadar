@@ -14,7 +14,7 @@
  */
 import { z } from 'zod';
 import { apiHandler, getUserEmail, parseBody, HttpError } from '../../../shared/middleware/handler';
-import { getItem, queryByPK, queryGSI } from '../../../shared/db/queries';
+import { getItem, queryByPK, queryGSI, skPrefixRange } from '../../../shared/db/queries';
 import { userPK, userSK, competitorPK, recommendationPK } from '../../../shared/db/keys';
 import { hasCapability } from '../../../shared/utils/capability';
 import { validate } from '../../../shared/middleware/validation';
@@ -87,9 +87,10 @@ export const handler = apiHandler(async (event) => {
   let rowCount = 0;
 
   if (body.type === 'changes') {
-    // GSI1 is keyed by userId for combined-feed lookup; SK begins_with CHANGE#<since>
-    const { items } = await queryGSI('GSI1', 'GSI1PK', userId, `CHANGE#${since}`, {
+    // GSI1 is keyed by userId for combined-feed lookup; range CHANGE#<since> … end of CHANGE#
+    const { items } = await queryGSI('GSI1', 'GSI1PK', userId, undefined, {
       skName: 'GSI1SK',
+      skBetween: skPrefixRange('CHANGE#', since),
       limit: 1000,
       scanForward: false,
     });

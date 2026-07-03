@@ -142,7 +142,13 @@
       "WebFetch(domain:www.statista.com)",
       "WebFetch(domain:www.themorning.lk)",
       "Skill(claude-api)",
-      "Skill(claude-api:*)"
+      "Skill(claude-api:*)",
+      "Bash(npx tsc *)",
+      "Bash(npm run *)",
+      "Bash(node -e ' *)",
+      "Bash(grep -rn \"CHANGE#\\\\${\" src/functions/ --include=\"*.ts\")",
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(MSYS_NO_PATHCONV=1 npx cdk synth --quiet)"
     ]
   }
 }
