@@ -409,6 +409,25 @@ export async function conditionalUpdate(args: {
   }
 }
 
+/** Append values to a list attribute, creating it when absent. */
+export async function appendToList(
+  pk: string,
+  sk: string,
+  attr: string,
+  values: unknown[]
+): Promise<void> {
+  if (values.length === 0) return;
+  await ddb.send(
+    new UpdateCommand({
+      TableName: TABLE_NAME,
+      Key: { PK: pk, SK: sk },
+      UpdateExpression: 'SET #a = list_append(if_not_exists(#a, :empty), :new)',
+      ExpressionAttributeNames: { '#a': attr },
+      ExpressionAttributeValues: { ':empty': [], ':new': values },
+    })
+  );
+}
+
 /** Seed a counter attribute exactly once; concurrent initializers lose silently. */
 export async function initCounterIfAbsent(
   pk: string,

@@ -13,7 +13,7 @@
  * the execution.
  */
 
-import { putItem, updateItem } from '../db/queries';
+import { appendToList, putItem, updateItem } from '../db/queries';
 import {
   researchRunPK,
   researchRunSK,
@@ -141,7 +141,6 @@ export async function markRunFinished(
   if (typeof input.citationCount === 'number')
     updates.citationCount = input.citationCount;
   if (input.errorMessage) updates.errorMessage = input.errorMessage.slice(0, 800);
-  if (input.events) updates.events = input.events.slice(-MAX_EVENTS);
 
   try {
     await updateItem(
@@ -149,6 +148,17 @@ export async function markRunFinished(
       researchRunSK(startedAt, id),
       updates
     );
+    // APPEND events rather than SET — a wholesale SET replaced the
+    // `run_queued` entry the trigger handler wrote, losing the timeline's
+    // first event. Callers pass only the not-yet-flushed tail.
+    if (input.events && input.events.length > 0) {
+      await appendToList(
+        researchRunPK(tenantUserId),
+        researchRunSK(startedAt, id),
+        'events',
+        input.events.slice(-MAX_EVENTS)
+      );
+    }
   } catch (err) {
     logger.warn('research_run_mark_finished_failed', {
       runId: id,
@@ -160,8 +170,9 @@ export async function markRunFinished(
 
 /**
  * Mid-run flush. Used by long-running Lambdas (deep-research can take ~60s)
- * to surface progress to the UI before terminal state. Truncates to the most
- * recent MAX_EVENTS entries.
+ * to surface progress to the UI before terminal state. APPENDS — callers
+ * pass only events not flushed yet (a wholesale SET used to erase the
+ * trigger handler's `run_queued` entry).
  */
 export async function flushEventsToRun(
   tenantUserId: string,
@@ -171,10 +182,11 @@ export async function flushEventsToRun(
 ): Promise<void> {
   if (events.length === 0) return;
   try {
-    await updateItem(
+    await appendToList(
       researchRunPK(tenantUserId),
       researchRunSK(startedAt, id),
-      { events: events.slice(-MAX_EVENTS) }
+      'events',
+      events.slice(-MAX_EVENTS)
     );
   } catch (err) {
     logger.warn('research_run_flush_events_failed', {

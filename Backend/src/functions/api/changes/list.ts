@@ -1,5 +1,5 @@
 import { apiHandler, getUserEmail } from '../../../shared/middleware/handler';
-import { getItem, queryGSI } from '../../../shared/db/queries';
+import { getItem, queryGSI, skPrefixRange } from '../../../shared/db/queries';
 import { userPK, userSK } from '../../../shared/db/keys';
 import { validate, paginationSchema } from '../../../shared/middleware/validation';
 import {
@@ -36,8 +36,13 @@ export const handler = apiHandler(async (event) => {
     ? new Date(Date.now() - sinceDays * 24 * 60 * 60 * 1000).toISOString()
     : undefined;
 
-  const { items, cursor } = await queryGSI('GSI1', 'GSI1PK', userId, 'CHANGE#', {
+  // `since` is a KEY condition, not a post-filter — filtering after the DDB
+  // Limit made pages come back short/empty with hasMore:true, and clients
+  // paged through rows the filter then discarded. (minSignificance and
+  // changeTypes remain post-filters: they're not part of the sort key.)
+  const { items, cursor } = await queryGSI('GSI1', 'GSI1PK', userId, sinceIso ? undefined : 'CHANGE#', {
     skName: 'GSI1SK',
+    ...(sinceIso ? { skBetween: skPrefixRange('CHANGE#', sinceIso) } : {}),
     limit: params.limit,
     cursor: params.cursor,
     scanForward: false,
@@ -67,9 +72,7 @@ export const handler = apiHandler(async (event) => {
       return typeof t === 'string' && set.has(t);
     });
   }
-  if (sinceIso) {
-    changes = changes.filter((c) => typeof c.detectedAt === 'string' && c.detectedAt >= sinceIso);
-  }
+  // `since` is now enforced at the key level above; no post-filter needed.
 
   return {
     statusCode: 200,

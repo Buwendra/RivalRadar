@@ -75,6 +75,10 @@ interface StoredChange {
   significance: number;
   pageUrl: string;
   summary: string;
+  /** Two-sentence delta explanation — the alert body (not the title again). */
+  detail: string;
+  /** Real research source category (news/product/…); alerts render it. */
+  category: string;
 }
 
 interface Output {
@@ -111,6 +115,10 @@ export const handler = async (event: Event): Promise<Output> => {
   // `run_queued` event; we add `research_started` first to surface
   // immediately when the row is next read.
   const runEvents: ApplicationEvent[] = [];
+  // flushEventsToRun/markRunFinished APPEND to the row's event list (which
+  // already holds the trigger's `run_queued`) — track what's been flushed so
+  // each write sends only the new tail, never re-appending earlier events.
+  let flushedEventCount = 0;
   const tenantUserId = event.tenantUserId ?? event.userId;
   const haveRunRow = !!event.runId && !!event.runStartedAt;
   runEvents.push(makeRunEvent('research_started', { competitorId: event.competitorId }));
@@ -119,6 +127,7 @@ export const handler = async (event: Event): Promise<Output> => {
     // Early flush so the dashboard reflects "research started" within ~2s
     // even if the deep-research call takes 60s. Best-effort.
     await flushEventsToRun(tenantUserId, event.runStartedAt!, event.runId!, runEvents);
+    flushedEventCount = runEvents.length;
   }
 
   try {
@@ -296,6 +305,8 @@ export const handler = async (event: Event): Promise<Output> => {
         significance: delta.significanceScore,
         pageUrl: delta.sourceUrl,
         summary: delta.title,
+        detail: delta.detail,
+        category: delta.category,
       });
     }
 
@@ -729,7 +740,7 @@ export const handler = async (event: Event): Promise<Output> => {
         status: 'succeeded',
         deltaCount: storedChanges.length,
         citationCount: current.citations.length,
-        events: runEvents,
+        events: runEvents.slice(flushedEventCount),
       });
     }
 
@@ -755,7 +766,7 @@ export const handler = async (event: Event): Promise<Output> => {
       await markRunFinished(tenantUserId, event.runStartedAt!, event.runId!, {
         status: 'failed',
         errorMessage: String(err),
-        events: runEvents,
+        events: runEvents.slice(flushedEventCount),
       });
     }
     return {

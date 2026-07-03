@@ -9,6 +9,8 @@ interface StoredChange {
   significance: number;
   pageUrl: string;
   summary: string;
+  detail?: string;
+  category?: string;
 }
 
 interface Event {
@@ -65,9 +67,11 @@ export const handler = async (event: Event): Promise<{ alertsSent: number }> => 
         competitorName: event.name,
         changeId: change.changeId,
         changeTitle: change.summary,
-        changeDetail: change.summary,
+        // Real delta explanation + source category (optional for in-flight
+        // events from before these fields existed on StoredChange).
+        changeDetail: change.detail ?? change.summary,
         significance: change.significance,
-        category: 'change',
+        category: change.category ?? 'news',
       });
       alertsSent += 1;
     } catch (err) {

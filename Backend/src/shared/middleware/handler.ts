@@ -19,9 +19,14 @@ type HandlerFn<E = AuthenticatedEvent | PublicEvent> = (
 
 const ALLOWED_ORIGIN = process.env.FRONTEND_URL!;
 
+// Keep in sync with the gateway-level corsPreflight in lib/stacks/api.stack.ts
+// — API Gateway answers preflights first, but this list must not silently
+// drift behind it (it bites anyone testing the Lambda directly or changing
+// the gateway config).
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
-  'Access-Control-Allow-Headers': 'Content-Type,Authorization,X-Idempotency-Key',
+  'Access-Control-Allow-Headers':
+    'Content-Type,Authorization,X-Idempotency-Key,X-Workspace-Id,X-Api-Key',
   'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
   'Access-Control-Allow-Credentials': 'true',
 };

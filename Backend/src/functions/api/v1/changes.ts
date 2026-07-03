@@ -10,7 +10,7 @@ import {
   resolveApiKeyContext,
   assertApiAccess,
 } from '../../../shared/middleware/api-key';
-import { queryGSI } from '../../../shared/db/queries';
+import { queryGSI, skPrefixRange } from '../../../shared/db/queries';
 import { validate, paginationSchema } from '../../../shared/middleware/validation';
 import type { PublicEvent } from '../../../shared/middleware/handler';
 
@@ -23,12 +23,21 @@ export const handler = apiHandler<PublicEvent>(async (event) => {
   const minSignificance = Number(q.minSignificance) || 0;
   const since = q.since;
 
-  const { items, cursor } = await queryGSI('GSI1', 'GSI1PK', ctx.tenantUserId, 'CHANGE#', {
-    skName: 'GSI1SK',
-    limit: params.limit ?? 50,
-    cursor: params.cursor,
-    scanForward: false,
-  });
+  // `since` at the key level (see changes/list.ts) — post-filtering after the
+  // DDB Limit broke pagination semantics. minSignificance stays a post-filter.
+  const { items, cursor } = await queryGSI(
+    'GSI1',
+    'GSI1PK',
+    ctx.tenantUserId,
+    since ? undefined : 'CHANGE#',
+    {
+      skName: 'GSI1SK',
+      ...(since ? { skBetween: skPrefixRange('CHANGE#', since) } : {}),
+      limit: params.limit ?? 50,
+      cursor: params.cursor,
+      scanForward: false,
+    }
+  );
 
   let data = items.map((item) => ({
     id: item.id as string,
@@ -44,9 +53,7 @@ export const handler = apiHandler<PublicEvent>(async (event) => {
   if (minSignificance > 0) {
     data = data.filter((c) => c.significance >= minSignificance);
   }
-  if (since) {
-    data = data.filter((c) => typeof c.detectedAt === 'string' && c.detectedAt >= since);
-  }
+  // `since` is enforced at the key level above; no post-filter needed.
 
   return {
     statusCode: 200,

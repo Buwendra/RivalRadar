@@ -133,7 +133,10 @@ export const handler = apiHandler(async (event) => {
   }
 
   const [{ items: changes }, { items: research }] = await Promise.all([
-    queryByPK(`COMP#${compId}`, 'CHANGE#', { limit: 30 }),
+    // limit 100 matches the enrichment block in deep-research.ts — at 30, an
+    // active competitor's detail-page momentum disagreed with the stored
+    // sidebar/list value because it was computed over a truncated series.
+    queryByPK(`COMP#${compId}`, 'CHANGE#', { limit: 100 }),
     // Phase 3E — bumped 10 → 50 to power the time-machine slider on the
     // competitor detail page. 50 covers ~1 year of weekly research at no
     // extra DDB cost (single Query, single page).
@@ -172,7 +175,10 @@ export const handler = apiHandler(async (event) => {
         createdAt: competitor.createdAt,
         momentum,
         momentumChangePercent,
-        momentumAsOf: new Date().toISOString(),
+        // Prefer the stored enrichment timestamp — fabricating `new Date()`
+        // claimed a freshness this on-read recompute doesn't have.
+        momentumAsOf:
+          (competitor.momentumAsOf as string | undefined) ?? new Date().toISOString(),
         threatLevel: competitor.threatLevel,
         threatReasoning: competitor.threatReasoning,
         threatAsOf: competitor.threatAsOf,

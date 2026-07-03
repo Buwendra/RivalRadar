@@ -96,8 +96,10 @@ async function buildAndSendNudge(
   candidate: NudgeCandidate,
   now: Date
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  // Personalize: count changes detected since their last login (or last 14
-  // days if lastLoginAt is unset). Cheap GSI1 query bounded at 50 items.
+  // Personalize: count changes detected since their last login, CAPPED at the
+  // last 14 days (a 60-day-inactive user gets a 14-day count, not their whole
+  // absence — keeps the query cheap and the copy honest: "in the last two
+  // weeks"). Cheap GSI1 query bounded at 50 items.
   const lookbackStart = new Date(
     Math.max(
       now.getTime() - 14 * 24 * 60 * 60 * 1000,
@@ -158,12 +160,26 @@ async function buildAndSendNudge(
     </div>
   `;
 
+  // Stamp BEFORE sending: for a marketing nudge, a missed email (send fails
+  // after a successful stamp — retried next quarter) is far better than the
+  // old order's failure mode, where a failed stamp after a successful send
+  // re-mailed the same user every day until the write landed.
   try {
-    await sendEmail(candidate.email, subject, html);
     await updateItem(userPK(candidate.userId), userSK(), {
       lastRetentionNudgeAt: now.toISOString(),
       updatedAt: now.toISOString(),
     });
+  } catch (err) {
+    const error = err instanceof Error ? err.message : String(err);
+    logger.error('retention_nudge_stamp_failed — skipping send', {
+      userId: candidate.userId,
+      error,
+    });
+    return { ok: false, error };
+  }
+
+  try {
+    await sendEmail(candidate.email, subject, html);
     logger.info('retention_nudge_sent', {
       userId: candidate.userId,
       daysSinceLogin: candidate.daysSinceLogin,
