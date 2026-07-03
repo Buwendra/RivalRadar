@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatFullDate } from "@/lib/utils/format-date";
+import { safeHostname } from "@/lib/utils/source-quality";
 
 export default function ChangeDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -60,7 +61,10 @@ export default function ChangeDetailPage() {
           rel="noopener noreferrer"
           className="flex items-center gap-1 text-primary hover:underline"
         >
-          {new URL(change.pageUrl).hostname}
+          {/* pageUrl is model-supplied and only checked to be a non-empty
+              string upstream — a bare `new URL()` white-screened the page on
+              non-URL values like "company press release". */}
+          {safeHostname(change.pageUrl) ?? change.pageUrl}
           <ExternalLink className="h-3 w-3" />
         </a>
       </div>

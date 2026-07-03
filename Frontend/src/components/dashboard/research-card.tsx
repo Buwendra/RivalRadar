@@ -38,8 +38,10 @@ function resolveCategoryMeta(
       Icon: Building2,
     };
   }
-  // STATIC_CATEGORY_META covers the other 5 keys exhaustively.
-  return STATIC_CATEGORY_META[category]!;
+  // STATIC_CATEGORY_META covers the other 5 keys today, but the data comes
+  // from stored rows — a category outside the current union must degrade to
+  // a generic section, not crash the card on a non-null assertion.
+  return STATIC_CATEGORY_META[category] ?? { label: category, Icon: Newspaper };
 }
 
 const IMPORTANCE_VARIANT: Record<1 | 2 | 3, "secondary" | "default" | "destructive"> = {
@@ -93,7 +95,10 @@ export function ResearchCard({ finding, competitorUrl }: ResearchCardProps) {
 
         <p className="text-sm leading-relaxed">{finding.summary}</p>
 
-        {nonEmptyCategories.length > 0 && (
+        {/* Sources render whenever citations exist — a finding with zero
+            category items but N citations used to advertise "· N sources" in
+            the header with no way to open them. */}
+        {(nonEmptyCategories.length > 0 || dedupedCitations.length > 0) && (
           <Accordion type="multiple" className="border-t border-brand-700">
             {nonEmptyCategories.map((cat) => (
               <CategorySection

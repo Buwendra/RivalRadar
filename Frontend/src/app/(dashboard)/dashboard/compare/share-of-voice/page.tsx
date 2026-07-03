@@ -20,7 +20,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ShareOfVoiceChart } from "@/components/dashboard/share-of-voice-chart";
+import {
+  ShareOfVoiceChart,
+  buildSovColorMap,
+} from "@/components/dashboard/share-of-voice-chart";
 import { ScoreInfo } from "@/components/dashboard/score-info";
 import { PLAN_LIMITS } from "@/lib/utils/plan-limits";
 import type { ResearchCategory, ShareOfVoiceWindowKey } from "@/lib/types";
@@ -102,37 +105,49 @@ export default function ShareOfVoicePage() {
             </Card>
           ) : (
             <>
-              <Card className="border-brand-700 bg-brand-900">
-                <CardContent className="space-y-3 p-5">
-                  <div className="flex items-center justify-between">
-                    <h2 className="flex items-center gap-1.5 text-sm font-semibold">
-                      Overall coverage
-                      <ScoreInfo metric="shareOfVoice" />
-                    </h2>
-                    <span className="text-xs text-muted-foreground">
-                      {data.totalChanges} mentions across the workspace
-                    </span>
-                  </div>
-                  <ShareOfVoiceChart rows={data.overall} />
-                </CardContent>
-              </Card>
-
-              <div>
-                <h2 className="mb-3 text-sm font-semibold">By category</h2>
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  {(Object.keys(CATEGORY_LABELS) as ResearchCategory[]).map((cat) => (
-                    <Card key={cat} className="border-brand-700 bg-brand-900">
-                      <CardContent className="space-y-3 p-4">
-                        <ShareOfVoiceChart
-                          title={CATEGORY_LABELS[cat]}
-                          rows={data.byCategory[cat] ?? []}
-                          compact
-                        />
+              {/* One identity-keyed colour map from the overall roster,
+                  shared by every chart on the page — the same competitor
+                  stays the same colour in every per-category bar, and the
+                  overall legend applies everywhere. */}
+              {(() => {
+                const colorMap = buildSovColorMap(data.overall);
+                return (
+                  <>
+                    <Card className="border-brand-700 bg-brand-900">
+                      <CardContent className="space-y-3 p-5">
+                        <div className="flex items-center justify-between">
+                          <h2 className="flex items-center gap-1.5 text-sm font-semibold">
+                            Overall coverage
+                            <ScoreInfo metric="shareOfVoice" />
+                          </h2>
+                          <span className="text-xs text-muted-foreground">
+                            {data.totalChanges} mentions across the workspace
+                          </span>
+                        </div>
+                        <ShareOfVoiceChart rows={data.overall} colorMap={colorMap} />
                       </CardContent>
                     </Card>
-                  ))}
-                </div>
-              </div>
+
+                    <div>
+                      <h2 className="mb-3 text-sm font-semibold">By category</h2>
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        {(Object.keys(CATEGORY_LABELS) as ResearchCategory[]).map((cat) => (
+                          <Card key={cat} className="border-brand-700 bg-brand-900">
+                            <CardContent className="space-y-3 p-4">
+                              <ShareOfVoiceChart
+                                title={CATEGORY_LABELS[cat]}
+                                rows={data.byCategory[cat] ?? []}
+                                compact
+                                colorMap={colorMap}
+                              />
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
             </>
           )}
         </>

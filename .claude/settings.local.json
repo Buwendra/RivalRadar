@@ -150,7 +150,10 @@
       "Bash(echo \"EXIT:$?\")",
       "Bash(MSYS_NO_PATHCONV=1 npx cdk synth --quiet)",
       "Bash(echo \"TSC_EXIT:$?\")",
-      "Bash(grep -n \"import { putItem\\\\|from '../../shared/db/queries'\\\\|from '../../shared/db/keys'\" src/functions/pipeline/deep-research.ts)"
+      "Bash(grep -n \"import { putItem\\\\|from '../../shared/db/queries'\\\\|from '../../shared/db/keys'\" src/functions/pipeline/deep-research.ts)",
+      "Bash(cd ../Frontend && grep -n \"new URL\" \"src/app/\\(dashboard\\)/dashboard/changes/[id]/page.tsx\" && sed -n '1,15p' src/lib/utils/format-date.ts && grep -n \"safeHostname\" src/lib/utils/source-quality.ts | head -2)",
+      "Read(//c/Work/personal/**)",
+      "Bash(echo \"TSC:$?\")"
     ]
   }
 }

@@ -61,7 +61,7 @@ const LOW_QUALITY_PATTERNS: RegExp[] = [
   /medium\.com\/@/i,             // personal Medium pages (not company pubs)
 ];
 
-function safeHostname(url: string): string | null {
+export function safeHostname(url: string): string | null {
   try {
     return new URL(url).hostname.toLowerCase().replace(/^www\./, "");
   } catch {

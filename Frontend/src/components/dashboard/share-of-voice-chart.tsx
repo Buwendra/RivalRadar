@@ -30,6 +30,15 @@ interface ShareOfVoiceChartProps {
   emptyMessage?: string;
   /** Show the ⓘ "how is this calculated?" link next to the title. */
   showInfo?: boolean;
+  /**
+   * competitorId → colour class, shared across sibling charts so the same
+   * entity keeps the same colour everywhere. Build one with
+   * `buildSovColorMap(overallRows)` and pass it to every per-category chart —
+   * without it, colours were assigned by each chart's own filtered segment
+   * index, so a competitor with zero News mentions shifted every other
+   * competitor's colour in the News chart and the overall legend misled.
+   */
+  colorMap?: Record<string, string>;
 }
 
 const COMPETITOR_PALETTE = [
@@ -42,9 +51,18 @@ const COMPETITOR_PALETTE = [
   "bg-rose-500/70",
 ];
 
-function colourFor(row: SoVRow, index: number): string {
-  if (row.isSelf) return "bg-emerald-500/70";
-  return COMPETITOR_PALETTE[index % COMPETITOR_PALETTE.length];
+const SELF_COLOR = "bg-emerald-500/70";
+
+/** Assign stable colours by roster position (self always emerald). */
+export function buildSovColorMap(rows: SoVRow[]): Record<string, string> {
+  const map: Record<string, string> = {};
+  let paletteIdx = 0;
+  for (const row of rows) {
+    map[row.competitorId] = row.isSelf
+      ? SELF_COLOR
+      : COMPETITOR_PALETTE[paletteIdx++ % COMPETITOR_PALETTE.length];
+  }
+  return map;
 }
 
 export function ShareOfVoiceChart({
@@ -53,9 +71,15 @@ export function ShareOfVoiceChart({
   compact = false,
   emptyMessage = "No mentions in this category yet.",
   showInfo = false,
+  colorMap,
 }: ShareOfVoiceChartProps) {
   const total = rows.reduce((sum, r) => sum + r.count, 0);
   const segments = rows.filter((r) => r.count > 0);
+  // Identity-keyed colours: from the shared map when provided, else from
+  // THIS chart's full roster (still stable against zero-count filtering).
+  const colours = colorMap ?? buildSovColorMap(rows);
+  const colourFor = (row: SoVRow): string =>
+    colours[row.competitorId] ?? (row.isSelf ? SELF_COLOR : COMPETITOR_PALETTE[0]);
 
   return (
     <div className={cn("space-y-2", compact ? "" : "space-y-3")}>
@@ -88,13 +112,13 @@ export function ShareOfVoiceChart({
               compact ? "h-6" : "h-8"
             )}
           >
-            {segments.map((row, i) => (
+            {segments.map((row) => (
               <Tooltip key={row.competitorId}>
                 <TooltipTrigger asChild>
                   <div
                     className={cn(
                       "cursor-default transition-opacity hover:opacity-100",
-                      colourFor(row, i)
+                      colourFor(row)
                     )}
                     style={{ width: `${row.percent}%` }}
                     aria-label={`${row.name}: ${row.count} mentions, ${row.percent}%`}
@@ -118,12 +142,12 @@ export function ShareOfVoiceChart({
       {/* Legend — only when not compact and we have at least one segment */}
       {!compact && segments.length > 0 && (
         <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px]">
-          {segments.map((row, i) => (
+          {segments.map((row) => (
             <span
               key={row.competitorId}
               className="inline-flex items-center gap-1 text-muted-foreground"
             >
-              <span className={cn("inline-block h-2 w-2 rounded-full", colourFor(row, i))} />
+              <span className={cn("inline-block h-2 w-2 rounded-full", colourFor(row))} />
               <span className={row.isSelf ? "text-emerald-300" : ""}>{row.name}</span>
               <span className="tabular-nums">{row.percent}%</span>
             </span>

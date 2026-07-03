@@ -87,8 +87,11 @@ export function ThreatCard({ threatLevel, reasoning }: ThreatCardProps) {
     <Card className={cn("border", cfg.cardClass)}>
       <CardContent className="p-4">
         <div className="flex items-center justify-between">
-          <span className="text-xs uppercase tracking-wide text-muted-foreground">
+          <span className="flex items-center gap-1 text-xs uppercase tracking-wide text-muted-foreground">
             Threat
+            {/* The "how is this calculated?" link matters MOST next to an
+                actual Critical/High rating, not only in the empty state. */}
+            <ScoreInfo metric="threat" />
           </span>
           <Icon className={cn("h-4 w-4", cfg.iconClass)} />
         </div>

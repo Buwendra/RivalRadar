@@ -85,11 +85,9 @@ export function MomentumChip({
         cfg.className,
         className
       )}
-      title={
-        showPct
-          ? `${cfg.label} — 7-day change: ${formatPercent(momentumChangePercent!)}`
-          : cfg.label
-      }
+      // Deliberately no native `title` here: the chip already shows label +
+      // percent inline, and a browser tooltip stacked on top of the ⓘ's
+      // Radix tooltip reads as a double-tooltip glitch.
     >
       <Icon className={iconSize} />
       <span>{cfg.label}</span>
