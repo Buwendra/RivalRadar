@@ -56,18 +56,21 @@ export async function resolveApiKeyContext(
     );
   }
 
-  // Minute throttle: opportunistic increment-or-reset
+  // Minute throttle: opportunistic increment-or-reset. Rows created before
+  // the quota field existed get the same default the create route uses —
+  // `nextCount > undefined` is always false, i.e. no throttle at all.
+  const quotaPerMinute = keyRow.quotaPerMinute ?? 60;
   const now = Date.now();
   const windowResetAt = keyRow.windowResetAt ?? 0;
   const isNewWindow = now >= windowResetAt;
   const nextCount = isNewWindow ? 1 : (keyRow.requestCount ?? 0) + 1;
 
-  if (!isNewWindow && nextCount > keyRow.quotaPerMinute) {
+  if (!isNewWindow && nextCount > quotaPerMinute) {
     const retryAfterSec = Math.max(0, Math.ceil((windowResetAt - now) / 1000));
     throw new HttpError(
       429,
       'RATE_LIMITED',
-      `API key exceeds ${keyRow.quotaPerMinute} req/min. Retry after ${retryAfterSec}s.`
+      `API key exceeds ${quotaPerMinute} req/min. Retry after ${retryAfterSec}s.`
     );
   }
 

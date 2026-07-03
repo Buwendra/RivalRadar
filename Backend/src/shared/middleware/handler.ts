@@ -136,5 +136,18 @@ function toApiError(err: unknown): { statusCode: number; code: string; message: 
   if (err instanceof HttpError) {
     return { statusCode: err.statusCode, code: err.code, message: err.message };
   }
+  // Duck-typed 4xx errors from layers below the middleware (e.g. the DB
+  // helpers' InvalidCursorError) — they carry statusCode/code but can't
+  // import HttpError without inverting the layering.
+  if (
+    err instanceof Error &&
+    typeof (err as { statusCode?: unknown }).statusCode === 'number' &&
+    typeof (err as { code?: unknown }).code === 'string'
+  ) {
+    const shaped = err as Error & { statusCode: number; code: string };
+    if (shaped.statusCode >= 400 && shaped.statusCode < 500) {
+      return { statusCode: shaped.statusCode, code: shaped.code, message: shaped.message };
+    }
+  }
   return { statusCode: 500, code: 'INTERNAL_ERROR', message: 'An unexpected error occurred' };
 }

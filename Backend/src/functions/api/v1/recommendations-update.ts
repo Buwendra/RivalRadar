@@ -41,10 +41,19 @@ export const handler = apiHandler<PublicEvent>(async (event) => {
   const body = validate(updateSchema, parseBody(event));
   const userId = ctx.tenantUserId;
 
-  // Same scan-find pattern as the dashboard handler — recs are sort-keyed by
-  // createdAt, so we recover the SK from the row we find.
-  const { items } = await queryByPK(recommendationPK(userId), 'REC#', { limit: 100 });
-  const target = items.find((r) => r.id === recId) as unknown as Recommendation | undefined;
+  // Recs are sort-keyed by createdAt, so we recover the SK from the row we
+  // find. Paginated: a single-page find() used to 404 any recommendation
+  // older than the newest 100, making old recs un-updatable via the API.
+  let target: (Recommendation & { SK?: string }) | undefined;
+  let cursor: string | undefined;
+  for (let page = 0; page < 10 && !target; page++) {
+    const result = await queryByPK(recommendationPK(userId), 'REC#', { limit: 100, cursor });
+    target = result.items.find((r) => r.id === recId) as
+      | (Recommendation & { SK?: string })
+      | undefined;
+    if (!result.cursor) break;
+    cursor = result.cursor;
+  }
   if (!target) throw new HttpError(404, 'NOT_FOUND', 'Recommendation not found');
 
   const oldStatus = target.status;

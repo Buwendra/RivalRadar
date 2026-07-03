@@ -79,7 +79,10 @@ export const handler = apiHandler(async (event) => {
     competitorPK(tenantUserId),
     competitorSK(competitorId)
   );
-  if (!competitor) {
+  // Phase 23 — the self-brand row 404s here like on get/research: a
+  // "battlecard against your own brand" is nonsense, and generating one ran
+  // a paid win-against-yourself Haiku call + wrote tactics onto the self row.
+  if (!competitor || competitor.targetKind === 'self') {
     throw new HttpError(404, 'NOT_FOUND', 'Competitor not found');
   }
 

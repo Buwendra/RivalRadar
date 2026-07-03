@@ -21,7 +21,14 @@ import {
   resolveApiKeyContext,
   assertApiAccess,
 } from '../../../shared/middleware/api-key';
-import { getItem, putItem, queryByPK } from '../../../shared/db/queries';
+import {
+  getItem,
+  putItem,
+  queryByPK,
+  initCounterIfAbsent,
+  incrementWithCeiling,
+  decrementFloorZero,
+} from '../../../shared/db/queries';
 import {
   competitorPK,
   competitorSK,
@@ -49,14 +56,16 @@ export const handler = apiHandler<PublicEvent>(async (event) => {
   if (!user) throw new HttpError(404, 'USER_NOT_FOUND', 'Workspace owner not found');
 
   // Phase 23 — self-brand row does not count against the competitor quota.
+  // Enforcement mirrors competitors/create.ts: atomic counter with ceiling.
   const { items: existing } = await queryByPK(competitorPK(userId), 'COMP#');
   const existingCompetitors = competitorsOnly(existing);
   const maxCompetitors = PLAN_LIMITS[user.plan].maxCompetitors;
-  if (existingCompetitors.length >= maxCompetitors) {
-    throw new HttpError(
-      403,
-      'PLAN_LIMIT',
-      `Workspace plan (${user.plan}) allows up to ${maxCompetitors} competitors. Upgrade to add more.`
+  if (typeof user.competitorCount !== 'number') {
+    await initCounterIfAbsent(
+      userPK(userId),
+      userSK(),
+      'competitorCount',
+      existingCompetitors.length
     );
   }
 
@@ -73,23 +82,42 @@ export const handler = apiHandler<PublicEvent>(async (event) => {
     );
   }
 
+  const admitted = await incrementWithCeiling(
+    userPK(userId),
+    userSK(),
+    'competitorCount',
+    maxCompetitors
+  );
+  if (!admitted) {
+    throw new HttpError(
+      403,
+      'PLAN_LIMIT',
+      `Workspace plan (${user.plan}) allows up to ${maxCompetitors} competitors. Upgrade to add more.`
+    );
+  }
+
   const compId = generateId();
   const now = new Date().toISOString();
 
-  await putItem({
-    PK: competitorPK(userId),
-    SK: competitorSK(compId),
-    id: compId,
-    userId,
-    name: body.name,
-    url: body.url,
-    pagesToTrack: body.pagesToTrack,
-    status: 'active',
-    targetKind: 'competitor',
-    createdAt: now,
-    updatedAt: now,
-    ...gsi2ActiveCompetitorKeys(compId),
-  });
+  try {
+    await putItem({
+      PK: competitorPK(userId),
+      SK: competitorSK(compId),
+      id: compId,
+      userId,
+      name: body.name,
+      url: body.url,
+      pagesToTrack: body.pagesToTrack,
+      status: 'active',
+      targetKind: 'competitor',
+      createdAt: now,
+      updatedAt: now,
+      ...gsi2ActiveCompetitorKeys(compId),
+    });
+  } catch (err) {
+    await decrementFloorZero(userPK(userId), userSK(), 'competitorCount').catch(() => {});
+    throw err;
+  }
 
   await recordAuditEvent({
     ctx,

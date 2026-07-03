@@ -11,6 +11,15 @@ export const competitorSK = (competitorId: string) => `COMP#${competitorId}`;
 
 export const changePK = (competitorId: string) => `COMP#${competitorId}`;
 export const changeSK = (timestamp: string) => `CHANGE#${timestamp}`;
+// Direct change-by-id lookup (GET /changes/{id}). Changes are keyed by
+// timestamp, so an id-only permalink used to scan the newest N rows and 404
+// past that. GSI3 is KEYS_ONLY — resolve the PK/SK pair here, then getItem
+// the full row (same two-hop as the battlecard token below). GSI3SK carries
+// the competitorId so the base-table PK is recoverable without a scan.
+export const changeIdGSI3 = (changeId: string, competitorId: string) => ({
+  GSI3PK: `CHANGE_ID#${changeId}`,
+  GSI3SK: `COMP#${competitorId}`,
+});
 
 // NOTE: the Firecrawl-era Snapshot entity (`SNAP#` SK prefix) is no longer
 // written; its key builders were removed. The prefix stays conceptually

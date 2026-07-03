@@ -44,7 +44,14 @@ async function awaitRateLimitClearance(estimatedInputTokens: number): Promise<vo
       );
       const used = row?.tokensUsed ?? 0;
       if (used <= TPM_THRESHOLD) return;
-      // Over threshold — sleep to the top of the next minute and retry.
+      // Final attempt over threshold: proceed fail-open and KEEP the
+      // reservation — the call runs in this minute, so it's accurate.
+      if (attempt === 1) return;
+      // Over threshold — this call won't run in the current minute, so
+      // release its reservation (leaving it would count a phantom call
+      // against everyone else in this bucket), then sleep to the boundary
+      // and re-reserve in the next minute's bucket.
+      await atomicAdd(rateLimitPK(), rateLimitSK(minute), 'tokensUsed', -estimatedInputTokens);
       const msToNextMinute = 60_000 - (Date.now() % 60_000);
       logger.warn('anthropic_rate_limit_local_throttle', {
         minute,
@@ -62,13 +69,25 @@ async function awaitRateLimitClearance(estimatedInputTokens: number): Promise<vo
   }
 }
 
-function estimateInputTokens(body: unknown): number {
+/**
+ * The web_search server tool re-feeds accumulated results as input on every
+ * internal iteration, so a deepResearch call's real input tokens run ~an
+ * order of magnitude past its serialized request body (10–20k vs 1–2k).
+ * Without this factor the TPM bucket tracked ~10–20% of actual usage for
+ * exactly the op the 30k org-limit protection exists for.
+ */
+const OP_TOKEN_MULTIPLIER: Record<string, number> = {
+  deepResearch: 8,
+};
+
+function estimateInputTokens(body: unknown, opName?: string): number {
+  const multiplier = (opName && OP_TOKEN_MULTIPLIER[opName]) || 1;
   // Rough: 1 token ≈ 4 chars of serialized request body. Slightly generous
   // (counts system + tools serialisation) which is fine for headroom.
   try {
-    return Math.ceil(JSON.stringify(body).length / 4);
+    return Math.ceil((JSON.stringify(body).length / 4) * multiplier);
   } catch {
-    return 4_000; // fallback if body can't be serialised (shouldn't happen)
+    return 4_000 * multiplier; // fallback if body can't be serialised
   }
 }
 
@@ -331,7 +350,7 @@ export async function callAnthropic(
   });
 
   // Issue 8 — pre-call rate-limit clearance. Fail-open on any DDB error.
-  await awaitRateLimitClearance(estimateInputTokens(body));
+  await awaitRateLimitClearance(estimateInputTokens(body, opName));
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -1155,7 +1174,17 @@ If nothing substantively new: return { "deltas": [] }.`;
     );
   }
 
-  const validCategories: ResearchCategory[] = ['news', 'product', 'funding', 'hiring', 'social'];
+  // Must cover everything the prompt above offers — omitting one silently
+  // remaps those deltas to 'news' via the fallback below ('industryContext'
+  // was missing for a while, which zeroed the 6th Share-of-Voice bucket).
+  const validCategories: ResearchCategory[] = [
+    'news',
+    'product',
+    'funding',
+    'hiring',
+    'social',
+    'industryContext',
+  ];
   const validChangeTypes: ResearchChangeType[] = [
     'pricing',
     'feature',

@@ -91,7 +91,12 @@ describe('callAnthropic — Issue 8 (input-TPM rate-limit bucket)', () => {
     const res = await p;
 
     expect(res.status).toBe(200);
-    expect(mockAtomicAdd.mock.calls.filter((c) => c[0] === rateLimitPK()).length).toBe(2);
+    // reserve (minute M) → release M's phantom reservation (negative delta)
+    // → re-reserve in minute M+1. The old flow skipped the release, counting
+    // a call against a minute it never ran in.
+    const bucketCalls = mockAtomicAdd.mock.calls.filter((c) => c[0] === rateLimitPK());
+    expect(bucketCalls.length).toBe(3);
+    expect(bucketCalls[1][3]).toBeLessThan(0);
     expect(mockFetch).toHaveBeenCalledTimes(1);
   });
 });

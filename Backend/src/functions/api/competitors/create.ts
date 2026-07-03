@@ -1,6 +1,13 @@
 import { apiHandler, getUserEmail, parseBody, HttpError } from '../../../shared/middleware/handler';
 import { validate, competitorCreateSchema } from '../../../shared/middleware/validation';
-import { putItem, queryByPK, getItem } from '../../../shared/db/queries';
+import {
+  putItem,
+  queryByPK,
+  getItem,
+  initCounterIfAbsent,
+  incrementWithCeiling,
+  decrementFloorZero,
+} from '../../../shared/db/queries';
 import { userPK, userSK, competitorPK, competitorSK, gsi2ActiveCompetitorKeys } from '../../../shared/db/keys';
 import { generateId } from '../../../shared/utils/id';
 import { PLAN_LIMITS, User } from '../../../shared/types';
@@ -29,18 +36,23 @@ export const handler = apiHandler(async (event) => {
   const existingCompetitors = competitorsOnly(existing);
   const maxCompetitors = PLAN_LIMITS[user.plan].maxCompetitors;
 
-  if (existingCompetitors.length >= maxCompetitors) {
-    throw new HttpError(
-      403,
-      'PLAN_LIMIT',
-      `Your ${user.plan} plan allows up to ${maxCompetitors} competitors. Upgrade to add more.`
+  // Plan-limit enforcement is a conditional counter on the User row, not a
+  // read-count-then-put (two concurrent creates at max-1 both passed that
+  // check and landed max+1 rows). Lazy-init seeds the counter from the row
+  // count the first time a pre-counter account creates a competitor.
+  if (typeof user.competitorCount !== 'number') {
+    await initCounterIfAbsent(
+      userPK(userId),
+      userSK(),
+      'competitorCount',
+      existingCompetitors.length
     );
   }
 
   // Misuse-defense gate before persisting the competitor. Account status,
   // sanctions denylist, rate limit, Haiku classifier — see
-  // shared/utils/research-eligibility.ts. Note: rate limit increments here,
-  // so a rejected create does NOT count against the user's daily quota.
+  // shared/utils/research-eligibility.ts. Runs BEFORE the counter increment
+  // so a rejected create never consumes a plan slot.
   const eligibility = await enforceResearchEligibility({
     user,
     competitors: [{ name: body.name, url: body.url }],
@@ -54,23 +66,43 @@ export const handler = apiHandler(async (event) => {
     );
   }
 
+  const admitted = await incrementWithCeiling(
+    userPK(userId),
+    userSK(),
+    'competitorCount',
+    maxCompetitors
+  );
+  if (!admitted) {
+    throw new HttpError(
+      403,
+      'PLAN_LIMIT',
+      `Your ${user.plan} plan allows up to ${maxCompetitors} competitors. Upgrade to add more.`
+    );
+  }
+
   const compId = generateId();
   const now = new Date().toISOString();
 
-  await putItem({
-    PK: competitorPK(userId),
-    SK: competitorSK(compId),
-    id: compId,
-    userId,
-    name: body.name,
-    url: body.url,
-    pagesToTrack: body.pagesToTrack,
-    status: 'active',
-    targetKind: 'competitor',
-    createdAt: now,
-    updatedAt: now,
-    ...gsi2ActiveCompetitorKeys(compId),
-  });
+  try {
+    await putItem({
+      PK: competitorPK(userId),
+      SK: competitorSK(compId),
+      id: compId,
+      userId,
+      name: body.name,
+      url: body.url,
+      pagesToTrack: body.pagesToTrack,
+      status: 'active',
+      targetKind: 'competitor',
+      createdAt: now,
+      updatedAt: now,
+      ...gsi2ActiveCompetitorKeys(compId),
+    });
+  } catch (err) {
+    // Release the slot the failed create claimed.
+    await decrementFloorZero(userPK(userId), userSK(), 'competitorCount').catch(() => {});
+    throw err;
+  }
 
   return {
     statusCode: 201,

@@ -12,7 +12,7 @@
  * specific code on rejection so handlers can map to user-facing 400/403/429.
  */
 import { classifyResearchTarget } from '../services/anthropic';
-import { updateItem } from '../db/queries';
+import { atomicAdd, conditionalUpdate } from '../db/queries';
 import { userPK, userSK } from '../db/keys';
 import { logger } from './logger';
 import { checkSanctions } from './sanctions';
@@ -56,11 +56,18 @@ function nextUtcMidnight(now: Date): string {
 }
 
 /**
- * Atomic-ish read-then-conditional-write rate-limit increment. The race
- * window between read and write is one Lambda invocation (<1s); the worst
- * case is one user getting one extra research call beyond their limit, which
- * is benign for MVP. If we ever need true atomicity, swap in a DynamoDB
- * UpdateCommand with `ConditionExpression: counter < :limit` + ADD.
+ * Race-free daily rate-limit increment (misuse-defense throttle).
+ *
+ * The old read-modify-write let N parallel requests all observe count =
+ * limit-1 and all pass — an attacker got ~N free research runs per burst.
+ * Now a two-phase conditional write:
+ *   1. Same window: ADD `count` while `researchCountResetAt` matches AND the
+ *      counter has headroom.
+ *   2. Window rolled (or never set): atomically RESET to `count` guarded by
+ *      "stored resetAt is missing or in the past", so two racers can't both
+ *      reset-and-claim.
+ * Any conditional failure that isn't explained by a rollover means the
+ * limit is genuinely hit.
  */
 async function incrementRateLimit(
   user: User & Record<string, unknown>,
@@ -69,32 +76,61 @@ async function incrementRateLimit(
   const tier: PlanTier = user.plan ?? 'scout';
   const limit = PLAN_LIMITS[tier].researchPerDay;
   const now = new Date();
-  const nowMs = now.getTime();
+  const nowIso = now.toISOString();
+  const freshResetAt = nextUtcMidnight(now);
+
+  if (count > limit) {
+    return { ok: false, used: 0, limit, resetAt: freshResetAt };
+  }
 
   const currentResetAt = (user as { researchCountResetAt?: string }).researchCountResetAt;
-  const resetMs = currentResetAt ? Date.parse(currentResetAt) : NaN;
 
-  // Determine effective starting count + reset boundary
-  let startCount = (user as { researchCountDay?: number }).researchCountDay ?? 0;
-  let resetAt = currentResetAt ?? nextUtcMidnight(now);
-  if (!Number.isFinite(resetMs) || nowMs >= resetMs) {
-    // Reset window has elapsed (or never set) — start fresh
-    startCount = 0;
-    resetAt = nextUtcMidnight(now);
+  // Phase 1 — increment within the currently-stored window.
+  if (currentResetAt && Date.parse(currentResetAt) > now.getTime()) {
+    const added = await conditionalUpdate({
+      pk: userPK(user.id),
+      sk: userSK(),
+      update: 'ADD #c :count SET #u = :now',
+      condition: '#r = :resetAt AND (attribute_not_exists(#c) OR #c <= :headroom)',
+      names: { '#c': 'researchCountDay', '#r': 'researchCountResetAt', '#u': 'updatedAt' },
+      values: {
+        ':count': count,
+        ':resetAt': currentResetAt,
+        ':headroom': limit - count,
+        ':now': nowIso,
+      },
+    });
+    if (added) {
+      const startCount = (user as { researchCountDay?: number }).researchCountDay ?? 0;
+      return { ok: true, nextUsed: startCount + count, resetAt: currentResetAt };
+    }
+    // Condition failed with a live window → over the limit (or the row's
+    // window moved under us, which also means another request just reset it
+    // and this one should re-observe as denied — safe direction).
+    const used = (user as { researchCountDay?: number }).researchCountDay ?? limit;
+    return { ok: false, used, limit, resetAt: currentResetAt };
   }
 
-  const proposed = startCount + count;
-  if (proposed > limit) {
-    return { ok: false, used: startCount, limit, resetAt };
-  }
-
-  await updateItem(userPK(user.id), userSK(), {
-    researchCountDay: proposed,
-    researchCountResetAt: resetAt,
-    updatedAt: now.toISOString(),
+  // Phase 2 — window elapsed or never set: reset-and-claim atomically.
+  const reset = await conditionalUpdate({
+    pk: userPK(user.id),
+    sk: userSK(),
+    update: 'SET #c = :count, #r = :freshReset, #u = :now',
+    condition: 'attribute_not_exists(#r) OR #r <= :nowIso',
+    names: { '#c': 'researchCountDay', '#r': 'researchCountResetAt', '#u': 'updatedAt' },
+    values: {
+      ':count': count,
+      ':freshReset': freshResetAt,
+      ':nowIso': nowIso,
+      ':now': nowIso,
+    },
   });
-
-  return { ok: true, nextUsed: proposed, resetAt };
+  if (reset) {
+    return { ok: true, nextUsed: count, resetAt: freshResetAt };
+  }
+  // A concurrent request won the reset race — treat as denied rather than
+  // stacking increments onto a window this invocation never observed.
+  return { ok: false, used: limit, limit, resetAt: freshResetAt };
 }
 
 /**
@@ -215,6 +251,22 @@ export async function enforceResearchEligibility(input: {
         userId: input.user.id,
         reason: result.rejectionCategory ?? 'classifier-rejected',
         competitorName: input.competitors[i].name,
+      });
+      // The counter was incremented at step 3 but this batch never runs —
+      // refund the quota so a legitimate user's typo'd target doesn't burn
+      // their day. (Increment-before-classify stays: over-quota users must
+      // not get free Haiku calls. Best-effort: a failed refund just means a
+      // slightly conservative counter until midnight.)
+      await atomicAdd(
+        userPK(input.user.id),
+        userSK(),
+        'researchCountDay',
+        -input.competitors.length
+      ).catch((err: unknown) => {
+        logger.warn('research_eligibility: quota refund failed', {
+          userId: input.user.id,
+          err: err instanceof Error ? err.message : String(err),
+        });
       });
       const codeMap: Record<string, IneligibilityCode> = {
         'individual-person': 'INDIVIDUAL_PERSON_TARGET',

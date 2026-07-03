@@ -27,7 +27,14 @@ import {
   parseBody,
   HttpError,
 } from '../../../shared/middleware/handler';
-import { putItem, queryByPK, getItem } from '../../../shared/db/queries';
+import {
+  putItem,
+  queryByPK,
+  getItem,
+  initCounterIfAbsent,
+  incrementWithCeiling,
+  decrementFloorZero,
+} from '../../../shared/db/queries';
 import {
   userPK,
   userSK,
@@ -221,20 +228,24 @@ export const handler = apiHandler(async (event) => {
     throw new HttpError(400, 'NO_VALID_ROWS', 'No valid rows to import.');
   }
 
-  // Plan-limit gate: existing + valid <= maxCompetitors. Phase 23 — exclude
-  // the self-brand row so monitoring your own brand doesn't consume a slot.
+  // Plan-limit gate. Phase 23 — exclude the self-brand row so monitoring
+  // your own brand doesn't consume a slot. Enforcement is an atomic
+  // claim-N-slots on the User row's counter (see competitors/create.ts) —
+  // the old read-count-then-put raced with concurrent creates.
   const { items: existing } = await queryByPK(competitorPK(userId), 'COMP#');
   const existingCompetitors = existing.filter((c) => c.targetKind !== 'self');
   const maxCompetitors = PLAN_LIMITS[user.plan].maxCompetitors;
-  if (existingCompetitors.length + valid.length > maxCompetitors) {
-    throw new HttpError(
-      403,
-      'PLAN_LIMIT',
-      `Your ${user.plan} plan allows up to ${maxCompetitors} competitors. You currently have ${existingCompetitors.length} and tried to add ${valid.length}.`
+  if (typeof user.competitorCount !== 'number') {
+    await initCounterIfAbsent(
+      userPK(userId),
+      userSK(),
+      'competitorCount',
+      existingCompetitors.length
     );
   }
 
-  // Eligibility: rate limit + sanctions + classifier on the WHOLE batch
+  // Eligibility: rate limit + sanctions + classifier on the WHOLE batch.
+  // Before the slot claim so a rejected batch never consumes plan capacity.
   const eligibility = await enforceResearchEligibility({
     user,
     competitors: valid.map((v) => ({ name: v.name, url: v.url })),
@@ -248,9 +259,24 @@ export const handler = apiHandler(async (event) => {
     );
   }
 
-  // Insert all valid rows in parallel
+  const admitted = await incrementWithCeiling(
+    userPK(userId),
+    userSK(),
+    'competitorCount',
+    maxCompetitors,
+    valid.length
+  );
+  if (!admitted) {
+    throw new HttpError(
+      403,
+      'PLAN_LIMIT',
+      `Your ${user.plan} plan allows up to ${maxCompetitors} competitors. You currently have ${existingCompetitors.length} and tried to add ${valid.length}.`
+    );
+  }
+
+  // Insert all valid rows in parallel; release the slots of any failed puts.
   const now = new Date().toISOString();
-  const created = await Promise.all(
+  const settled = await Promise.allSettled(
     valid.map(async (v) => {
       const compId = generateId();
       await putItem({
@@ -278,6 +304,23 @@ export const handler = apiHandler(async (event) => {
       };
     })
   );
+
+  const created = settled
+    .filter(
+      (s): s is PromiseFulfilledResult<(typeof settled)[number] extends PromiseSettledResult<infer T> ? T : never> =>
+        s.status === 'fulfilled'
+    )
+    .map((s) => s.value);
+  const failedPuts = settled.length - created.length;
+  if (failedPuts > 0) {
+    logger.warn('competitors_bulk_import: releasing slots for failed puts', {
+      userId,
+      failedPuts,
+    });
+    for (let i = 0; i < failedPuts; i++) {
+      await decrementFloorZero(userPK(userId), userSK(), 'competitorCount').catch(() => {});
+    }
+  }
 
   logger.info('competitors_bulk_imported', {
     userId,

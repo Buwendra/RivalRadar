@@ -24,6 +24,7 @@ import {
   markRunStarted,
 } from '../../../shared/services/research-run';
 import { logger } from '../../../shared/utils/logger';
+import { claimSelfBrandSlot, releaseSelfBrandSlot } from '../brand/_shared';
 
 const sfn = new SFNClient({});
 
@@ -39,9 +40,26 @@ export const handler = apiHandler(async (event) => {
   const user = await getItem<User & Record<string, unknown>>(userPK(userId), userSK());
   if (!user) throw new HttpError(404, 'USER_NOT_FOUND', 'User not found');
 
-  // Check plan limit
+  // Idempotency guard: onboarding creates competitor rows BEFORE it stamps
+  // onboardingComplete, so a client retry (timeout, double-submit) used to
+  // duplicate every competitor and could exceed the plan limit. A completed
+  // account has nothing to onboard — 409 tells the client to just proceed.
+  if (user.onboardingComplete === true) {
+    throw new HttpError(
+      409,
+      'ALREADY_ONBOARDED',
+      'Onboarding is already complete for this account.'
+    );
+  }
+
+  // Check plan limit against existing + submitted (a partially-failed prior
+  // attempt may have left competitor rows behind).
   const maxCompetitors = PLAN_LIMITS[user.plan].maxCompetitors;
-  if (body.competitors.length > maxCompetitors) {
+  const { items: preExisting } = await queryByPK(competitorPK(userId), 'COMP#');
+  const preExistingCompetitors = (preExisting as Array<Record<string, unknown>>).filter(
+    (c) => c.targetKind !== 'self'
+  );
+  if (preExistingCompetitors.length + body.competitors.length > maxCompetitors) {
     throw new HttpError(
       403,
       'PLAN_LIMIT',
@@ -95,27 +113,33 @@ export const handler = apiHandler(async (event) => {
   // self row already exists for this workspace.
   let selfBrandId: string | undefined;
   if (body.companyWebsite) {
-    const { items: existingSelf } = await queryByPK(competitorPK(userId), 'COMP#');
-    const hasExistingSelf = (existingSelf as Array<Record<string, unknown>>).some(
-      (c) => c.targetKind === 'self'
-    );
-    if (!hasExistingSelf) {
-      selfBrandId = generateId();
-      await putItem({
-        PK: competitorPK(userId),
-        SK: competitorSK(selfBrandId),
-        id: selfBrandId,
-        userId,
-        name: body.companyName,
-        url: body.companyWebsite,
-        pagesToTrack: ['homepage'],
-        status: 'active',
-        targetKind: 'self',
-        industry: body.industry,
-        createdAt: now,
-        updatedAt: now,
-        ...gsi2ActiveCompetitorKeys(selfBrandId),
-      });
+    // One-self-row-per-workspace is enforced by an atomic pointer claim
+    // (see brand/_shared.ts) — a query-then-check races with concurrent
+    // requests and used to allow duplicate self rows.
+    const candidateId = generateId();
+    const claimed = await claimSelfBrandSlot(userId, candidateId);
+    if (claimed) {
+      selfBrandId = candidateId;
+      try {
+        await putItem({
+          PK: competitorPK(userId),
+          SK: competitorSK(selfBrandId),
+          id: selfBrandId,
+          userId,
+          name: body.companyName,
+          url: body.companyWebsite,
+          pagesToTrack: ['homepage'],
+          status: 'active',
+          targetKind: 'self',
+          industry: body.industry,
+          createdAt: now,
+          updatedAt: now,
+          ...gsi2ActiveCompetitorKeys(selfBrandId),
+        });
+      } catch (err) {
+        await releaseSelfBrandSlot(userId).catch(() => {});
+        throw err;
+      }
     }
   }
 
@@ -176,6 +200,9 @@ export const handler = apiHandler(async (event) => {
     onboardingComplete: true,
     companyName: body.companyName,
     industry: body.industry,
+    // Seed the plan-limit counter (self row excluded) so later creates use
+    // the race-free ceiling path without a lazy-init round trip.
+    competitorCount: preExistingCompetitors.length + body.competitors.length,
     updatedAt: now,
   };
   if (body.companyWebsite) {

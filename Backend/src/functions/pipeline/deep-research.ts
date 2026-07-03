@@ -10,12 +10,19 @@ import {
   dispatchViewMatch,
 } from '../../shared/services/notifier';
 import type { SavedView, User } from '../../shared/types';
-import { putItem, queryByPK, updateItem, getItem } from '../../shared/db/queries';
+import {
+  queryByPK,
+  updateItem,
+  getItem,
+  transactWrite,
+  TRANSACT_MAX_ITEMS,
+} from '../../shared/db/queries';
 import {
   researchPK,
   researchSK,
   changePK,
   changeSK,
+  changeIdGSI3,
   competitorPK,
   competitorSK,
   savedViewPK,
@@ -190,11 +197,15 @@ export const handler = async (event: Event): Promise<Output> => {
       runEvents.push(makeRunEvent('first_run_no_prior_finding'));
     }
 
-    // 4. Persist the new ResearchFinding (only after delta detection succeeded)
+    // 4+5. Persist the new ResearchFinding AND every delta's Change row as ONE
+    //      atomic transaction. A partial persist here corrupts derived state:
+    //      once the new finding exists it becomes the delta-detection baseline,
+    //      so any Change rows that failed to land after it would never be
+    //      re-detected — silently lost alerts and digest content.
     const researchId = generateId();
     const generatedAt = new Date().toISOString();
 
-    await putItem({
+    const findingItem = {
       PK: researchPK(event.competitorId),
       SK: researchSK(generatedAt),
       id: researchId,
@@ -217,7 +228,7 @@ export const handler = async (event: Event): Promise<Output> => {
       // back. Omitted only when deepResearch returned no derivedState at all.
       ...(current.derivedState ? { derivedState: current.derivedState } : {}),
       ...gsi1ResearchKeys(event.userId, generatedAt),
-    });
+    };
 
     // Phase 5 funnel event — emit on the first successful research per competitor.
     // The whole-user-first-research event is harder to dedupe cheaply (would
@@ -235,17 +246,26 @@ export const handler = async (event: Event): Promise<Output> => {
       });
     }
 
-    // 5. Persist each delta as a Change record + fire real-time critical
-    //    alerts for significance >= 8 (the Phase 3 "Slack-pings-now" bar).
-    //    The chained send-alert.ts task handles the lower 7-bucket via the
-    //    same notifier facade — these two thresholds give us interrupt vs
-    //    follow-up framing without double-notifying on the same delta.
+    // Cap deltas defensively at the transaction limit (finding + N changes).
+    // detectResearchDeltas realistically returns < 30; hitting this means
+    // something upstream is pathological — keep the highest-significance ones.
+    if (deltas.length > TRANSACT_MAX_ITEMS - 1) {
+      logger.warn('deep-research: capping deltas to fit the write transaction', {
+        competitorId: event.competitorId,
+        deltaCount: deltas.length,
+      });
+      deltas = [...deltas]
+        .sort((a, b) => b.significanceScore - a.significanceScore)
+        .slice(0, TRANSACT_MAX_ITEMS - 1);
+    }
+
     const storedChanges: StoredChange[] = [];
+    const changeItems: Array<Record<string, unknown>> = [];
     for (const delta of deltas) {
       const changeId = generateId();
       const detectedAt = new Date().toISOString();
 
-      await putItem({
+      changeItems.push({
         PK: changePK(event.competitorId),
         SK: changeSK(detectedAt),
         id: changeId,
@@ -267,6 +287,8 @@ export const handler = async (event: Event): Promise<Output> => {
         citations: current.citations,
         sourceCategory: delta.category,
         ...gsi1ChangeKeys(event.userId, detectedAt),
+        // Direct change-by-id lookup for GET /changes/{id} permalinks.
+        ...changeIdGSI3(changeId, event.competitorId),
       });
 
       storedChanges.push({
@@ -275,6 +297,19 @@ export const handler = async (event: Event): Promise<Output> => {
         pageUrl: delta.sourceUrl,
         summary: delta.title,
       });
+    }
+
+    // Atomic commit: the finding and all its Change rows land together.
+    await transactWrite([findingItem, ...changeItems]);
+
+    // Side effects AFTER the committed write — real-time critical alerts for
+    // significance >= 8 (the Phase 3 "Slack-pings-now" bar). The chained
+    // send-alert.ts task handles the lower 7-bucket via the same notifier
+    // facade — these two thresholds give us interrupt vs follow-up framing
+    // without double-notifying on the same delta.
+    for (let i = 0; i < deltas.length; i++) {
+      const delta = deltas[i];
+      const changeId = storedChanges[i].changeId;
 
       // Real-time critical alert (sig >= 8). Best-effort — failure logs
       // but doesn't break the research run.

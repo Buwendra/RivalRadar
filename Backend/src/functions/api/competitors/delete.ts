@@ -5,8 +5,8 @@ import {
   getSourceIp,
   getUserAgent,
 } from '../../../shared/middleware/handler';
-import { deleteItem, getItem } from '../../../shared/db/queries';
-import { competitorPK, competitorSK } from '../../../shared/db/keys';
+import { deleteItem, getItem, decrementFloorZero } from '../../../shared/db/queries';
+import { competitorPK, competitorSK, userPK, userSK } from '../../../shared/db/keys';
 import {
   resolveTenantContext,
   getRequestedWorkspaceId,
@@ -33,6 +33,12 @@ export const handler = apiHandler(async (event) => {
   }
 
   await deleteItem(competitorPK(userId), competitorSK(compId));
+
+  // Release the plan-limit slot. Self rows never counted toward the limit;
+  // floor-zero also protects pre-counter accounts (no attr → no-op).
+  if (competitor.targetKind !== 'self') {
+    await decrementFloorZero(userPK(userId), userSK(), 'competitorCount').catch(() => {});
+  }
 
   await recordAuditEvent({
     ctx,

@@ -38,7 +38,13 @@ import {
   resolveTenantContext,
   getRequestedWorkspaceId,
 } from '../../../shared/middleware/tenant';
-import { loadSelfBrand, loadUserForBrand, assertBrandPulseCapability } from './_shared';
+import {
+  loadSelfBrand,
+  loadUserForBrand,
+  assertBrandPulseCapability,
+  claimSelfBrandSlot,
+  releaseSelfBrandSlot,
+} from './_shared';
 import { logger } from '../../../shared/utils/logger';
 
 const sfn = new SFNClient({});
@@ -84,22 +90,36 @@ export const handler = apiHandler(async (event) => {
   const selfId = generateId();
   const industry = body.industry ?? user.industry ?? 'unknown';
 
-  // Create the self-brand Competitor row.
-  await putItem({
-    PK: competitorPK(userId),
-    SK: competitorSK(selfId),
-    id: selfId,
-    userId,
-    name: body.companyName,
-    url: body.companyWebsite,
-    pagesToTrack: ['homepage'],
-    status: 'active',
-    targetKind: 'self',
-    industry,
-    createdAt: now,
-    updatedAt: now,
-    ...gsi2ActiveCompetitorKeys(selfId),
-  });
+  // Atomically claim the one-self-row-per-workspace slot BEFORE creating the
+  // row — the loadSelfBrand() pre-check above races with concurrent setups
+  // (double-click / retry) and both used to create a self row.
+  const claimed = await claimSelfBrandSlot(userId, selfId);
+  if (!claimed) {
+    throw new HttpError(409, 'BRAND_ALREADY_SET_UP', 'Brand profile already exists.');
+  }
+
+  // Create the self-brand Competitor row; release the claim if it fails so
+  // a retry can succeed.
+  try {
+    await putItem({
+      PK: competitorPK(userId),
+      SK: competitorSK(selfId),
+      id: selfId,
+      userId,
+      name: body.companyName,
+      url: body.companyWebsite,
+      pagesToTrack: ['homepage'],
+      status: 'active',
+      targetKind: 'self',
+      industry,
+      createdAt: now,
+      updatedAt: now,
+      ...gsi2ActiveCompetitorKeys(selfId),
+    });
+  } catch (err) {
+    await releaseSelfBrandSlot(userId).catch(() => {});
+    throw err;
+  }
 
   // Persist companyWebsite (+ companyName / industry if changed) on the User row.
   const userUpdates: Record<string, unknown> = {
