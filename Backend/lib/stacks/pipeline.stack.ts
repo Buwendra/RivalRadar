@@ -9,6 +9,8 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as logs from 'aws-cdk-lib/aws-logs';
+import * as sqs from 'aws-cdk-lib/aws-sqs';
 import { Construct } from 'constructs';
 import * as path from 'path';
 
@@ -20,6 +22,15 @@ interface PipelineStackProps extends cdk.StackProps {
 export class PipelineStack extends cdk.Stack {
   public readonly weeklyStateMachine: sfn.StateMachine;
   public readonly researchStateMachine: sfn.StateMachine;
+
+  /**
+   * Shared dead-letter queue for every EventBridge cron target (here plus the
+   * Monitoring/StatusPage rules, which receive it via bin/app.ts). Without a
+   * DLQ, an invocation EventBridge drops after retries loses a whole
+   * scheduled run — e.g. the week's digest — with no trace. Monitoring
+   * alarms on messages-visible ≥ 1.
+   */
+  public readonly cronDlq: sqs.Queue;
 
   // Critical Lambdas exposed for MonitoringStack to attach alarms.
   // Failure of any of these is user-visible: research breaks, digest goes
@@ -57,6 +68,10 @@ export class PipelineStack extends cdk.Stack {
       timeout: cdk.Duration.minutes(5),
       memorySize: 512,
       environment: sharedEnv,
+      // 90 days: comfortably covers debugging + the Insights-based nightly
+      // cost aggregation (which only reads the prior day). Without this,
+      // every log group retains forever — slow cost creep across the fleet.
+      logRetention: logs.RetentionDays.THREE_MONTHS,
       bundling: {
         minify: true,
         sourceMap: true,
@@ -334,11 +349,27 @@ export class PipelineStack extends cdk.Stack {
 
     // ─── EventBridge Schedules ───
 
+    // Shared DLQ + delivery policy for every cron target. Bounded retries
+    // (3 attempts / 1h max age) beat EventBridge's default 24h of silent
+    // retrying for time-sensitive crons — EventBridge only retries failed
+    // INVOCATIONS (throttle/5xx); function errors already page via the
+    // per-Lambda error alarms in MonitoringStack.
+    this.cronDlq = new sqs.Queue(this, 'CronDlq', {
+      queueName: `${this.stackName}-CronDlq`,
+      retentionPeriod: cdk.Duration.days(14),
+      encryption: sqs.QueueEncryption.SQS_MANAGED,
+    });
+    const cronTargetProps = {
+      deadLetterQueue: this.cronDlq,
+      retryAttempts: 3,
+      maxEventAge: cdk.Duration.hours(1),
+    };
+
     // Weekly Monday at 8:00 AM UTC — digest email
     new events.Rule(this, 'WeeklyCronRule', {
       ruleName: `${this.stackName}-WeeklyCron`,
       schedule: events.Schedule.cron({ minute: '0', hour: '8', weekDay: 'MON' }),
-      targets: [new targets.SfnStateMachine(this.weeklyStateMachine)],
+      targets: [new targets.SfnStateMachine(this.weeklyStateMachine, cronTargetProps)],
     });
 
     // Weekly Monday at 10:00 AM UTC — Comparative Briefing (Phase 24).
@@ -347,21 +378,21 @@ export class PipelineStack extends cdk.Stack {
     new events.Rule(this, 'ComparativeBriefingCronRule', {
       ruleName: `${this.stackName}-ComparativeBriefingCron`,
       schedule: events.Schedule.cron({ minute: '0', hour: '10', weekDay: 'MON' }),
-      targets: [new targets.SfnStateMachine(comparativeStateMachine)],
+      targets: [new targets.SfnStateMachine(comparativeStateMachine, cronTargetProps)],
     });
 
     // Weekly Sunday at 6:00 AM UTC — recurring research enqueuer
     new events.Rule(this, 'RecurringResearchCronRule', {
       ruleName: `${this.stackName}-RecurringResearchCron`,
       schedule: events.Schedule.cron({ minute: '0', hour: '6', weekDay: 'SUN' }),
-      targets: [new targets.LambdaFunction(this.enqueueRecurringFn)],
+      targets: [new targets.LambdaFunction(this.enqueueRecurringFn, cronTargetProps)],
     });
 
     // Daily 3:00 AM UTC — AI cost aggregator
     new events.Rule(this, 'AggregateAiCostsCronRule', {
       ruleName: `${this.stackName}-AggregateAiCostsCron`,
       schedule: events.Schedule.cron({ minute: '0', hour: '3' }),
-      targets: [new targets.LambdaFunction(this.aggregateAiCostsFn)],
+      targets: [new targets.LambdaFunction(this.aggregateAiCostsFn, cronTargetProps)],
     });
 
     // ─── Send Scheduled Reports Lambda (Phase 6c) ───
@@ -411,7 +442,7 @@ export class PipelineStack extends cdk.Stack {
         month: '*',
         year: '*',
       }),
-      targets: [new targets.LambdaFunction(this.sendScheduledReportsFn)],
+      targets: [new targets.LambdaFunction(this.sendScheduledReportsFn, cronTargetProps)],
     });
 
     // ─── Send Retention Nudges Lambda (Phase 8a) ───
@@ -430,7 +461,7 @@ export class PipelineStack extends cdk.Stack {
     new events.Rule(this, 'DailyRetentionCronRule', {
       ruleName: `${this.stackName}-DailyRetentionCron`,
       schedule: events.Schedule.cron({ minute: '0', hour: '4' }),
-      targets: [new targets.LambdaFunction(this.sendRetentionNudgesFn)],
+      targets: [new targets.LambdaFunction(this.sendRetentionNudgesFn, cronTargetProps)],
     });
 
     // ─── Send Saved-View Digests Lambda (Phase 15) ───
@@ -452,7 +483,7 @@ export class PipelineStack extends cdk.Stack {
     new events.Rule(this, 'SavedViewDigestsCronRule', {
       ruleName: `${this.stackName}-SavedViewDigestsCron`,
       schedule: events.Schedule.cron({ minute: '0', hour: '9', weekDay: 'MON' }),
-      targets: [new targets.LambdaFunction(sendSavedViewDigestsFn)],
+      targets: [new targets.LambdaFunction(sendSavedViewDigestsFn, cronTargetProps)],
     });
 
     // ─── Outputs ───

@@ -66,6 +66,10 @@ const monitoringStack = new MonitoringStack(app, `${prefix}-Monitoring`, {
     sendRetentionNudges: pipelineStack.sendRetentionNudgesFn,
   },
   alertEmail: process.env.ALERT_EMAIL,
+  cronDlq: pipelineStack.cronDlq,
+  monthlyBudgetUsd: process.env.AWS_BUDGET_MONTHLY_USD
+    ? Number(process.env.AWS_BUDGET_MONTHLY_USD)
+    : undefined,
 });
 
 // Phase 8c — public status page. Subscribes to MonitoringStack's alerts

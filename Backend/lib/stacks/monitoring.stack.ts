@@ -11,6 +11,9 @@ import * as nodejs from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as sns from 'aws-cdk-lib/aws-sns';
 import * as subs from 'aws-cdk-lib/aws-sns-subscriptions';
+import * as sqs from 'aws-cdk-lib/aws-sqs';
+import * as logs from 'aws-cdk-lib/aws-logs';
+import * as budgets from 'aws-cdk-lib/aws-budgets';
 import { Construct } from 'constructs';
 import * as path from 'path';
 
@@ -41,6 +44,18 @@ interface MonitoringStackProps extends cdk.StackProps {
    * be added manually post-deploy via the SNS console.
    */
   alertEmail?: string;
+  /**
+   * PipelineStack's cron dead-letter queue — this stack alarms on it.
+   * (Each stack owns its OWN DLQ for its rules: the queue policy that lets
+   * EventBridge deliver must reference the rule ARNs, so sharing Pipeline's
+   * queue across stacks creates a cyclic cross-stack dependency.)
+   */
+  cronDlq: sqs.IQueue;
+  /**
+   * Monthly AWS cost budget in USD. The budget is only created when
+   * `alertEmail` is set (CfnBudget notifications require a subscriber).
+   */
+  monthlyBudgetUsd?: number;
 }
 
 export class MonitoringStack extends cdk.Stack {
@@ -49,7 +64,7 @@ export class MonitoringStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: MonitoringStackProps) {
     super(scope, id, props);
 
-    const { table, api, criticalLambdas, alertEmail } = props;
+    const { table, api, criticalLambdas, alertEmail, cronDlq, monthlyBudgetUsd } = props;
 
     // ─── Alerts SNS Topic ───
     // One topic for every "page someone" alarm in this stack. Email is the
@@ -298,6 +313,7 @@ export class MonitoringStack extends cdk.Stack {
       memorySize: 256,
       entry: path.join(__dirname, '..', '..', 'src', 'functions', 'scheduled', 'refresh-ofac-sdn.ts'),
       functionName: `${this.stackName}-RefreshOfacSdn`,
+      logRetention: logs.RetentionDays.THREE_MONTHS,
       environment: {
         TABLE_NAME: table.tableName,
         ALERTS_TOPIC_ARN: this.alertsTopic.topicArn,
@@ -311,11 +327,25 @@ export class MonitoringStack extends cdk.Stack {
     table.grantReadWriteData(refreshOfacSdnFn);
     this.alertsTopic.grantPublish(refreshOfacSdnFn);
 
+    // This stack's own rule DLQ — see the cronDlq prop doc for why it can't
+    // reuse Pipeline's queue (cyclic queue-policy dependency).
+    const monitoringCronDlq = new sqs.Queue(this, 'MonitoringCronDlq', {
+      queueName: `${this.stackName}-CronDlq`,
+      retentionPeriod: cdk.Duration.days(14),
+      encryption: sqs.QueueEncryption.SQS_MANAGED,
+    });
+
     // Weekly Saturday 7am UTC — outside of any other scheduled-job window.
     new events.Rule(this, 'OfacSdnRefreshCronRule', {
       ruleName: `${this.stackName}-OfacSdnRefreshCron`,
       schedule: events.Schedule.cron({ minute: '0', hour: '7', weekDay: 'SAT' }),
-      targets: [new targets.LambdaFunction(refreshOfacSdnFn)],
+      targets: [
+        new targets.LambdaFunction(refreshOfacSdnFn, {
+          deadLetterQueue: monitoringCronDlq,
+          retryAttempts: 3,
+          maxEventAge: cdk.Duration.hours(1),
+        }),
+      ],
     });
 
     // Page on any error — a failing OFAC fetch means our drift detection
@@ -332,6 +362,80 @@ export class MonitoringStack extends cdk.Stack {
       treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
     });
     ofacErrorAlarm.addAlarmAction(alarmAction);
+
+    // ─── Cron DLQ alarms ───
+    // Any message on either queue means EventBridge gave up delivering a
+    // scheduled run (digest kickoff, recurring research, cost aggregation,
+    // OFAC refresh, …) after its retries — a whole cron cycle silently lost
+    // unless someone is paged.
+    for (const [id, queue] of [
+      ['PipelineCronDlqAlarm', cronDlq],
+      ['MonitoringCronDlqAlarm', monitoringCronDlq],
+    ] as const) {
+      const dlqAlarm = new cloudwatch.Alarm(this, id, {
+        alarmName: `${this.stackName}-${id}`,
+        metric: queue.metricApproximateNumberOfMessagesVisible({
+          period: cdk.Duration.minutes(5),
+          statistic: 'Maximum',
+        }),
+        threshold: 0,
+        evaluationPeriods: 1,
+        comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+        treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+      });
+      dlqAlarm.addAlarmAction(alarmAction);
+    }
+
+    // ─── Monthly AWS cost budget ───
+    // The account-level spend watchdog for a self-funded launch: alerts at
+    // 80% actual, 100% actual, and 100% forecast. CfnBudget notifications
+    // require at least one subscriber, so this only exists when an alert
+    // email is configured — the synth warning keeps the gap visible.
+    if (alertEmail) {
+      const limitUsd = monthlyBudgetUsd ?? 50;
+      new budgets.CfnBudget(this, 'MonthlyBudget', {
+        budget: {
+          budgetName: `${this.stackName}-monthly`,
+          budgetType: 'COST',
+          timeUnit: 'MONTHLY',
+          budgetLimit: { amount: limitUsd, unit: 'USD' },
+        },
+        notificationsWithSubscribers: [
+          {
+            notification: {
+              notificationType: 'ACTUAL',
+              comparisonOperator: 'GREATER_THAN',
+              threshold: 80,
+              thresholdType: 'PERCENTAGE',
+            },
+            subscribers: [{ subscriptionType: 'EMAIL', address: alertEmail }],
+          },
+          {
+            notification: {
+              notificationType: 'ACTUAL',
+              comparisonOperator: 'GREATER_THAN',
+              threshold: 100,
+              thresholdType: 'PERCENTAGE',
+            },
+            subscribers: [{ subscriptionType: 'EMAIL', address: alertEmail }],
+          },
+          {
+            notification: {
+              notificationType: 'FORECASTED',
+              comparisonOperator: 'GREATER_THAN',
+              threshold: 100,
+              thresholdType: 'PERCENTAGE',
+            },
+            subscribers: [{ subscriptionType: 'EMAIL', address: alertEmail }],
+          },
+        ],
+      });
+    } else {
+      cdk.Annotations.of(this).addWarning(
+        'ALERT_EMAIL is unset — the monthly AWS budget was NOT created ' +
+          '(budget notifications require a subscriber). Set ALERT_EMAIL and redeploy.'
+      );
+    }
 
     // ─── Output ───
     new cdk.CfnOutput(this, 'AlertsTopicArn', { value: this.alertsTopic.topicArn });

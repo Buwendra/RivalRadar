@@ -9,6 +9,7 @@ import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
+import * as logs from 'aws-cdk-lib/aws-logs';
 import { Construct } from 'constructs';
 import * as path from 'path';
 
@@ -78,6 +79,11 @@ export class ApiStack extends cdk.Stack {
       timeout: cdk.Duration.seconds(30),
       memorySize: 256,
       environment: sharedEnv,
+      // 90-day retention across all ~60 route Lambdas. Deliberately the
+      // `logRetention` prop (one singleton custom resource) rather than ~60
+      // explicit LogGroups — this stack already flirts with the 500-resource
+      // CloudFormation ceiling (see the note at the route table below).
+      logRetention: logs.RetentionDays.THREE_MONTHS,
       bundling: {
         minify: true,
         sourceMap: true,

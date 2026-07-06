@@ -1,5 +1,7 @@
 import * as cdk from 'aws-cdk-lib';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
+import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
+import * as cwActions from 'aws-cdk-lib/aws-cloudwatch-actions';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as events from 'aws-cdk-lib/aws-events';
 import * as targets from 'aws-cdk-lib/aws-events-targets';
@@ -9,6 +11,8 @@ import * as nodejs from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as sns from 'aws-cdk-lib/aws-sns';
 import * as snsSubs from 'aws-cdk-lib/aws-sns-subscriptions';
+import * as sqs from 'aws-cdk-lib/aws-sqs';
+import * as logs from 'aws-cdk-lib/aws-logs';
 import { Construct } from 'constructs';
 import * as path from 'path';
 
@@ -106,6 +110,7 @@ export class StatusPageStack extends cdk.Stack {
         'update-status-page.ts'
       ),
       functionName: `${this.stackName}-UpdateStatusPage`,
+      logRetention: logs.RetentionDays.THREE_MONTHS,
       environment: {
         STATUS_BUCKET: bucket.bucketName,
         DISTRIBUTION_ID: distribution.distributionId,
@@ -146,10 +151,38 @@ export class StatusPageStack extends cdk.Stack {
     // Keeps the "as of" timestamp fresh even when nothing changed. Also
     // self-heals if an alarm fires while the Lambda is broken or the
     // SNS subscription is misconfigured.
+    // This stack's own rule DLQ — each stack owns its own (an EventBridge
+    // DLQ's queue policy must reference the consuming rule ARNs, so sharing
+    // Pipeline's queue creates a cyclic cross-stack dependency). The alarm
+    // lives here too, wired to the alerts topic this stack already receives.
+    const cronDlq = new sqs.Queue(this, 'StatusPageCronDlq', {
+      queueName: `${this.stackName}-CronDlq`,
+      retentionPeriod: cdk.Duration.days(14),
+      encryption: sqs.QueueEncryption.SQS_MANAGED,
+    });
+    const cronDlqAlarm = new cloudwatch.Alarm(this, 'StatusPageCronDlqAlarm', {
+      alarmName: `${this.stackName}-CronDlqMessages`,
+      metric: cronDlq.metricApproximateNumberOfMessagesVisible({
+        period: cdk.Duration.minutes(5),
+        statistic: 'Maximum',
+      }),
+      threshold: 0,
+      evaluationPeriods: 1,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+    });
+    cronDlqAlarm.addAlarmAction(new cwActions.SnsAction(alertsTopic));
+
     new events.Rule(this, 'StatusPageDailyCron', {
       ruleName: `${this.stackName}-StatusPageDailyCron`,
       schedule: events.Schedule.cron({ minute: '0', hour: '0' }), // midnight UTC
-      targets: [new targets.LambdaFunction(updaterFn)],
+      targets: [
+        new targets.LambdaFunction(updaterFn, {
+          deadLetterQueue: cronDlq,
+          retryAttempts: 3,
+          maxEventAge: cdk.Duration.hours(1),
+        }),
+      ],
     });
 
     // ─── Outputs ───
