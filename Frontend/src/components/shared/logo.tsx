@@ -12,7 +12,7 @@ export function Logo({ className, iconOnly = false }: LogoProps) {
       {/* unoptimized: SVG sources bypass the Next image optimizer (it rejects
           SVG unless dangerouslyAllowSVG is enabled globally) */}
       <Image
-        src="/logo.svg"
+        src="/Kironyx_logo.svg"
         alt="Kironyx logo"
         width={32}
         height={32}
@@ -21,7 +21,7 @@ export function Logo({ className, iconOnly = false }: LogoProps) {
       />
       {!iconOnly && (
         <span className="text-lg font-bold tracking-tight text-foreground">
-          Kiron<span className="text-primary">yx</span>
+          Kirony<span className="text-primary">X</span>
         </span>
       )}
     </div>
