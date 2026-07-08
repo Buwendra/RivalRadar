@@ -1,10 +1,10 @@
-# RivalScan
+# Kironyx
 
 AI-powered competitive intelligence + brand monitoring for SMBs. Claude-powered deep web research on each competitor (and on your own brand), strategic delta detection, threat scoring, and weekly briefings delivered via email + Slack + webhook.
 
 Priced at $49–$199/month to fill the gap between free tools (Google Alerts) and $20k+/year enterprise platforms (Crayon, Klue).
 
-> **Naming**: the git repo / directory is `RivalRadar`, the product is `RivalScan`. Code identifiers (stack names, secret paths, UI copy) all use `RivalScan`.
+> **Naming**: the git repo / directory is `RivalRadar`, the product is `Kironyx`. Code identifiers (stack names, secret paths, UI copy) all use `Kironyx`.
 
 ## Tech stack
 

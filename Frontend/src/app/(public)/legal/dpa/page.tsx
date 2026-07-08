@@ -1,7 +1,7 @@
 import { DraftBanner } from "@/components/shared/draft-banner";
 
 export const metadata = {
-  title: "Data Processing Agreement — RivalScan",
+  title: "Data Processing Agreement — Kironyx",
 };
 
 export default function DpaPage() {
@@ -32,7 +32,7 @@ export default function DpaPage() {
       <h2>Requesting the DPA</h2>
       <p>
         Email{" "}
-        <a href="mailto:legal@rivalscan.com">legal@rivalscan.com</a> with your
+        <a href="mailto:legal@kironyx.com">legal@kironyx.com</a> with your
         company name, the responsible contact for the agreement, and your
         country of operation. We will counter-sign and return within 5
         business days.

@@ -99,7 +99,7 @@ export const handler = apiHandler(async (event) => {
     throw new HttpError(
       413,
       'EXPORT_TOO_LARGE',
-      `Your data export is ${(sizeBytes / 1024 / 1024).toFixed(2)} MB which exceeds the inline limit. Email support@rivalscan.com to receive an emailed download link.`
+      `Your data export is ${(sizeBytes / 1024 / 1024).toFixed(2)} MB which exceeds the inline limit. Email support@kironyx.com to receive an emailed download link.`
     );
   }
 

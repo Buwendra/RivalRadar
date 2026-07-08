@@ -1,5 +1,5 @@
 /**
- * Single source of truth for how RivalScan's scores are explained to users.
+ * Single source of truth for how Kironyx's scores are explained to users.
  *
  * The /dashboard/methodology page renders the full set; the inline ⓘ score
  * explainers (`<ScoreInfo metric="…" />`) render `oneLiner` + a deep link to

@@ -2,6 +2,14 @@ import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-sec
 
 const client = new SecretsManagerClient({});
 
+/**
+ * Canonical Secrets Manager path for the app's API keys. Every runtime
+ * getSecret() call must use this constant. The two CDK references
+ * (api.stack.ts / pipeline.stack.ts `ApiSecrets`) can't import runtime code,
+ * so they carry the same literal — keep all three in lockstep.
+ */
+export const API_SECRETS_PATH = 'kironyx/api-keys';
+
 // Cache secrets in Lambda memory to avoid repeated API calls
 const cache: Record<string, { value: AppSecrets; expiresAt: number }> = {};
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes

@@ -144,7 +144,7 @@ export const handler = async (
   const html = `
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 680px; margin: 0 auto; background: #ffffff;">
       <div style="background: #1e3a5f; padding: 24px 32px; border-radius: 8px 8px 0 0;">
-        <h1 style="color: white; margin: 0; font-size: 20px;">RivalScan</h1>
+        <h1 style="color: white; margin: 0; font-size: 20px;">Kironyx</h1>
         <p style="color: #93c5fd; margin: 4px 0 0;">Your Weekly Competitive Brief</p>
       </div>
 
@@ -213,7 +213,7 @@ export const handler = async (
 
       <div style="background: #f9fafb; padding: 16px 32px; border-radius: 0 0 8px 8px; text-align: center;">
         <p style="color: #9ca3af; font-size: 12px; margin: 0 0 8px;">
-          RivalScan — AI Competitive Intelligence for SMBs
+          Kironyx — AI Competitive Intelligence for SMBs
         </p>
         <p style="color: #9ca3af; font-size: 11px; margin: 0; line-height: 1.5;">
           AI-generated analysis. May contain errors. For internal evaluation only — not legal, financial, or investment advice.<br>

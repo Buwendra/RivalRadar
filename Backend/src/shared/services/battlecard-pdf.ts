@@ -160,10 +160,10 @@ export async function renderBattlecardPdf(
         size: 'LETTER',
         margins: { top: 50, bottom: 50, left: 50, right: 50 },
         info: {
-          Title: `RivalScan Battlecard — ${input.competitor.name}`,
-          Author: 'RivalScan',
+          Title: `Kironyx Battlecard — ${input.competitor.name}`,
+          Author: 'Kironyx',
           Subject: `Competitor battlecard: ${input.competitor.name}`,
-          Creator: 'RivalScan',
+          Creator: 'Kironyx',
         },
       });
 
@@ -181,7 +181,7 @@ export async function renderBattlecardPdf(
         .fillColor(COLOR.brand)
         .fontSize(10)
         .font('Helvetica-Bold')
-        .text('RIVALSCAN BATTLECARD', margin, 50);
+        .text('KIRONYX BATTLECARD', margin, 50);
 
       doc
         .fillColor(COLOR.textMuted)
@@ -545,7 +545,7 @@ export async function renderBattlecardPdf(
         .fillColor(COLOR.brand)
         .fontSize(7)
         .font('Helvetica-Bold')
-        .text('rivalscan.com', pageWidth - margin - 60, FOOTER_Y, {
+        .text('kironyx.com', pageWidth - margin - 60, FOOTER_Y, {
           width: 60,
           align: 'right',
           lineBreak: false,

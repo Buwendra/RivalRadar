@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-RivalScan is an AI-powered competitive intelligence monitoring SaaS for SMBs. It runs Claude-powered deep web research on each competitor, detects strategically significant changes, scores their implications, and delivers weekly strategic briefings via email. Priced at $49–$199/month to fill the gap between free tools (Google Alerts) and $20K+/year enterprise platforms (Crayon, Klue).
+Kironyx is an AI-powered competitive intelligence monitoring SaaS for SMBs. It runs Claude-powered deep web research on each competitor, detects strategically significant changes, scores their implications, and delivers weekly strategic briefings via email. Priced at $49–$199/month to fill the gap between free tools (Google Alerts) and $20K+/year enterprise platforms (Crayon, Klue).
 
-**Naming**: the git repo / directory is `RivalRadar`, but the product and all code identifiers (stack names, secret paths, UI copy) use **`RivalScan`** — they refer to the same thing. Use `RivalScan` in code.
+**Naming**: the git repo / directory is `RivalRadar`, but the product and all code identifiers (stack names, secret paths, UI copy) use **`Kironyx`** — they refer to the same thing. Use `Kironyx` in code. (The product was called **RivalScan** until July 2026 — commits, git history, and the old AWS `RivalScan-*` stacks predate the rebrand.)
 
 > The product no longer scrapes sites on a daily cron. The original Firecrawl daily-snapshot pipeline was replaced by on-demand + scheduled Claude deep research (see "AI Deep Research"); there is no daily scrape Lambda anymore.
 
@@ -33,7 +33,7 @@ Onboard / manual click     → ResearchPipeline SFN     → [DeepResearch (web_s
 
 **8 CDK stacks** wired in `bin/app.ts` with explicit cross-stack dependencies:
 Database → Storage → Auth → Email → Pipeline → API (receives `researchStateMachine` ARN) → Monitoring → StatusPage (Phase 8c — public S3+CloudFront `/status` site with auto-updater Lambda).
-Stack naming: `RivalScan-${stage}-${StackType}` (stage from env context: dev/staging/prod).
+Stack naming: `Kironyx-${stage}-${StackType}` (stage from env context: dev/staging/prod).
 
 **Backend layout split**: CDK stack definitions live in `Backend/lib/stacks/*.stack.ts` (infrastructure); Lambda handler source lives in `Backend/src/functions/` (`api/` per-route handlers, `pipeline/` and `scheduled/` for the state-machine/cron Lambdas) with cross-cutting code in `Backend/src/shared/`. References to `api.stack.ts`, `pipeline.stack.ts`, etc. throughout this doc mean files under `lib/stacks/`.
 
@@ -152,6 +152,8 @@ export const handler = apiHandler(async (event) => {
 
 **Public routes that need to emit non-JSON responses (e.g. `Location:` header for a 302 redirect)** must bypass `apiHandler` — the wrapper hardcodes `Content-Type: application/json`. See `api/public/battlecard.ts` for the pattern.
 
+**CORS headers live in two places that must not drift**: the `CORS_HEADERS` allow-list in `shared/middleware/handler.ts` and the gateway `corsPreflight` in `api.stack.ts`. If you add a custom request header (like `X-Workspace-Id` / `X-Api-Key`), update both.
+
 ### Backend Path Aliases (tsconfig)
 
 - `@shared/*` → `./src/shared/*`
@@ -167,15 +169,17 @@ All API responses follow: `{ data?, error?: { code, message, details? }, meta?: 
 
 ### Pagination
 
-Cursor-based using DynamoDB `LastEvaluatedKey` → base64url-encoded JSON string. Clients pass cursor back as query param. Frontend uses TanStack Query `useInfiniteQuery` with `getNextPageParam` reading `meta.cursor`.
+Cursor-based using DynamoDB `LastEvaluatedKey` → base64url-encoded JSON string. Clients pass cursor back as query param. Frontend uses TanStack Query `useInfiniteQuery` with `getNextPageParam` reading `meta.cursor`. Malformed/forged cursors throw `InvalidCursorError` from `queries.ts`, which `apiHandler` duck-type-maps to a 400 `INVALID_CURSOR` (not a 500) — DDB `ValidationException` from a tampered cursor is caught too.
+
+**`since` filters must be key conditions, not post-filters.** `queryByPK`/`queryGSI` accept `skBetween`; build the range with `skPrefixRange('CHANGE#', sinceIso)` so it stays inside the SK prefix namespace. Two traps this exists to prevent: `begins_with(SK, 'CHANGE#<full-ISO>')` silently matches nothing, and post-filtering after the DDB `Limit` returns short/empty pages with `hasMore: true`.
 
 ### Frontend Data Flow
 
 API calls: `lib/api/client.ts` (`apiClient<T>` / `apiClientWithMeta<T>`) → domain modules (`lib/api/{resource}.ts`) → TanStack Query hooks (`lib/hooks/use-{resource}.ts`) → components.
 
-Auth tokens stored in localStorage with `rs_` prefix. `apiClient` auto-injects Bearer token when `requireAuth: true` (default). Auto-redirects to `/sign-in` on 401.
+Auth tokens stored in localStorage with `kx_` prefix. `apiClient` auto-injects Bearer token when `requireAuth: true` (default). On 401 it attempts a token refresh and replays the request once before clearing tokens and redirecting to `/sign-in` (preserving the return path via `?redirect=` — which sign-in only honours for same-origin paths, closing an open redirect).
 
-**Cognito token gotcha**: `apiClient` must send `rs_id_token` (not `rs_access_token`) because the backend's `getUserEmail()` reads the `email` JWT claim, which only appears in Cognito **ID tokens** — access tokens contain only `sub`/`username`. Changing this reintroduces "Missing email claim" 401s on every authenticated route.
+**Cognito token gotcha**: `apiClient` must send `kx_id_token` (not `kx_access_token`) because the backend's `getUserEmail()` reads the `email` JWT claim, which only appears in Cognito **ID tokens** — access tokens contain only `sub`/`username`. Changing this reintroduces "Missing email claim" 401s on every authenticated route.
 
 ### Frontend Global Query Config
 
@@ -185,6 +189,8 @@ Auth tokens stored in localStorage with `rs_` prefix. `apiClient` auto-injects B
 
 Cognito JWT → tokens in localStorage → `AuthProvider` hydrates on mount, checks token expiry every 60s → `AuthGuard` component wraps protected routes and enforces onboarding completion.
 
+**Token refresh (Wave 2):** sessions survive past the 1-hour id-token validity via public `POST /auth/refresh` (Cognito `REFRESH_TOKEN_AUTH`; `auth: false` because the caller's id token is expired by definition — the 30-day refresh token is the credential). Frontend side lives in `lib/auth/token-refresh.ts`: **single-flight** `refreshSession()` (a module-level promise so N simultaneous 401s trigger one refresh; uses raw `fetch` deliberately since `apiClient` depends on this module). `AuthProvider` proactively renews 2 minutes before expiry and only treats a **401** from refresh as session death — network flakes/500s retry with backoff instead of nuking valid tokens. Gotcha: Cognito's refresh flow does NOT return a new refresh token; use `storeRefreshedTokens()` (which leaves the stored refresh token untouched) — calling `storeTokens` with `undefined` would blank it and kill renewability.
+
 ### Workspaces & Tenancy (Phase 4a/b/c)
 
 Every authenticated handler resolves a **TenantContext** before doing any work — `resolveTenantContext(email, requestedWorkspaceId?)` in `shared/middleware/tenant.ts` translates the JWT email into:
@@ -192,7 +198,7 @@ Every authenticated handler resolves a **TenantContext** before doing any work �
 - **`callerUserId`** — the actual signed-in user. Use for audit attribution + caller-scoped entities (Notification, AuditEvent actor, ApiKey creator).
 - **`workspaceId`, `workspaceName`, `role`** — workspace identity + the caller's role.
 
-Resolution order: email → `callerUserId` (GSI3) → memberships under `USER#<callerUserId>` / SK `MEMBERSHIP#`. If the caller has multiple workspaces, the **`X-Workspace-Id`** header (sent by the frontend from `localStorage.rs_current_workspace_id`) picks the active one; otherwise the resolver falls back to the caller's own workspace. Legacy users with no memberships return `tenantUserId === callerUserId`.
+Resolution order: email → `callerUserId` (GSI3) → memberships under `USER#<callerUserId>` / SK `MEMBERSHIP#`. If the caller has multiple workspaces, the **`X-Workspace-Id`** header (sent by the frontend from `localStorage.kx_current_workspace_id`) picks the active one; otherwise the resolver falls back to the caller's own workspace. Legacy users with no memberships return `tenantUserId === callerUserId`.
 
 **Three-role hierarchy (Phase 14):** `owner > admin > member`. Owners can do anything; admins can invite/remove members and edit content; members are read-only-ish. Role gates live in handlers — search for `requireOwner` / `requireAdminOrOwner`. Admins **cannot invite other admins** — that's gated to owners only to prevent admin-as-second-owner attacks.
 
@@ -206,7 +212,7 @@ Current capability flags: `pdfExports`, `csvExports`, `slackIntegration`, `webho
 
 ### Public API (Phase 11/13)
 
-**`/v1/*` routes are X-API-Key authenticated, NOT Cognito.** Routes registered in `api.stack.ts` with `auth: false` and a separate middleware `resolveApiKeyContext()` that hashes the incoming key (SHA-256), looks up the row by `APIKEY#<hash>` PK, and returns the workspace + scope. Keys have a `scope` enum (`'read'` default / `'write'`) — write-scope routes (`POST /v1/competitors`, `PATCH /v1/recommendations/{id}`) reject read-only keys at the handler. Pre-Phase-13 keys default to `'read'` via `keyRow.scope ?? 'read'` so nothing breaks.
+**`/v1/*` routes are X-API-Key authenticated, NOT Cognito.** Routes registered in `api.stack.ts` with `auth: false` and a separate middleware `resolveApiKeyContext()` that hashes the incoming key (SHA-256), looks up the row by `APIKEY#<hash>` PK, and returns the workspace + scope. Keys have a `scope` enum (`'read'` default / `'write'`) — write-scope routes (`POST /v1/competitors`, `PATCH /v1/recommendations/{id}`) reject read-only keys at the handler. Pre-Phase-13 keys default to `'read'` via `keyRow.scope ?? 'read'` so nothing breaks. Same defensive-default pattern for the per-minute quota: keys predating the field get 60 req/min (a comparison against `undefined` used to disable throttling entirely).
 
 ### Public token-share routes
 
@@ -222,14 +228,14 @@ Uses ULID (`generateId()` in `shared/utils/id.ts`) — time-sortable, conflict-f
 
 ### Secrets
 
-Lazy-loaded singleton with 5-minute TTL cache (`shared/services/secrets.ts`). Pulls from AWS Secrets Manager (`rivalscan/api-keys`): `PADDLE_SECRET_KEY`, `PADDLE_WEBHOOK_SECRET`, `ANTHROPIC_API_KEY`, `ELEVENLABS_API_KEY` (optional — weekly audio briefing). (`FIRECRAWL_API_KEY` was removed with the Firecrawl pipeline — no longer required or read.)
+Lazy-loaded singleton with 5-minute TTL cache (`shared/services/secrets.ts`). Pulls from AWS Secrets Manager (`kironyx/api-keys`): `PADDLE_SECRET_KEY`, `PADDLE_WEBHOOK_SECRET`, `ANTHROPIC_API_KEY`, `ELEVENLABS_API_KEY` (optional — weekly audio briefing). (`FIRECRAWL_API_KEY` was removed with the Firecrawl pipeline — no longer required or read.)
 
 ### AI Models & Anthropic call patterns
 
 All Anthropic calls go through `callAnthropic()` in `shared/services/anthropic.ts`. Use it for any new Claude call you add; do not call `fetch('.../v1/messages')` directly. Beyond the `fetch`, the wrapper now owns three cross-cutting concerns added in Issues 7/8/9 (see `docs/LAUNCH_ISSUES.md`):
 - **429 retry** with backoff (honors `retry-after` header, default 65s, max 2 retries).
-- **Input-TPM rate-limit bucket** (`awaitRateLimitClearance`) — a per-minute DynamoDB token bucket (`RATELIMIT#ANTHROPIC_INPUT_TPM` / `MINUTE#<key>`) pre-checked before each call. Over the 25k/min threshold (30k org limit − 5k headroom) it sleeps to the next minute boundary and retries once. **Fail-open**: any DDB error proceeds with the call (better to risk a 429 than block on our own tracker).
-- **Real-time cost cap** — `atomicAdd` bumps the per-user `CostDay` rollup as calls complete, so the monthly cap is enforced in real time, not only by the 3am `aggregate-ai-costs` cron.
+- **Input-TPM rate-limit bucket** (`awaitRateLimitClearance`) — a per-minute DynamoDB token bucket (`RATELIMIT#ANTHROPIC_INPUT_TPM` / `MINUTE#<key>`) pre-checked before each call. Over the 25k/min threshold (30k org limit − 5k headroom) it sleeps to the next minute boundary and retries once, releasing the stale minute's reservation before re-reserving (no double count). `deepResearch` estimates get an **8× web_search amplification factor** — the raw prompt is ~10–20% of that op's real input. **Fail-open**: any DDB error proceeds with the call (better to risk a 429 than block on our own tracker).
+- **Real-time cost cap** — `atomicAddGuarded` (month-guarded ADD that RESETs on month rollover, so June's spend never carries into July) bumps the per-user `monthToDateCostUsd` cache as calls complete. The 3am `aggregate-ai-costs` cron is a **reconciler** — `max(cache, Σ CostDay of current month)` — NOT a re-adder; re-ADDing what the real-time path already counted once halved every user's effective budget. Audit-log + cost writes are awaited (fire-and-forget was silently dropped by Lambda freeze).
 - **Forensic AI audit log** (`persistAiLog`) — fire-and-forget row per call (`AILOG#<yyyy-mm>` / `CALL#<ts>#<aiCallId>`) capturing `opName`, `model`, `userId`, `promptHash`, truncated response (4 KB), HTTP status, duration, token counts, and cost. 365-day TTL; write failures log + continue, never propagate.
 
 - **Claude Sonnet 4.5** (alias `claude-sonnet-4-5`):
@@ -247,7 +253,7 @@ All Anthropic calls go through `callAnthropic()` in `shared/services/anthropic.t
   - `classifyResearchTarget()` — pre-research input classifier rejecting person names / sanctioned entities (Compliance Phase 1)
   - `analyzeChange()` (legacy, unused after the deep-research refactor — kept for reference)
 
-All AI surfaces (dashboard cards, weekly digest email, battlecard PDF) carry an AI disclaimer footer — see `Frontend/src/components/dashboard/ai-disclaimer.tsx` and the footer line in the PDF renderers.
+All AI surfaces (dashboard cards, weekly digest email, battlecard PDF) carry an AI disclaimer footer — see `Frontend/src/components/dashboard/ai-disclaimer.tsx` and the footer line in the PDF renderers. Score explanations live on the `/dashboard/methodology` page (content in `Frontend/src/lib/content/methodology.ts`); threat/significance/momentum/brand-health UI elements link to its anchors via the `ScoreInfo` ⓘ component (`components/dashboard/score-info.tsx`).
 
 **Do not pin Sonnet to a dated snapshot without confirming it exists.** A bad snapshot ID (`claude-sonnet-4-5-20241022`, which is actually a 3.5 Sonnet date) shipped once and caused silent 404s. The alias `claude-sonnet-4-5` is the safe default.
 
@@ -257,7 +263,7 @@ All AI surfaces (dashboard cards, weekly digest email, battlecard PDF) carry an 
 
 **Industry-aware 6th category (`industryContext`)**: when the user has an industry set, the prompt gains a sixth bucket whose label and guidance come from `INDUSTRY_RESEARCH_CONFIGS` in `shared/utils/industry-research.ts` (e.g. "Regulatory & Compliance" for Fintech, "ARR & Customer Wins" for SaaS), plus per-category guidance sentences appended to the 5 base buckets. Config keys MUST match the `INDUSTRIES` literal in `Frontend/src/lib/utils/constants.ts`; industry "Other" has no config, so the sixth bucket is dropped. The label is snapshotted on the ResearchFinding as `industryContextLabel` so historical findings keep their original label if the user later changes industry.
 
-**Eligibility gate**: every research-triggering handler (`competitors/create` + `bulk-import`, `competitors/research`, `brand/research` + `brand/setup`, `users/onboard`, `v1/competitors-create`, the recurring-research enqueuer) calls `enforceResearchEligibility()` from `shared/utils/research-eligibility.ts` BEFORE starting the pipeline. Sequence: account-status check → monthly cost cap (reads the real-time `monthToDateCostUsd` cache; per-user `monthlyTokenBudget` override trumps the tier cap) → sanctions/personal-name denylist (sync) → per-day rate limit (read-modify-write on the User row) → Haiku `classifyResearchTarget()` (**fail-closed** on classifier errors). Returns a typed `IneligibilityCode` so handlers map rejections to specific 400/403/429 responses.
+**Eligibility gate**: every research-triggering handler (`competitors/create` + `bulk-import`, `competitors/research`, `brand/research` + `brand/setup`, `users/onboard`, `v1/competitors-create`, the recurring-research enqueuer) calls `enforceResearchEligibility()` from `shared/utils/research-eligibility.ts` BEFORE starting the pipeline. Sequence: account-status check → monthly cost cap (reads the real-time `monthToDateCostUsd` cache; per-user `monthlyTokenBudget` override trumps the tier cap) → sanctions/personal-name denylist (sync) → per-day rate limit (a two-phase **conditional write** on the User row: window ADD-with-headroom, guarded reset on day rollover — a plain read-modify-write let parallel requests all pass) → Haiku `classifyResearchTarget()` (**fail-closed** on classifier errors; a classifier rejection refunds the daily-quota slot it claimed). Returns a typed `IneligibilityCode` so handlers map rejections to specific 400/403/429 responses.
 
 The `targetKind` parameter (Phase 23) swaps the prompt framing: `'competitor'` (default) frames the analysis from a competitive-intelligence POV; `'self'` reframes as media intelligence ("how is the market perceiving X?") so the same engine produces brand-monitoring findings. Output schema is identical so the downstream pipeline (delta detection, persistence, enrichment) is untouched.
 
@@ -279,7 +285,7 @@ The enrichment block is wrapped in try/catch — Haiku failures don't break mome
 
 The workspace's own brand is monitored using the same deep-research engine as competitors, persisted as a **Competitor row with `targetKind: 'self'`**. Exactly one self row per workspace; created at onboarding when the user supplies `companyWebsite`, or via the `POST /brand/setup` endpoint for legacy users (renders an empty-state CTA on the Your Brand page).
 
-The discriminator approach (vs a separate Brand entity) means every key builder, query helper, enrichment block, and the entire `deep-research.ts` Lambda is reused as-is. The cost is a **filter-discipline rule**: every endpoint that lists competitors must exclude self rows. Use `competitorsOnly()` / `isCompetitorTarget()` from `shared/utils/competitor-target.ts`. Already applied to: `competitors/list`, `competitors/create` + `bulk-import` (so self doesn't consume a plan-limit slot), `v1/competitors` + `v1/competitors-create`, `search`, the weekly digest pipeline (aggregate-changes, generate-recommendations, send-saved-view-digests), the PDF/CSV exports. Account delete and GDPR export deliberately do NOT filter — they want everything. `competitors/get` and `competitors/research` 404 on self rows so the UI surface stays consistent.
+The discriminator approach (vs a separate Brand entity) means every key builder, query helper, enrichment block, and the entire `deep-research.ts` Lambda is reused as-is. The cost is a **filter-discipline rule**: every endpoint that lists competitors must exclude self rows. Use `competitorsOnly()` / `isCompetitorTarget()` from `shared/utils/competitor-target.ts`. Already applied to: `competitors/list`, `competitors/create` + `bulk-import` (so self doesn't consume a plan-limit slot), `v1/competitors` + `v1/competitors-create`, `search`, the weekly digest pipeline (aggregate-changes, generate-recommendations, send-saved-view-digests), the PDF/CSV exports. Account delete and GDPR export deliberately do NOT filter — they want everything. `competitors/get`, `competitors/research`, and `competitors/battlecard` 404 on self rows so the UI surface stays consistent (and no one pays for "win against yourself" tactics).
 
 The self-brand surface is `/brand/*`: `GET /brand`, `POST /brand/research`, `GET /brand/coverage`, `GET /brand/sentiment`, `GET /brand/health` (Phase 24), `POST /brand/setup`. Handlers share `loadSelfBrand()`, `loadUserForBrand()`, and `assertBrandPulseCapability()` from `api/brand/_shared.ts`. The frontend mirror is at `Frontend/src/app/(dashboard)/dashboard/your-brand/`.
 
@@ -326,6 +332,7 @@ Funnel events are emitted as structured JSON via `logger.info(eventName, metadat
 | Notification | `USER#<recipientUserId>` | `NOTIF#<ts>#<id>` | Phase 18, 90-day TTL |
 | Battlecard | `USER#<tenantUserId>` | `BATTLECARD#<ts>#<id>` | Phase 20, 30-day TTL, GSI3 token lookup |
 | CancellationFeedback | `CANCEL_FEEDBACK#<token>` | `META` | Phase 8b, token-share |
+| Self-brand pointer | `USER#<tenantUserId>` | `SELF_BRAND` | Wave 3 — atomic one-self-row-per-workspace claim |
 | OFAC SDN drift tracker | `OFAC_SDN` | `META` | Compliance Phase 1, drift cron |
 | AI audit log | `AILOG#<yyyy-mm>` | `CALL#<ts>#<aiCallId>` | Issue 9 forensic log, 365-day TTL (written by `callAnthropic`) |
 | Anthropic TPM bucket | `RATELIMIT#ANTHROPIC_INPUT_TPM` | `MINUTE#<key>` | Issue 8 per-minute token bucket, 120s TTL |
@@ -335,15 +342,27 @@ The `Snapshot` entity from the original Firecrawl pipeline is no longer written.
 **GSIs**:
 - **GSI1** — user's combined feed; stores `CHANGE#<ts>`, `RESEARCH#<ts>`, and `REC#<ts>` SK prefixes (filter with `begins_with`)
 - **GSI2** — all active competitors (PK=`ACTIVE`); originally for the daily cron, still used by Step Function input collectors
-- **GSI3** — multi-purpose reverse index keyed by `GSI3PK`:
+- **GSI3** — multi-purpose reverse index keyed by `GSI3PK` (KEYS_ONLY — resolve the base-table PK/SK, then `getItem` the full row):
   - `<email-lowercased>` → user by email (every authenticated route's first step)
   - `BATTLECARD_TOKEN#<token>` → public battlecard share-token lookup (Phase 20)
+  - `CHANGE_ID#<changeId>` (GSI3SK carries `COMP#<competitorId>`) → O(1) change-by-id for `GET /changes/{id}` permalinks (Wave 3). Only rows written since then carry these keys; legacy rows fall back to a paginated GSI1 walk.
 
-The **Competitor** record carries derived intelligence written by the enrichment block: `momentum`, `momentumChangePercent`, `momentumAsOf`, `threatLevel`, `threatReasoning`, `threatAsOf`, `derivedTags`, `derivedTagsAsOf`, `predictedMoves`, `predictionHistory`. Plus the lazy-populated `winAgainstTactics` cache (Phase 21) keyed by `winAgainstTacticsResearchId` so battlecard regeneration within one research cycle skips the Claude call. All read directly by the list/detail endpoints without recomputation. **`targetKind`** (Phase 23) discriminates competitor vs self-brand rows; threat/predicted-moves fields stay unset for self rows.
+The **Competitor** record carries derived intelligence written by the enrichment block: `momentum`, `momentumChangePercent`, `momentumAsOf`, `threatLevel`, `threatReasoning`, `threatAsOf`, `derivedTags`, `derivedTagsAsOf`, `predictedMoves`, `predictionHistory`. Plus the lazy-populated `winAgainstTactics` cache (Phase 21) keyed by `winAgainstTacticsResearchId` so battlecard regeneration within one research cycle skips the Claude call. All read directly by the list/detail endpoints without recomputation. **`targetKind`** (Phase 23) discriminates competitor vs self-brand rows; threat/predicted-moves fields stay unset for self rows. **`lastResearchedAt`** (Wave 1) is stamped in `deep-research`'s core path on every successful run and drives recurring-research cadence. The competitor **detail** endpoint computes momentum over the same 100-change window as the stored enrichment and returns the stored `momentumAsOf` — keep these consistent or the detail page disagrees with the sidebar/list.
 
 The **User** record gained `companyWebsite?` (Phase 23) — seeds the self-brand Competitor row at onboarding or via `POST /brand/setup`.
 
-Key builders in `shared/db/keys.ts`. Query helpers (`getItem`, `putItem`, `queryByPK`, `queryGSI`, `updateItem`) in `shared/db/queries.ts`. Pure-function metrics (`computeMomentum`, `buildChangesByDay`, `deriveTagsFromState`) live in `shared/utils/competitor-metrics.ts`; SoV and Brand Health utilities (`computeShareOfVoice`, `computeBrandHealthScore`) in `shared/utils/share-of-voice.ts` and `shared/utils/brand-health.ts`; the self-vs-competitor filter helpers (`isCompetitorTarget`, `competitorsOnly`) in `shared/utils/competitor-target.ts`.
+Key builders in `shared/db/keys.ts`. Query helpers (`getItem`, `putItem`, `queryByPK`, `queryGSI`, `updateItem`) in `shared/db/queries.ts`, plus the atomicity toolkit added in Wave 3 (see next section). Pure-function metrics (`computeMomentum`, `buildChangesByDay`, `deriveTagsFromState`) live in `shared/utils/competitor-metrics.ts`; SoV and Brand Health utilities (`computeShareOfVoice`, `computeBrandHealthScore`) in `shared/utils/share-of-voice.ts` and `shared/utils/brand-health.ts`; the self-vs-competitor filter helpers (`isCompetitorTarget`, `competitorsOnly`) in `shared/utils/competitor-target.ts`.
+
+### Atomic write helpers (Wave 3)
+
+`shared/db/queries.ts` grew a set of race/atomicity primitives — reach for these instead of read-modify-write patterns, which have all been purged:
+
+- **`transactWrite(items)`** — one atomic `TransactWriteItems` commit, all-or-nothing; **throws** past `TRANSACT_MAX_ITEMS` (100) rather than silently splitting. Used by `deep-research.ts` to persist the ResearchFinding + all its Change rows together (a partial persist made the new finding the baseline and permanently hid the unpersisted deltas from re-detection).
+- **Atomic counters** — `initCounterIfAbsent` / `incrementWithCeiling` / `decrementFloorZero`. Plan limits are enforced by a `competitorCount` counter with ceiling on create / bulk-import / v1-create / delete — do NOT count-then-put.
+- **`putItemIfNotExists`** — conditional claim. Used for the one-self-brand-row-per-workspace guarantee via a deterministic pointer row (`USER#<tenantUserId>` / `SELF_BRAND`, see `api/brand/_shared.ts`) claimed by brand/setup + onboarding.
+- **`atomicAddGuarded`** — month-guarded ADD with RESET on rollover (the real-time cost cap).
+- **`appendToList`** — `list_append` for ResearchRun (Phase 22) event timelines; events are APPENDED so the trigger's `run_queued` entry survives `deep-research`'s later flushes (a SET overwrote it).
+- **`skPrefixRange` / `skBetween`** — prefix-safe `since` ranges (see "Pagination").
 
 ## Pipeline Flow (Step Functions)
 
@@ -354,8 +373,8 @@ The `deep-research` Lambda owns the full per-competitor flow internally — ther
 1. **Load prior `ResearchFinding`** from DynamoDB (newest first via descending SK scan, may be null on first run)
 2. **`deepResearch()`** — Sonnet + web_search → current findings, citations, derivedState
 3. **`detectResearchDeltas()`** — Sonnet compares prior vs current, returns array of new items with impact analysis. **Runs BEFORE persisting the new finding** so a Claude failure leaves the prior baseline intact for clean retry.
-4. **Persist new `ResearchFinding`** with full `derivedState`
-5. **Persist each delta as a `Change` record** (with `researchId`, `citations`, `sourceCategory` fields)
+4. **Persist the new `ResearchFinding` (with full `derivedState`) + every delta as a `Change` record in ONE `transactWrite`** — Change rows carry `researchId`, `citations`, `sourceCategory`, and GSI3 `CHANGE_ID#<id>` keys for permalink lookup. Atomicity matters: a partial persist silently makes the finding the new baseline and hides the unpersisted deltas forever.
+5. **Stamp `lastResearchedAt`** on the Competitor (core path, any trigger) — the authoritative signal the recurring enqueuer keys cadence off (distinct from `momentumAsOf`, which only moves when enrichment succeeds; and never fall back to `updatedAt` — unrelated edits postponed research a full cycle)
 6. **Enrichment block** (best-effort, won't fail the run):
    - Query last 30d of changes once → use for both momentum + threat input
    - Compute momentum (rule-based)
@@ -370,6 +389,8 @@ Lambda timeout 5 min, memory 1024 MB (web_search responses can be large).
 **Weekly competitive digest** (`Backend/src/functions/scheduled/`):
 1. `get-subscribers` → 2. `aggregate-changes` (top 10 by significance, past 7 days via GSI1) → 3. `generate-summary` (Claude Sonnet) → 4. `generate-recommendations` (Claude Sonnet) → 5. `render-send-email` (SES). MAP wrapper, maxConcurrency=5.
 
+**Digest fault tolerance (Wave 1):** each Map iteration has its own catch (a Pass state inside the iterator — a Map-level catch would still abort the whole batch, one bad user killing everyone's digest). `generate-summary`/`generate-recommendations` soft-degrade on AI failure; `render-send-email` survives a failed user load; users with zero competitors (workspace members, empty accounts) are skipped rather than sent misleading "all stable" ghost digests. The comparative-briefing Map has the same per-iteration catches.
+
 **Audio briefing (Demo-wow Phase 2):** for `audioBriefing`-capable users (Strategist+), `render-send-email` also synthesizes an audio version of the digest via ElevenLabs Flash (`shared/services/elevenlabs.ts`), stores the MP3 (`shared/services/audio-briefing-storage.ts`), and links it in the email. Gated by the `audioBriefing` capability flag; degrades silently to text-only if `ELEVENLABS_API_KEY` is unset.
 
 **Comparative briefing (Phase 24)** — opt-in, separate state machine, same Map shape:
@@ -378,7 +399,7 @@ Lambda timeout 5 min, memory 1024 MB (web_search responses can be large).
 **Trigger entry points for the research pipeline**:
 - Onboarding completion (`api/users/onboard.ts`) starts the ResearchPipeline with all newly-created competitors AND the self-brand row when `companyWebsite` was provided
 - Manual "Research Now" buttons: `POST /competitors/{id}/research` for a single competitor, `POST /brand/research` for the self-brand row
-- Sunday 6am UTC recurring-research enqueuer (`scheduled/enqueue-recurring-research.ts`) walks the active-competitor index and re-runs research based on each row's `researchCadenceDays` (or the tier default from `PLAN_LIMITS`)
+- Sunday 6am UTC recurring-research enqueuer (`scheduled/enqueue-recurring-research.ts`) walks the active-competitor index and re-runs research based on each row's `researchCadenceDays` (or the tier default from `PLAN_LIMITS`), measured from `lastResearchedAt`. It passes each row's `targetKind` through so scheduled self-brand runs keep the `'self'` framing (Wave 1 — they used to get threat scores + predicted moves written onto the self row every Sunday)
 
 **Other EventBridge schedules** (all in `pipeline.stack.ts`):
 - Mon  8am UTC — WeeklyDigest state machine
@@ -386,8 +407,10 @@ Lambda timeout 5 min, memory 1024 MB (web_search responses can be large).
 - Mon 10am UTC — ComparativeBriefing state machine (Phase 24)
 - Sun  6am UTC — recurring-research enqueuer
 - Daily 3am UTC — `aggregate-ai-costs` (per-user CostDay rollup, drives monthly cost-cap enforcement)
-- Daily 4am UTC — `send-retention-nudges` (Phase 8a, 90-day per-user cooldown)
+- Daily 4am UTC — `send-retention-nudges` (Phase 8a, 90-day per-user cooldown; stamps `lastRetentionNudgeAt` BEFORE sending so a failed stamp can't re-mail daily)
 - 1st of month 8am UTC — `send-scheduled-reports` (Phase 6c, Command-tier PDF briefing)
+
+**Cron reliability (pre-soft-launch hardening):** every EventBridge cron rule has a dead-letter queue with bounded delivery (3 retries / 1h max age) and a messages-visible ≥ 1 alarm. Each stack owns its **own** DLQ — an EventBridge DLQ's queue policy must reference the consuming rule ARNs, so sharing Pipeline's queue from Monitoring/StatusPage creates a cyclic cross-stack dependency (caught at synth). All Lambdas have 90-day log retention via the `logRetention` prop (chosen over explicit LogGroups to conserve the Api stack's CloudFormation resource count, ~588/1000).
 
 ## Pricing Tiers & Plan Limits
 
@@ -397,19 +420,19 @@ Lambda timeout 5 min, memory 1024 MB (web_search responses can be large).
 | Strategist | $99/mo | 10 | 90 days |
 | Command | $199/mo | 25 | 1 year |
 
-Defined in `PLAN_LIMITS` from `shared/types/index.ts`. Enforced in `competitors/create.ts`. Payments handled via Paddle (checkout sessions, customer portal, webhook lifecycle events).
+Defined in `PLAN_LIMITS` from `shared/types/index.ts`. Enforced via the atomic `competitorCount` counter (`incrementWithCeiling`) in create / bulk-import / v1-create, decremented on delete — see "Atomic write helpers". Payments handled via Paddle (checkout sessions, customer portal, webhook lifecycle events).
 
 ## Environment Variables
 
 **Backend Lambda** (set via CDK): `TABLE_NAME`, `BUCKET_NAME`, `USER_POOL_ID`, `USER_POOL_CLIENT_ID`, `SECRETS_ARN`, `FRONTEND_URL`, `FROM_EMAIL`. Lambdas that trigger the research state machine (`api/users/onboard.ts`, `api/competitors/research.ts`, `api/brand/research.ts`, `api/brand/setup.ts`) get `RESEARCH_PIPELINE_ARN`. Subscription checkout gets `PADDLE_PRICE_SCOUT`/`_STRATEGIST`/`_COMMAND`. (`DAILY_PIPELINE_ARN` is gone with the daily scrape pipeline.)
 
-**CDK deploy** (required for `cdk deploy`): `CDK_DEFAULT_ACCOUNT`, `CDK_DEFAULT_REGION` (defaults to us-east-1), `FRONTEND_URL` (for API CORS — **must match the Amplify URL exactly**, e.g. `https://main.d1zrq9gf129s9u.amplifyapp.com`, or CORS blocks the browser), `FROM_EMAIL`, `PADDLE_PRICE_*`. `bin/app.ts` validates `CDK_DEFAULT_ACCOUNT` and `FRONTEND_URL` at synth time. A populated `Backend/.env` can be sourced with `set -a && source .env && set +a`.
+**CDK deploy** (required for `cdk deploy`): `CDK_DEFAULT_ACCOUNT`, `CDK_DEFAULT_REGION` (defaults to us-east-1), `FRONTEND_URL` (for API CORS — **must match the Amplify URL exactly**, e.g. `https://main.d1zrq9gf129s9u.amplifyapp.com`, or CORS blocks the browser), `FROM_EMAIL`, `PADDLE_PRICE_*`. Optional: `ALERT_EMAIL` (subscribes the alarms SNS topic AND enables the monthly AWS cost budget — the budget is skipped with a synth-visible warning when unset; **set it before a real deploy**), `AWS_BUDGET_MONTHLY_USD` (default $50). `bin/app.ts` validates `CDK_DEFAULT_ACCOUNT` and `FRONTEND_URL` at synth time. A populated `Backend/.env` can be sourced with `set -a && source .env && set +a`.
 
 **Frontend** (Amplify app-level env vars): `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_APP_NAME`, `NEXT_PUBLIC_APP_URL`. **These are inlined at build time**, not read at runtime — after changing them in Amplify console you MUST trigger a rebuild (`aws amplify start-job --app-id d1zrq9gf129s9u --branch-name main --job-type RELEASE`), otherwise the old localhost-fallback bundle keeps serving.
 
 ## Deploy Notes
 
-- **Backend** deploys via `cdk deploy --all` from `Backend/` after sourcing `.env`. Individual stacks: `cdk deploy RivalScan-dev-Pipeline RivalScan-dev-Api`.
+- **Backend** deploys via `cdk deploy --all` from `Backend/` after sourcing `.env`. Individual stacks: `cdk deploy Kironyx-dev-Pipeline Kironyx-dev-Api`.
 - **Frontend** deploys automatically on push to `main` (Amplify tracks the GitHub repo). Manual: `aws amplify start-job --app-id d1zrq9gf129s9u --branch-name main --job-type RELEASE`.
 - AWS region is **us-east-1**. Paths with leading `/` (CloudWatch log group names, IAM ARNs) passed to `aws` CLI from Git Bash on Windows get mangled — prefix with `MSYS_NO_PATHCONV=1`.
 - `cdk synth` requires `FRONTEND_URL` and `CDK_DEFAULT_ACCOUNT` set or `bin/app.ts` throws at parse time — handy when scripting verification.

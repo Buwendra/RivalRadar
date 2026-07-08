@@ -18,8 +18,8 @@ const geistMono = localFont({
 
 export const metadata: Metadata = {
   title: {
-    default: "RivalScan — AI Competitive Intelligence for SMBs",
-    template: "%s | RivalScan",
+    default: "Kironyx — AI Competitive Intelligence for SMBs",
+    template: "%s | Kironyx",
   },
   description:
     "Know what your competitors did this week — automatically. AI-powered competitive monitoring at 1/200th the price of enterprise tools.",

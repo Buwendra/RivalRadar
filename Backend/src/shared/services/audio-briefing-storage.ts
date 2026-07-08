@@ -56,7 +56,7 @@ export async function storeAudioBriefing(
       Key: s3Key,
       Body: input.mp3,
       ContentType: 'audio/mpeg',
-      ContentDisposition: `inline; filename="rivalscan-briefing-${generatedAt.slice(0, 10)}.mp3"`,
+      ContentDisposition: `inline; filename="kironyx-briefing-${generatedAt.slice(0, 10)}.mp3"`,
       Metadata: {
         'audio-briefing-id': id,
         'tenant-user-id': input.tenantUserId,

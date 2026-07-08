@@ -1,6 +1,6 @@
 # Access Review Runbook
 
-> Phase 10a. Quarterly procedure to verify who has privileged access to RivalScan's systems. Companion to [SECRET_ROTATION_RUNBOOK.md](../runbooks/SECRET_ROTATION_RUNBOOK.md) (paired cadence). Maps to SOC 2 CC6.2 (provisioning + de-provisioning) and CC6.3 (access modifications).
+> Phase 10a. Quarterly procedure to verify who has privileged access to Kironyx's systems. Companion to [SECRET_ROTATION_RUNBOOK.md](../runbooks/SECRET_ROTATION_RUNBOOK.md) (paired cadence). Maps to SOC 2 CC6.2 (provisioning + de-provisioning) and CC6.3 (access modifications).
 
 ## Cadence
 
@@ -22,13 +22,13 @@ For each row: open the listed source, verify the "Who today" column, take action
 | 3 | **AWS IAM roles** | `aws iam list-roles` — sanity-check no roles trust an unexpected principal. | Lambda execution roles + CDK-managed roles only | Investigate any role with an external trust policy. |
 | 4 | **GitHub repo admins / collaborators** | `gh api repos/<org>/<repo>/collaborators --jq '.[].login'` | Owner | Revoke former contributors. Verify branch-protection rules still require PR review on `main`. |
 | 5 | **GitHub Actions secrets** | Repo Settings → Secrets and variables → Actions. Check creation/last-updated dates. | Per current `.github/workflows/*.yml` requirements | Delete unused secrets. Rotate any older than 90 days. |
-| 6 | **Cognito user pool** | Console → User pool `RivalScan-${stage}-Auth` → Users tab. Sort by last-used. | All registered customers (sign-ups). Internal staff accounts. | This is the customer base — only review for unexpected staff accounts or test fixtures that shouldn't persist. |
+| 6 | **Cognito user pool** | Console → User pool `Kironyx-${stage}-Auth` → Users tab. Sort by last-used. | All registered customers (sign-ups). Internal staff accounts. | This is the customer base — only review for unexpected staff accounts or test fixtures that shouldn't persist. |
 | 7 | **Paddle dashboard** | Console → Settings → Team. | Owner | Rotate the Paddle webhook secret if anyone leaves; revoke their dashboard access. |
 | 8 | **Anthropic console** | console.anthropic.com → Manage org members. | Owner | Rotate the Anthropic API key if anyone leaves; remove their org membership. |
 | 9 | **Amplify console** | App settings → Access. | Owner | Revoke any unexpected member. |
 | 10 | **AWS Amplify environment variables** | Amplify console → App `d1zrq9gf129s9u` → Hosting → Environment variables. | Per build needs (NEXT_PUBLIC_* only) | Delete any stale variable that no longer maps to the running frontend. |
 | 11 | **Domain registrar** | Registrar account login + 2FA enabled? DNS records still pointing where expected? | Owner | Add 2FA if missing. Rotate registrar password annually regardless. |
-| 12 | **AWS Secrets Manager** | `aws secretsmanager list-secrets --query 'SecretList[].{Name:Name,LastRotated:LastRotatedDate}'` | `rivalscan/api-keys`, plus any per-stage variants | Cross-check against `SECRET_ROTATION_RUNBOOK.md` rotation log. Anything unrotated >120 days = action item. |
+| 12 | **AWS Secrets Manager** | `aws secretsmanager list-secrets --query 'SecretList[].{Name:Name,LastRotated:LastRotatedDate}'` | `kironyx/api-keys`, plus any per-stage variants | Cross-check against `SECRET_ROTATION_RUNBOOK.md` rotation log. Anything unrotated >120 days = action item. |
 | 13 | **API keys (in-app)** | Sign in as workspace owner → Settings → Workspace → API keys. Or query DynamoDB directly: `PK begins_with APIKEY#`. | Per-customer, per-workspace | Customers self-manage. Internal staff should not have personal API keys for production accounts. |
 
 ## Procedure

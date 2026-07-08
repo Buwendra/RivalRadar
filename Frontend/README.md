@@ -1,4 +1,4 @@
-# RivalScan Frontend
+# Kironyx Frontend
 
 Next.js 14 (App Router) + TypeScript + Tailwind CSS + shadcn/ui. Deployed via AWS Amplify on push to `main`.
 
@@ -18,7 +18,7 @@ Three `NEXT_PUBLIC_*` variables. Inlined at build time, so any change in Amplify
 | Var | Purpose |
 |---|---|
 | `NEXT_PUBLIC_API_URL` | Backend HTTP API origin, e.g. `https://6xjghxskzd.execute-api.us-east-1.amazonaws.com` |
-| `NEXT_PUBLIC_APP_NAME` | Display name (currently `RivalScan`) |
+| `NEXT_PUBLIC_APP_NAME` | Display name (currently `Kironyx`) |
 | `NEXT_PUBLIC_APP_URL` | Public URL of the deployed frontend (used in some email/share links) |
 
 Set these in Amplify console (App settings → Environment variables). After changing, trigger a manual rebuild:

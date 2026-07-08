@@ -4,7 +4,7 @@
 
 ## Scope
 
-This policy covers any change to the production RivalScan environment that customers can be affected by:
+This policy covers any change to the production Kironyx environment that customers can be affected by:
 
 - Code changes (Backend Lambdas, Frontend Next.js, CDK infrastructure).
 - Configuration changes (environment variables, AWS Secrets Manager values, Cognito user pool settings).
@@ -28,7 +28,7 @@ Every production-affecting change goes through the following gates:
    - `npm audit --audit-level=high` clean (Phase 9b workflow `.github/workflows/npm-audit.yml`).
 4. **Merge to `main`.**
 5. **Deploy:**
-   - **Backend:** `cd Backend && set -a && source .env && set +a && npx cdk deploy --all` from the operator's MFA-enabled local environment. Specific stacks: `cdk deploy RivalScan-${stage}-Pipeline RivalScan-${stage}-Api`.
+   - **Backend:** `cd Backend && set -a && source .env && set +a && npx cdk deploy --all` from the operator's MFA-enabled local environment. Specific stacks: `cdk deploy Kironyx-${stage}-Pipeline Kironyx-${stage}-Api`.
    - **Frontend:** automatic via Amplify on push to `main`. Manual: `aws amplify start-job --app-id d1zrq9gf129s9u --branch-name main --job-type RELEASE`.
 6. **Smoke-test:** sign in to the deployed environment, exercise the changed surface, verify CloudWatch shows no new errors, verify the Phase 8c status page transitions stayed green.
 
@@ -65,7 +65,7 @@ Some changes carry extra blast radius. For these, require additional steps:
 
 CDK ships immutable Lambda function versions; rollback is possible without re-deploying CDK if the regression is in code.
 
-1. **Backend code regression** — find the prior Lambda version: `aws lambda list-versions-by-function --function-name RivalScan-dev-<HandlerName>`. Update the alias: `aws lambda update-alias --function-name RivalScan-dev-<HandlerName> --name live --function-version <prior-version>`.
+1. **Backend code regression** — find the prior Lambda version: `aws lambda list-versions-by-function --function-name Kironyx-dev-<HandlerName>`. Update the alias: `aws lambda update-alias --function-name Kironyx-dev-<HandlerName> --name live --function-version <prior-version>`.
 2. **Backend infrastructure regression** — revert the offending commit on `main`, redeploy via `cdk deploy --all`.
 3. **Frontend regression** — Amplify deploy history: `aws amplify list-jobs --app-id d1zrq9gf129s9u --branch-name main`. Re-deploy a previous build: `aws amplify start-job --app-id d1zrq9gf129s9u --branch-name main --job-type REDEPLOY --job-id <prior-job-id>`.
 4. **Configuration regression** — restore prior values in AWS Secrets Manager (`aws secretsmanager update-secret`). Invalidate the in-Lambda 5-minute secrets cache by triggering a cold start (touch any environment variable on the Lambda).

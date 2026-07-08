@@ -50,8 +50,10 @@ export class PipelineStack extends cdk.Stack {
 
     const { table, snapshotBucket } = props;
 
+    // Path literal must match API_SECRETS_PATH in src/shared/services/secrets.ts
+    // (stacks can't import runtime code).
     const apiSecrets = secretsmanager.Secret.fromSecretNameV2(
-      this, 'ApiSecrets', 'rivalscan/api-keys'
+      this, 'ApiSecrets', 'kironyx/api-keys'
     );
 
     const sharedEnv = {

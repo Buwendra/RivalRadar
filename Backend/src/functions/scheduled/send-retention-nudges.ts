@@ -138,7 +138,7 @@ async function buildAndSendNudge(
   const html = `
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 0 auto;">
       <div style="background: #1e3a5f; padding: 20px 28px; border-radius: 8px 8px 0 0;">
-        <h1 style="color: white; margin: 0; font-size: 18px;">RivalScan</h1>
+        <h1 style="color: white; margin: 0; font-size: 18px;">Kironyx</h1>
       </div>
       <div style="padding: 24px 28px;">
         <p>Hi ${candidate.name},</p>
@@ -149,7 +149,7 @@ async function buildAndSendNudge(
           </a>
         </div>
         <p style="color: #6b7280; font-size: 12px;">
-          You're getting this because you haven't logged into RivalScan in over a week. We'll only nudge you again at most once per quarter.
+          You're getting this because you haven't logged into Kironyx in over a week. We'll only nudge you again at most once per quarter.
         </p>
       </div>
       <div style="background: #f9fafb; padding: 14px 28px; border-radius: 0 0 8px 8px; text-align: center;">

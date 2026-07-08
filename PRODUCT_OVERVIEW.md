@@ -1,8 +1,8 @@
-# RivalScan — Product Overview
+# Kironyx — Product Overview
 
 ## At a glance
 
-RivalScan is competitive intelligence for teams that don't have a competitive-intelligence
+Kironyx is competitive intelligence for teams that don't have a competitive-intelligence
 analyst. Tell us who your competitors are; we research the open web every week, surface
 only what's actually changed and matters, and tell you what to do about it. The result
 is one Monday-morning briefing — sourced, scored, and short — that replaces a Sunday
@@ -34,7 +34,7 @@ deal-breakers.
 what competitors are doing — works for a while, then doesn't, because nobody owns it, the
 searching is inconsistent, and the synthesis lives in one person's head.
 
-RivalScan exists to give SMB teams the *outcome* of an enterprise CI program — a weekly
+Kironyx exists to give SMB teams the *outcome* of an enterprise CI program — a weekly
 briefing with the things that matter — without the price tag or the headcount.
 
 ---
@@ -68,14 +68,14 @@ A few scenarios, written the way customers describe them.
 
 **"A competitor just raised a Series B."** You'd want to know within a day, with the
 funding amount, the investors, the headcount they'll likely hire, and a fast assessment
-of what it means for your positioning. RivalScan surfaces the funding event, re-scores
+of what it means for your positioning. Kironyx surfaces the funding event, re-scores
 the competitor's threat level with reasoning written for your business context, and adds
 an evidence-backed prediction of the moves they'll likely make over the next 30, 60, and
 90 days.
 
 **"Sales lost a deal to X — what's their pitch?"** Five minutes before the next prospect
 call, you want a one-page brief: positioning, recent product moves, current customers,
-three concrete ways you can win against them. RivalScan generates a battlecard PDF on
+three concrete ways you can win against them. Kironyx generates a battlecard PDF on
 demand, including AI-suggested win-against tactics rated by difficulty and impact. It's
 shareable as a 30-day public link, so a sales rep can open it without logging in.
 
@@ -272,14 +272,14 @@ call, a board meeting tomorrow.
 
 ---
 
-## How RivalScan is different
+## How Kironyx is different
 
 **vs. Google Alerts and RSS** — they alert; we triage, score, explain, and recommend.
 Alerts are raw. We give you the thing you'd otherwise spend an hour producing from those
 alerts.
 
 **vs. Crayon and Klue** — same job, a fraction of the price, no analyst required.
-They're great when you have a CI team. RivalScan is great when you don't, and aren't
+They're great when you have a CI team. Kironyx is great when you don't, and aren't
 going to hire one in the next eighteen months.
 
 **vs. doing it manually on Sundays** — your Sundays are yours again. And consistency
@@ -288,7 +288,7 @@ quarter-end scramble.
 
 ---
 
-## What RivalScan isn't
+## What Kironyx isn't
 
 We are deliberately *not* a few things, and saying so up front saves everyone time.
 
@@ -302,7 +302,7 @@ We are deliberately *not* a few things, and saying so up front saves everyone ti
   citations, and asks you to confirm before acting. We're a force multiplier, not an
   oracle.
 - **Not for tracking individuals.** A pre-research input classifier rejects person-name
-  targets and sanctioned entities before any research starts. RivalScan is for
+  targets and sanctioned entities before any research starts. Kironyx is for
   competitive intelligence on *companies*, not people.
 
 ---
@@ -343,7 +343,7 @@ A few things we take seriously and want you to know up front:
   post, or filing every claim is based on.
 - **Sanctions and misuse screening.** Before any research runs, an input classifier
   rejects person-name targets, sanctioned entities (against the OFAC SDN list), and
-  non-business research targets. RivalScan is for competitive intelligence on
+  non-business research targets. Kironyx is for competitive intelligence on
   companies, not surveillance.
 - **GDPR and CCPA data rights are first-class.** Full personal-data export and
   self-service account deletion are available in settings. Our
@@ -357,7 +357,7 @@ A few things we take seriously and want you to know up front:
 
 ## Getting started
 
-The fastest way to evaluate RivalScan is to sign up, complete onboarding (around five
+The fastest way to evaluate Kironyx is to sign up, complete onboarding (around five
 minutes), and let the first research pass populate your dashboard. By the time you
 finish your second cup of coffee, you'll have a working competitive feed with real data
 on your real competitors, scored against your real company context.

@@ -147,7 +147,7 @@ function renderDigestHtml(
           ${rows}
         </table>
         <p style="margin-top: 24px; color: #6b7280; font-size: 11px;">
-          You're receiving this email because you subscribed to a saved view in RivalScan.
+          You're receiving this email because you subscribed to a saved view in Kironyx.
           Manage your subscriptions: hover the view in your sidebar and click the bell icon to unsubscribe.
         </p>
         <p style="color: #9ca3af; font-size: 10px;">

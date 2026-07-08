@@ -32,9 +32,10 @@ export class ApiStack extends cdk.Stack {
 
     const { table, snapshotBucket, userPool, userPoolClient, researchStateMachine, deepResearchFn } = props;
 
-    // Secrets for external APIs
+    // Secrets for external APIs. Path literal must match API_SECRETS_PATH in
+    // src/shared/services/secrets.ts (stacks can't import runtime code).
     const apiSecrets = secretsmanager.Secret.fromSecretNameV2(
-      this, 'ApiSecrets', 'rivalscan/api-keys'
+      this, 'ApiSecrets', 'kironyx/api-keys'
     );
 
     // ─── HTTP API ───

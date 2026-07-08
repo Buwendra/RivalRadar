@@ -50,7 +50,7 @@ export const handler = async (): Promise<Result> => {
   let body: string;
   try {
     const resp = await fetch(SDN_URL, {
-      headers: { 'User-Agent': 'RivalScan-OFAC-SDN-Drift-Detector/1.0' },
+      headers: { 'User-Agent': 'Kironyx-OFAC-SDN-Drift-Detector/1.0' },
     });
     if (!resp.ok) {
       throw new Error(`OFAC SDN fetch returned HTTP ${resp.status}`);

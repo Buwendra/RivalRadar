@@ -138,7 +138,7 @@ export async function dispatchCriticalAlert(
         <p>${input.changeDetail}</p>
         ${input.citationUrl ? `<p><a href="${input.citationUrl}">Source</a></p>` : ''}
         <p style="margin-top: 20px;">
-          <a href="${dashboardUrl}" style="background: #2563eb; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none;">View on RivalScan</a>
+          <a href="${dashboardUrl}" style="background: #2563eb; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none;">View on Kironyx</a>
         </p>
       </div>
     `;
@@ -346,13 +346,13 @@ export async function dispatchTestPing(input: {
 
   if (input.provider === 'slack') {
     const r = await sendSlackNotification(integration.secret, {
-      text: '✅ RivalScan test ping — your Slack integration is wired up.',
+      text: '✅ Kironyx test ping — your Slack integration is wired up.',
       blocks: [
         {
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: '✅ *RivalScan test ping*\nIf you can read this, your incoming webhook is good to go.',
+            text: '✅ *Kironyx test ping*\nIf you can read this, your incoming webhook is good to go.',
           },
         },
       ],
@@ -371,7 +371,7 @@ export async function dispatchTestPing(input: {
       envelope: {
         event: 'integration.test',
         timestamp: new Date().toISOString(),
-        data: { message: 'RivalScan test ping' },
+        data: { message: 'Kironyx test ping' },
       },
     });
     await recordDelivery(input.user.userId, 'webhook', r.ok, r.ok ? undefined : r.error);

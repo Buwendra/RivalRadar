@@ -132,7 +132,7 @@ export const handler = apiHandler(async (event) => {
   // Upload + presign
   const exportId = generateId();
   const ymd = now.toISOString().slice(0, 10);
-  const filename = `rivalscan-briefing-${ymd}.pdf`;
+  const filename = `kironyx-briefing-${ymd}.pdf`;
   const bucket = process.env.BUCKET_NAME;
   if (!bucket) throw new HttpError(500, 'CONFIG_ERROR', 'Storage bucket not configured');
 

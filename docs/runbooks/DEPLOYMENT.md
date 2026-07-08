@@ -1,6 +1,6 @@
-# RivalScan Deployment Guide
+# Kironyx Deployment Guide
 
-Step-by-step guide to deploy the RivalScan backend (AWS CDK) and frontend (Vercel).
+Step-by-step guide to deploy the Kironyx backend (AWS CDK) and frontend (Vercel).
 
 ---
 
@@ -69,13 +69,13 @@ aws configure
 
 ## 3. AWS Secrets Manager Setup
 
-Store all external API keys in a single secret named `rivalscan/api-keys`.
+Store all external API keys in a single secret named `kironyx/api-keys`.
 
 **Via AWS CLI:**
 
 ```bash
 aws secretsmanager create-secret \
-  --name rivalscan/api-keys \
+  --name kironyx/api-keys \
   --region us-east-1 \
   --secret-string '{
     "PADDLE_SECRET_KEY": "your-paddle-api-key",
@@ -95,7 +95,7 @@ aws secretsmanager create-secret \
    - `PADDLE_WEBHOOK_SECRET`
    - `FIRECRAWL_API_KEY`
    - `ANTHROPIC_API_KEY`
-5. Name the secret `rivalscan/api-keys`
+5. Name the secret `kironyx/api-keys`
 6. Complete the wizard with defaults
 
 ---
@@ -175,24 +175,24 @@ npx cdk deploy --all --require-approval broadening
 ```
 
 CDK deploys stacks in dependency order:
-1. `RivalScan-dev-Database` — DynamoDB table
-2. `RivalScan-dev-Storage` — S3 snapshot bucket
-3. `RivalScan-dev-Auth` — Cognito User Pool
-4. `RivalScan-dev-Email` — SES (placeholder)
-5. `RivalScan-dev-Pipeline` — Step Functions + EventBridge schedules
-6. `RivalScan-dev-Api` — API Gateway + all Lambda functions
-7. `RivalScan-dev-Monitoring` — CloudWatch dashboard + alarms
+1. `Kironyx-dev-Database` — DynamoDB table
+2. `Kironyx-dev-Storage` — S3 snapshot bucket
+3. `Kironyx-dev-Auth` — Cognito User Pool
+4. `Kironyx-dev-Email` — SES (placeholder)
+5. `Kironyx-dev-Pipeline` — Step Functions + EventBridge schedules
+6. `Kironyx-dev-Api` — API Gateway + all Lambda functions
+7. `Kironyx-dev-Monitoring` — CloudWatch dashboard + alarms
 
 ### 5.6 Note the Outputs
 
 After deployment, CDK prints stack outputs. Save these values:
 
 ```
-RivalScan-dev-Api.ApiUrl = https://xxxxxxxxxx.execute-api.us-east-1.amazonaws.com
-RivalScan-dev-Auth.UserPoolId = us-east-1_XXXXXXXXX
-RivalScan-dev-Auth.UserPoolClientId = xxxxxxxxxxxxxxxxxxxxxxxxxx
-RivalScan-dev-Database.TableName = RivalScan-dev-Database-Table
-RivalScan-dev-Storage.BucketName = rivalscan-dev-storage-snapshots
+Kironyx-dev-Api.ApiUrl = https://xxxxxxxxxx.execute-api.us-east-1.amazonaws.com
+Kironyx-dev-Auth.UserPoolId = us-east-1_XXXXXXXXX
+Kironyx-dev-Auth.UserPoolClientId = xxxxxxxxxxxxxxxxxxxxxxxxxx
+Kironyx-dev-Database.TableName = Kironyx-dev-Database-Table
+Kironyx-dev-Storage.BucketName = kironyx-dev-storage-snapshots
 ```
 
 The **ApiUrl** is needed for frontend deployment in the next step.
@@ -205,7 +205,7 @@ By default the stage is `dev`. To deploy `staging` or `prod`:
 npx cdk deploy --all -c stage=prod
 ```
 
-This creates a separate set of resources prefixed with `RivalScan-prod-*`.
+This creates a separate set of resources prefixed with `Kironyx-prod-*`.
 
 ---
 
@@ -244,8 +244,8 @@ In Vercel project settings (**Settings > Environment Variables**), add:
 | Variable | Value | Example |
 |----------|-------|---------|
 | `NEXT_PUBLIC_API_URL` | API Gateway URL from Step 5.6 | `https://xxxxxxxxxx.execute-api.us-east-1.amazonaws.com` |
-| `NEXT_PUBLIC_APP_NAME` | Your app name | `RivalScan` |
-| `NEXT_PUBLIC_APP_URL` | Your production domain | `https://rivalscan.com` |
+| `NEXT_PUBLIC_APP_NAME` | Your app name | `Kironyx` |
+| `NEXT_PUBLIC_APP_URL` | Your production domain | `https://kironyx.com` |
 
 ### 6.4 Redeploy After Setting Variables
 
@@ -257,7 +257,7 @@ Or trigger a redeploy from the Vercel dashboard.
 
 ### 6.5 Note the Production URL
 
-Save your Vercel production URL (e.g., `https://rivalscan.vercel.app` or your custom domain).
+Save your Vercel production URL (e.g., `https://kironyx.vercel.app` or your custom domain).
 
 ---
 
@@ -270,7 +270,7 @@ Now that you have your Vercel production URL, update the backend:
 ```bash
 cd Backend
 export FRONTEND_URL=https://your-vercel-url.vercel.app
-npx cdk deploy RivalScan-dev-Api
+npx cdk deploy Kironyx-dev-Api
 ```
 
 This redeploys only the API stack with the correct CORS origin.
@@ -298,7 +298,7 @@ This redeploys only the API stack with the correct CORS origin.
 **Backend (API Gateway):**
 1. In AWS Console > API Gateway > Custom Domain Names
 2. Create a domain mapping (requires an ACM certificate in the API region)
-3. Point your DNS subdomain (e.g., `api.rivalscan.com`) to the API Gateway domain
+3. Point your DNS subdomain (e.g., `api.kironyx.com`) to the API Gateway domain
 
 If you set up a custom API domain, update `NEXT_PUBLIC_API_URL` in Vercel accordingly.
 
@@ -312,7 +312,7 @@ After deployment, walk through these steps to confirm everything works:
 
 - [ ] Open the API URL in a browser — you should get a CORS error or empty response (not a 500)
 - [ ] Check CloudWatch Logs for the Lambda functions (no startup errors)
-- [ ] Open the CloudWatch dashboard (`RivalScan-dev-Dashboard`) — widgets should render
+- [ ] Open the CloudWatch dashboard (`Kironyx-dev-Dashboard`) — widgets should render
 
 ### 8.2 User Flow
 
@@ -350,13 +350,13 @@ After deployment, walk through these steps to confirm everything works:
 cd Backend
 
 # Deploy a single stack
-npx cdk deploy RivalScan-dev-Api
+npx cdk deploy Kironyx-dev-Api
 
 # Preview changes before deploying
 npx cdk diff
 
 # View recent Lambda logs (requires stack name + function logical ID)
-aws logs tail /aws/lambda/RivalScan-dev-Api-AuthSignup --follow
+aws logs tail /aws/lambda/Kironyx-dev-Api-AuthSignup --follow
 
 # Type-check without deploying
 npx tsc --noEmit
@@ -393,11 +393,11 @@ vercel --prod
 
 ```bash
 # View current secret value
-aws secretsmanager get-secret-value --secret-id rivalscan/api-keys --query SecretString --output text | jq .
+aws secretsmanager get-secret-value --secret-id kironyx/api-keys --query SecretString --output text | jq .
 
 # Update a single key
-aws secretsmanager put-secret-value --secret-id rivalscan/api-keys \
-  --secret-string "$(aws secretsmanager get-secret-value --secret-id rivalscan/api-keys \
+aws secretsmanager put-secret-value --secret-id kironyx/api-keys \
+  --secret-string "$(aws secretsmanager get-secret-value --secret-id kironyx/api-keys \
   --query SecretString --output text | jq '.FIRECRAWL_API_KEY = "new-key-here"')"
 ```
 

@@ -1,6 +1,6 @@
-# RivalScan — Security Overview
+# Kironyx — Security Overview
 
-> Public-safe one-page summary of RivalScan's security posture. For deep-dive answers, see [SECURITY_QUESTIONNAIRE.md](SECURITY_QUESTIONNAIRE.md) (NDA recommended). For incident response, see [INCIDENT_RUNBOOK.md](../runbooks/INCIDENT_RUNBOOK.md).
+> Public-safe one-page summary of Kironyx's security posture. For deep-dive answers, see [SECURITY_QUESTIONNAIRE.md](SECURITY_QUESTIONNAIRE.md) (NDA recommended). For incident response, see [INCIDENT_RUNBOOK.md](../runbooks/INCIDENT_RUNBOOK.md).
 >
 > Last reviewed: **2026-05-07**.
 
@@ -31,7 +31,7 @@ What's *not* stored:
 
 - **In transit:** TLS 1.2+ enforced. API Gateway HTTPS-only. CloudFront enforces TLS 1.2 minimum.
 - **At rest:** DynamoDB SSE with AWS-managed KMS. S3 SSE-S3 (audit-logs bucket additionally has object-lock with 7-year retention, governance mode). Cognito user pool encrypted at rest.
-- **Secrets:** AWS Secrets Manager with KMS encryption (`rivalscan/api-keys`). 5-minute in-Lambda cache. Quarterly rotation per [SECRET_ROTATION_RUNBOOK.md](../runbooks/SECRET_ROTATION_RUNBOOK.md).
+- **Secrets:** AWS Secrets Manager with KMS encryption (`kironyx/api-keys`). 5-minute in-Lambda cache. Quarterly rotation per [SECRET_ROTATION_RUNBOOK.md](../runbooks/SECRET_ROTATION_RUNBOOK.md).
 - **Customer passwords:** managed entirely by Cognito. We never see plaintext.
 - **API keys:** sha256-hashed at rest; plaintext returned once at creation, never echoed back.
 
@@ -58,7 +58,7 @@ What's *not* stored:
 
 ## Sub-processors
 
-Five sub-processors. Full list with services, regions, and certifications: [`/legal/sub-processors`](https://app.rivalscan.com/legal/sub-processors) (public), [VENDOR_RISK_REGISTER.md](VENDOR_RISK_REGISTER.md) (annual review tracker).
+Five sub-processors. Full list with services, regions, and certifications: [`/legal/sub-processors`](https://app.kironyx.com/legal/sub-processors) (public), [VENDOR_RISK_REGISTER.md](VENDOR_RISK_REGISTER.md) (annual review tracker).
 
 | Vendor | Service | Certifications |
 |---|---|---|
@@ -73,8 +73,8 @@ Five sub-processors. Full list with services, regions, and certifications: [`/le
 - **Plan:** [INCIDENT_RUNBOOK.md](../runbooks/INCIDENT_RUNBOOK.md) — severity definitions (SEV1–SEV4), 5 common-scenario playbooks, communications templates, post-incident review template.
 - **Customer notification:** within **72 hours** for confirmed breaches affecting customer data (GDPR Art. 33 SLA).
 - **Forensic capability:** CloudTrail with 7-year retention + AuditEvent log with actor IP/UA.
-- **Status communication:** [`https://status.rivalscan.com`](https://status.rivalscan.com) auto-updates from CloudWatch alarm transitions (Phase 8c).
-- **Vulnerability disclosure:** [`https://app.rivalscan.com/.well-known/security.txt`](https://app.rivalscan.com/.well-known/security.txt) per RFC 9116 → `security@rivalscan.com`.
+- **Status communication:** [`https://status.kironyx.com`](https://status.kironyx.com) auto-updates from CloudWatch alarm transitions (Phase 8c).
+- **Vulnerability disclosure:** [`https://app.kironyx.com/.well-known/security.txt`](https://app.kironyx.com/.well-known/security.txt) per RFC 9116 → `security@kironyx.com`.
 
 ## Compliance posture
 
@@ -106,7 +106,7 @@ Five sub-processors. Full list with services, regions, and certifications: [`/le
 - [CHANGE_MANAGEMENT_POLICY.md](CHANGE_MANAGEMENT_POLICY.md) — production deploy + rollback
 - [VENDOR_RISK_REGISTER.md](VENDOR_RISK_REGISTER.md) — annual sub-processor review
 - [PUBLIC_API.md](../api/PUBLIC_API.md) — read-only API reference
-- [`/.well-known/security.txt`](https://app.rivalscan.com/.well-known/security.txt) — vulnerability disclosure
-- [`/legal/privacy`](https://app.rivalscan.com/legal/privacy), [`/legal/terms`](https://app.rivalscan.com/legal/terms), [`/legal/dpa`](https://app.rivalscan.com/legal/dpa), [`/legal/sub-processors`](https://app.rivalscan.com/legal/sub-processors) — public policy pages
+- [`/.well-known/security.txt`](https://app.kironyx.com/.well-known/security.txt) — vulnerability disclosure
+- [`/legal/privacy`](https://app.kironyx.com/legal/privacy), [`/legal/terms`](https://app.kironyx.com/legal/terms), [`/legal/dpa`](https://app.kironyx.com/legal/dpa), [`/legal/sub-processors`](https://app.kironyx.com/legal/sub-processors) — public policy pages
 
-For questions: **security@rivalscan.com**.
+For questions: **security@kironyx.com**.

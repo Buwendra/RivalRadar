@@ -23,15 +23,15 @@ Update this section when adding the second person.
 
 ## Detection sources
 
-- **CloudWatch alarms** (Phase 1 + 9a): SNS topic `RivalScan-${stage}-Alerts` → owner email. Most actionable signals come through here:
+- **CloudWatch alarms** (Phase 1 + 9a): SNS topic `Kironyx-${stage}-Alerts` → owner email. Most actionable signals come through here:
   - Weekly digest pipeline errors
   - DeepResearch error rate >10% over 15min
   - SES bounce rate >5%
   - API Gateway 5xx, DynamoDB throttling
   - OFAC SDN refresh errors (Phase 9b)
 - **AWS Health Dashboard:** account events affecting your services.
-- **CloudTrail audit logs** (Phase 9b): for forensic investigation, queryable from `s3://rivalscan-dev-audit-logs/`.
-- **Customer reports:** support@rivalscan.com (set up a real inbox; today this routes to the owner).
+- **CloudTrail audit logs** (Phase 9b): for forensic investigation, queryable from `s3://kironyx-dev-audit-logs/`.
+- **Customer reports:** support@kironyx.com (set up a real inbox; today this routes to the owner).
 - **Status page** (Phase 8c, deferred): once shipped, a one-stop public view for users.
 
 ## Common scenarios
@@ -44,14 +44,14 @@ Update this section when adding the second person.
 1. **Lock the root account.** Console → IAM → root credentials → reset password + rotate root access keys.
 2. **Disable suspicious IAM users.** Console → IAM → Users → toggle off all unfamiliar users. Don't delete (preserve evidence).
 3. **Rotate ALL secrets.** Follow [SECRET_ROTATION_RUNBOOK.md](SECRET_ROTATION_RUNBOOK.md) emergency procedure for every secret.
-4. **Audit CloudTrail** for the past 7 days: `s3://rivalscan-dev-audit-logs/AWSLogs/<account>/CloudTrail/` — grep for unusual region usage, IAM operations, S3 GetObject on customer data.
+4. **Audit CloudTrail** for the past 7 days: `s3://kironyx-dev-audit-logs/AWSLogs/<account>/CloudTrail/` — grep for unusual region usage, IAM operations, S3 GetObject on customer data.
 5. **Open AWS support case** as SEV1. They have a dedicated security incident response team.
 6. **Customer comms:** if customer data was accessed (verify via CloudTrail S3 access logs), follow the "Customer data breach" playbook below.
 7. **Post-incident:** rotate every credential in the org's password manager, audit all GitHub access tokens, audit lawyer + accountant contacts.
 
 ### 2. Anthropic credential leak
 
-**Detection:** Anthropic console shows usage spike from unknown source; cost alarm trips (Phase 1 cost-cap); CloudTrail shows unusual `GetSecretValue` against `rivalscan/api-keys`.
+**Detection:** Anthropic console shows usage spike from unknown source; cost alarm trips (Phase 1 cost-cap); CloudTrail shows unusual `GetSecretValue` against `kironyx/api-keys`.
 
 **Response (SEV1):**
 1. **Revoke the leaked key.** console.anthropic.com → API Keys → Revoke the affected key. This kills the attacker's access immediately.
@@ -92,7 +92,7 @@ Anthropic, Paddle, AWS, or SES is down. Most often partial — some regions / en
 
 A bug or a malicious user triggers an unbounded loop of Sonnet calls.
 
-**Detection:** Phase 1 monthly cost cap kicks in; CloudWatch alarm `RivalScan-${stage}-Alerts` → owner email; Anthropic console shows hour-over-hour spend doubling.
+**Detection:** Phase 1 monthly cost cap kicks in; CloudWatch alarm `Kironyx-${stage}-Alerts` → owner email; Anthropic console shows hour-over-hour spend doubling.
 
 **Response (SEV1/2):**
 1. **Cost cap is the brake.** Phase 1's `enforceResearchEligibility` already returns `COST_CAP_EXCEEDED` once `monthToDateCostUsd >= tier.monthlyCostCap`. So the bleeding stops at the per-user cap (Scout $5, Strategist $20, Command $80).
@@ -215,7 +215,7 @@ This runbook gets reviewed alongside the secret rotation cadence. Same calendar 
 | CC5 (Control Activities) | Audit log + role gates (Phase 4b); [ACCESS_REVIEW_RUNBOOK.md](../security/ACCESS_REVIEW_RUNBOOK.md) |
 | CC8 (Change Management) | [CHANGE_MANAGEMENT_POLICY.md](../security/CHANGE_MANAGEMENT_POLICY.md) |
 | C1 (Confidentiality) | [SECURITY_OVERVIEW.md](../security/SECURITY_OVERVIEW.md) § Encryption; [SECURITY_QUESTIONNAIRE.md](../security/SECURITY_QUESTIONNAIRE.md) § H (Cryptography) |
-| P1–P8 (Privacy) | [SECURITY_QUESTIONNAIRE.md](../security/SECURITY_QUESTIONNAIRE.md) § K (Privacy); [`/legal/privacy`](https://app.rivalscan.com/legal/privacy) + GDPR/CCPA self-service surfaces |
+| P1–P8 (Privacy) | [SECURITY_QUESTIONNAIRE.md](../security/SECURITY_QUESTIONNAIRE.md) § K (Privacy); [`/legal/privacy`](https://app.kironyx.com/legal/privacy) + GDPR/CCPA self-service surfaces |
 
 ---
 

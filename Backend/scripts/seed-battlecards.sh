@@ -9,7 +9,7 @@
 set -e
 
 REGION=us-east-1
-FN_NAME=RivalScan-dev-Api-CompetitorBattlecard
+FN_NAME=Kironyx-dev-Api-CompetitorBattlecard
 EMAIL=buwendra.s@gmail.com
 
 # ChatGPT + Claude competitor IDs for buwendra.s@gmail.com

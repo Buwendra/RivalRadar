@@ -12,7 +12,7 @@ export interface WebhookEnvelope<T = unknown> {
  * user-supplied URL.
  *
  * Signature scheme (Stripe-style):
- *   - Header: `X-RivalScan-Signature: t=<unix-ts>,v1=<hex sha256>`
+ *   - Header: `X-Kironyx-Signature: t=<unix-ts>,v1=<hex sha256>`
  *   - Signed payload: `<unix-ts>.<raw json body>`
  *   - The user verifies on their end with the `hmacSecret` we returned
  *     once at integration creation time.
@@ -37,8 +37,8 @@ export async function sendWebhookNotification(input: {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-RivalScan-Signature': `t=${tsSec},v1=${signature}`,
-        'User-Agent': 'RivalScan-Webhook/1.0',
+        'X-Kironyx-Signature': `t=${tsSec},v1=${signature}`,
+        'User-Agent': 'Kironyx-Webhook/1.0',
       },
       body,
     });

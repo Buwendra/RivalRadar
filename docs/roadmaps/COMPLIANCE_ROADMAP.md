@@ -1,6 +1,6 @@
 # Compliance & Safety Roadmap
 
-Phased plan to bring RivalScan to industry-standard compliance posture. Ordered by **legal/operational risk × effort to ship**. Each phase is scoped to be implementable as a single focused session (file paths, deliverables, and acceptance criteria specified) so context isn't lost between handoffs.
+Phased plan to bring Kironyx to industry-standard compliance posture. Ordered by **legal/operational risk × effort to ship**. Each phase is scoped to be implementable as a single focused session (file paths, deliverables, and acceptance criteria specified) so context isn't lost between handoffs.
 
 > **Disclaimer:** This document is an engineering-led compliance plan, not legal advice. Every "policy" deliverable below requires review by a qualified SaaS attorney before publishing. The technical deliverables can be shipped without a lawyer; the documents (Privacy Policy, ToS, DPA, etc.) cannot.
 
@@ -118,7 +118,7 @@ Phased plan to bring RivalScan to industry-standard compliance posture. Ordered 
 | 4.1 | **Security headers** (HSTS, CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy) | Frontend: `Frontend/next.config.mjs` → headers config. CSP starts in report-only mode; tighten over 2-4 weeks | `securityheaders.com` scans the site at A grade |
 | 4.2 | **Rate limiting on all auth endpoints** | API Gateway throttling on `/auth/signup`, `/auth/signin`, `/users/me`. Cognito has built-in lockout but supplement with API-Gateway-level | Brute force from a single IP locked out after 10 failed attempts in 5 min |
 | 4.3 | **Dependency vulnerability scanning** | Add `npm audit` to Amplify build (fail on high+); add `npm audit fix` weekly via GitHub action; Dependabot alerts on the repo | New high-severity CVE blocks the build until patched |
-| 4.4 | **Secret rotation** | Document the rotation process for `rivalscan/api-keys` Secrets Manager entry. Rotate Anthropic + Paddle keys quarterly | Runbook documented; rotation log entry on first execution |
+| 4.4 | **Secret rotation** | Document the rotation process for `kironyx/api-keys` Secrets Manager entry. Rotate Anthropic + Paddle keys quarterly | Runbook documented; rotation log entry on first execution |
 | 4.5 | **Input validation everywhere** | Already use Zod on most handlers; audit each `apiHandler` to confirm. Add for missing routes | All POST/PUT bodies validated; reject with 400 + field-level error |
 | 4.6 | **AWS WAF on API Gateway** | Add WAFv2 rule set: AWS Managed Rules (Common Rule Set + Known Bad Inputs); rate-based rule (5000 req/5min/IP) | WAF blocks SQL injection / XSS attempts; CloudWatch shows metrics |
 | 4.7 | **CloudFront / Amplify CDN with DDoS protection** | Already using Amplify which includes CloudFront. Verify AWS Shield Standard is on (free, default) | AWS Shield enabled; baseline DDoS protection in place |
@@ -230,16 +230,16 @@ If a phase grows beyond a session, split by the # markers in each table — ever
 
 ## Appendix A — Acceptable Use Policy (draft)
 
-The following uses of RivalScan are **prohibited**. Violation results in account termination and may be reported to law enforcement. This list is non-exhaustive.
+The following uses of Kironyx are **prohibited**. Violation results in account termination and may be reported to law enforcement. This list is non-exhaustive.
 
 1. **Personal individual research.** Researching natural persons (employees, executives, public figures) outside of their professional capacity at a clearly-identified business entity. Targets must be incorporated companies.
 2. **Sanctioned entities.** Researching individuals or entities on the U.S. OFAC SDN list, EU Consolidated Sanctions list, UK HMT sanctions list, or comparable national sanctions registries.
 3. **Stalking, harassment, or doxxing.** Using research output to harm, embarrass, or threaten any person.
-4. **Trading decisions.** Using research output as the basis for securities trading. RivalScan is not a registered investment advisor and outputs may be inaccurate.
-5. **Redistribution of AI output.** Republishing, broadcasting, or commercializing RivalScan-generated text without explicit written permission. Internal-team use is permitted.
+4. **Trading decisions.** Using research output as the basis for securities trading. Kironyx is not a registered investment advisor and outputs may be inaccurate.
+5. **Redistribution of AI output.** Republishing, broadcasting, or commercializing Kironyx-generated text without explicit written permission. Internal-team use is permitted.
 6. **Competitive intelligence on protected categories.** Targeted research designed to identify employees by race, gender, religion, disability, age, sexual orientation, or other protected status.
 7. **Trade secret misappropriation.** Attempting to extract or summarize confidentially-held information of another party (leaked documents, breached materials, unpublished filings).
-8. **Defamation.** Using RivalScan output as the basis for false, damaging public statements about any person or entity.
+8. **Defamation.** Using Kironyx output as the basis for false, damaging public statements about any person or entity.
 9. **Automated mass research.** Scripting or automating the research API beyond what individual interactive use requires (programmatic access requires written permission).
 10. **Resale of access.** Sharing accounts, reselling credentials, or providing the service to third parties under your own account.
 

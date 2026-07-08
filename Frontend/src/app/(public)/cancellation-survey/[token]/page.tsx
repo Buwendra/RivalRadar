@@ -65,7 +65,7 @@ export default function CancellationSurveyPage() {
               That genuinely helps us improve. If you ever change your mind, you can resubscribe anytime.
             </p>
             <Button asChild variant="outline" className="mt-4">
-              <Link href="/">Back to RivalScan</Link>
+              <Link href="/">Back to Kironyx</Link>
             </Button>
           </CardContent>
         </Card>

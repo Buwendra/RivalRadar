@@ -1,5 +1,5 @@
 export const metadata = {
-  title: "Acceptable Use Policy — RivalScan",
+  title: "Acceptable Use Policy — Kironyx",
 };
 
 export default function AupPage() {
@@ -10,10 +10,10 @@ export default function AupPage() {
 
       <p>
         This Acceptable Use Policy (&quot;AUP&quot;) applies to all use of the
-        RivalScan service. It is incorporated by reference into the{" "}
+        Kironyx service. It is incorporated by reference into the{" "}
         <a href="/legal/terms">Terms of Service</a>. Violation results in
         account termination and may be reported to law enforcement. The list
-        below is non-exhaustive — RivalScan retains discretion to determine
+        below is non-exhaustive — Kironyx retains discretion to determine
         what constitutes misuse.
       </p>
 
@@ -44,7 +44,7 @@ export default function AupPage() {
 
       <h3>4. Trading decisions</h3>
       <p>
-        Using research output as the basis for securities trading. RivalScan
+        Using research output as the basis for securities trading. Kironyx
         is not a registered investment advisor and outputs may be inaccurate.
         Use of the service for trading-decision input violates this AUP and
         may also constitute violations of securities laws.
@@ -53,7 +53,7 @@ export default function AupPage() {
       <h3>5. Redistribution of AI output</h3>
       <p>
         Republishing, broadcasting, or commercializing
-        RivalScan-generated text without explicit written permission. Quoting
+        Kironyx-generated text without explicit written permission. Quoting
         small excerpts internally is permitted; large-scale extraction or
         commercial republishing is not.
       </p>
@@ -76,7 +76,7 @@ export default function AupPage() {
 
       <h3>8. Defamation</h3>
       <p>
-        Using RivalScan output as the basis for false, damaging public
+        Using Kironyx output as the basis for false, damaging public
         statements about any person or entity. AI-generated content can
         contain errors; you are responsible for verifying material claims
         before any external use.
@@ -128,14 +128,14 @@ export default function AupPage() {
       <h2>Reporting violations</h2>
       <p>
         If you believe another user is misusing the service, email{" "}
-        <a href="mailto:abuse@rivalscan.com">abuse@rivalscan.com</a> with
+        <a href="mailto:abuse@kironyx.com">abuse@kironyx.com</a> with
         details. Reports are reviewed within 5 business days.
       </p>
 
       <h2>Questions</h2>
       <p>
         Edge cases or clarifications:{" "}
-        <a href="mailto:legal@rivalscan.com">legal@rivalscan.com</a>.
+        <a href="mailto:legal@kironyx.com">legal@kironyx.com</a>.
       </p>
     </>
   );

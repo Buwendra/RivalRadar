@@ -174,7 +174,7 @@ export const handler = apiHandler<PublicEvent>(async (event) => {
               <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 0 auto;">
                 <div style="padding: 24px 28px;">
                   <p>Hi ${user.name ?? 'there'},</p>
-                  <p>We noticed you canceled your RivalScan ${canceledPlan} subscription. We'd love to know why so we can do better for the next person.</p>
+                  <p>We noticed you canceled your Kironyx ${canceledPlan} subscription. We'd love to know why so we can do better for the next person.</p>
                   <p>30 seconds to fill in — no follow-up sales pitch:</p>
                   <div style="text-align: center; margin: 24px 0;">
                     <a href="${surveyUrl}" style="background: #2563eb; color: white; padding: 12px 28px; border-radius: 6px; text-decoration: none; font-weight: 500;">
@@ -219,8 +219,8 @@ export const handler = apiHandler<PublicEvent>(async (event) => {
         try {
           await sendEmail(
             userEmail,
-            'Action required: Payment failed for your RivalScan subscription',
-            `<p>Hi,</p><p>We were unable to process your RivalScan subscription payment. Please update your payment method in your <a href="${process.env.FRONTEND_URL}/dashboard/settings">billing settings</a> to avoid service interruption.</p>`
+            'Action required: Payment failed for your Kironyx subscription',
+            `<p>Hi,</p><p>We were unable to process your Kironyx subscription payment. Please update your payment method in your <a href="${process.env.FRONTEND_URL}/dashboard/settings">billing settings</a> to avoid service interruption.</p>`
           );
         } catch (emailErr) {
           logger.error('Failed to send payment failure email', { error: emailErr, userEmail });

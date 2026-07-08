@@ -15,8 +15,8 @@ import { AiDisclaimer } from "@/components/dashboard/ai-disclaimer";
 import { METHODOLOGY, type MetricDoc } from "@/lib/content/methodology";
 
 export const metadata: Metadata = {
-  title: "Methodology — RivalScan",
-  description: "How RivalScan computes its threat, momentum, Brand Health, Share of Voice, and significance scores.",
+  title: "Methodology — Kironyx",
+  description: "How Kironyx computes its threat, momentum, Brand Health, Share of Voice, and significance scores.",
 };
 
 function ProvenanceBadge({ text }: { text: string }) {
@@ -81,7 +81,7 @@ export default function MethodologyPage() {
     <div className="space-y-6">
       <PageHeader
         title="Methodology"
-        description="How every score in RivalScan is calculated — so you can judge the numbers, not just read them."
+        description="How every score in Kironyx is calculated — so you can judge the numbers, not just read them."
       />
 
       <Card className="border-brand-700 bg-brand-900">

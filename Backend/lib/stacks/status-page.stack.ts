@@ -27,7 +27,7 @@ import * as path from 'path';
  * fresh even when nothing's changed.
  *
  * DNS: CloudFront issues a default `*.cloudfront.net` URL out of the box.
- * For a custom domain (status.rivalscan.com), the owner adds a CNAME at the
+ * For a custom domain (status.kironyx.com), the owner adds a CNAME at the
  * registrar pointing at the CloudFront distribution. That step is manual —
  * not codified here so DNS changes don't block CDK deploys.
  */

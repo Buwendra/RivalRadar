@@ -1,7 +1,7 @@
 {
-  "name": "rivalscan-backend",
+  "name": "kironyx-backend",
   "version": "1.0.0",
-  "description": "RivalScan AWS Serverless Backend — CDK + Lambda (TypeScript)",
+  "description": "Kironyx AWS Serverless Backend — CDK + Lambda (TypeScript)",
   "scripts": {
     "build": "tsc",
     "cdk": "cdk",

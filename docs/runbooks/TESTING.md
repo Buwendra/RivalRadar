@@ -57,7 +57,7 @@ aws sesv2 send-email \
   --destination "ToAddresses=$TEST_EMAIL" \
   --content '{
     "Simple": {
-      "Subject": {"Data": "RivalScan SES Test"},
+      "Subject": {"Data": "Kironyx SES Test"},
       "Body": {"Text": {"Data": "SES is working. If you received this, email config is good."}}
     }
   }' \
@@ -139,7 +139,7 @@ This kicks off the daily pipeline Step Function for the new competitor.
 
 ```bash
 aws stepfunctions list-executions \
-  --state-machine-arn arn:aws:states:us-east-1:076561717141:stateMachine:RivalScan-dev-Pipeline-DailyPipeline \
+  --state-machine-arn arn:aws:states:us-east-1:076561717141:stateMachine:Kironyx-dev-Pipeline-DailyPipeline \
   --max-items 5 \
   --region $AWS_REGION
 ```
@@ -174,7 +174,7 @@ If you want a guaranteed email without waiting for a high-significance change, m
 
 ```bash
 aws stepfunctions start-execution \
-  --state-machine-arn arn:aws:states:us-east-1:076561717141:stateMachine:RivalScan-dev-Pipeline-WeeklyDigest \
+  --state-machine-arn arn:aws:states:us-east-1:076561717141:stateMachine:Kironyx-dev-Pipeline-WeeklyDigest \
   --region $AWS_REGION
 ```
 
@@ -182,7 +182,7 @@ Watch it progress:
 
 ```bash
 aws stepfunctions list-executions \
-  --state-machine-arn arn:aws:states:us-east-1:076561717141:stateMachine:RivalScan-dev-Pipeline-WeeklyDigest \
+  --state-machine-arn arn:aws:states:us-east-1:076561717141:stateMachine:Kironyx-dev-Pipeline-WeeklyDigest \
   --max-items 1 \
   --region $AWS_REGION
 ```
@@ -199,8 +199,8 @@ After it completes (~15-30 seconds), check your inbox for the weekly digest emai
 
 1. **Check CloudWatch logs** for the specific Lambda:
    ```bash
-   aws logs tail /aws/lambda/RivalScan-dev-Pipeline-SendAlert --follow --region $AWS_REGION
-   aws logs tail /aws/lambda/RivalScan-dev-Pipeline-RenderSendEmail --follow --region $AWS_REGION
+   aws logs tail /aws/lambda/Kironyx-dev-Pipeline-SendAlert --follow --region $AWS_REGION
+   aws logs tail /aws/lambda/Kironyx-dev-Pipeline-RenderSendEmail --follow --region $AWS_REGION
    ```
 
 2. **Check SES sending statistics**:
@@ -222,7 +222,7 @@ Your account is in SES sandbox and the recipient isn't verified. Either:
 Firecrawl API key in Secrets Manager may be wrong. Check:
 ```bash
 aws secretsmanager get-secret-value \
-  --secret-id rivalscan/api-keys \
+  --secret-id kironyx/api-keys \
   --query SecretString --output text --region $AWS_REGION | jq .FIRECRAWL_API_KEY
 ```
 
@@ -231,7 +231,7 @@ aws secretsmanager get-secret-value \
 Anthropic API key issue. Same check:
 ```bash
 aws secretsmanager get-secret-value \
-  --secret-id rivalscan/api-keys \
+  --secret-id kironyx/api-keys \
   --query SecretString --output text --region $AWS_REGION | jq .ANTHROPIC_API_KEY
 ```
 

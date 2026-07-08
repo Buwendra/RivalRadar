@@ -3,7 +3,7 @@ import { logger } from '../utils/logger';
 
 const ses = new SESv2Client({});
 
-const FROM_EMAIL = process.env.FROM_EMAIL ?? 'noreply@rivalscan.com';
+const FROM_EMAIL = process.env.FROM_EMAIL ?? 'noreply@kironyx.com';
 
 export async function sendEmail(
   to: string,

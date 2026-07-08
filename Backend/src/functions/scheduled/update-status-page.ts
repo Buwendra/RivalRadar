@@ -156,7 +156,7 @@ function renderHtml(components: ComponentState[], asOf: string): string {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex">
-  <title>RivalScan Status</title>
+  <title>Kironyx Status</title>
   <style>
     * { box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f9fafb; color: #0f172a; margin: 0; padding: 32px 16px; }
@@ -174,7 +174,7 @@ function renderHtml(components: ComponentState[], asOf: string): string {
 <body>
   <div class="wrap">
     <div class="header">
-      <div style="font-size: 14px; color: #6b7280; font-weight: 500;">RivalScan</div>
+      <div style="font-size: 14px; color: #6b7280; font-weight: 500;">Kironyx</div>
       <div class="headline">${escapeHtml(headline)}</div>
       <div class="as-of">Updated ${escapeHtml(asOf)} UTC</div>
     </div>
@@ -183,7 +183,7 @@ function renderHtml(components: ComponentState[], asOf: string): string {
       <ul>${componentsHtml || '<li style="padding: 14px 18px; color: #6b7280;">No alarms configured.</li>'}</ul>
     </div>
     <div class="footer">
-      <a href="https://rivalscan.com">rivalscan.com</a>
+      <a href="https://kironyx.com">kironyx.com</a>
       &nbsp;·&nbsp;
       Reflects current state of CloudWatch alarms. Auto-refreshes on alarm state change + daily.
     </div>

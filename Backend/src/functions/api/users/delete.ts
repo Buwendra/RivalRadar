@@ -184,12 +184,12 @@ Items deleted:
 
 Per GDPR Art. 17 / CCPA §1798.105 your personal data has been erased from our systems. Some data may persist in encrypted backups for up to 30 days before automated rotation completes.
 
-If you didn't request this deletion, contact support@rivalscan.com immediately.`;
+If you didn't request this deletion, contact support@kironyx.com immediately.`;
 
   try {
     await sendEmail(
       email,
-      'Your RivalScan account has been deleted',
+      'Your Kironyx account has been deleted',
       `<pre style="font-family:ui-monospace,monospace;white-space:pre-wrap;">${certificate}</pre>`
     );
   } catch (err) {

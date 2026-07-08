@@ -8,7 +8,7 @@ export class DatabaseStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    this.table = new dynamodb.Table(this, 'RivalScanTable', {
+    this.table = new dynamodb.Table(this, 'KironyxTable', {
       tableName: `${this.stackName}-Table`,
       partitionKey: { name: 'PK', type: dynamodb.AttributeType.STRING },
       sortKey: { name: 'SK', type: dynamodb.AttributeType.STRING },

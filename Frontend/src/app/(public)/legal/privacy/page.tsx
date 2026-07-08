@@ -1,7 +1,7 @@
 import { DraftBanner } from "@/components/shared/draft-banner";
 
 export const metadata = {
-  title: "Privacy Policy — RivalScan",
+  title: "Privacy Policy — Kironyx",
 };
 
 export default function PrivacyPage() {
@@ -14,10 +14,10 @@ export default function PrivacyPage() {
 
       <h2>1. Who we are</h2>
       <p>
-        RivalScan is operated by RivalScan Inc. (the &quot;Company&quot;,
+        Kironyx is operated by Kironyx Inc. (the &quot;Company&quot;,
         &quot;we&quot;, &quot;us&quot;). This Privacy Policy describes how we
         collect, use, and share information about you when you use the
-        RivalScan service.
+        Kironyx service.
       </p>
 
       <h2>2. What we collect</h2>
@@ -68,7 +68,7 @@ export default function PrivacyPage() {
 
       <h2>4. AI processing disclosure</h2>
       <p>
-        RivalScan uses Anthropic&apos;s Claude API to perform competitive
+        Kironyx uses Anthropic&apos;s Claude API to perform competitive
         research and analysis. Your competitors&apos; names and URLs (which you
         provide) are sent to Anthropic to enable the research function.
         Anthropic does not use this data to train their models. See our{" "}
@@ -98,7 +98,7 @@ export default function PrivacyPage() {
         <li>
           <strong>Right to access</strong> (GDPR Art. 15 / CCPA §1798.110) — request
           a machine-readable export of your data via the dashboard or by
-          emailing privacy@rivalscan.com.
+          emailing privacy@kironyx.com.
         </li>
         <li>
           <strong>Right to erasure</strong> (GDPR Art. 17 / CCPA §1798.105) —
@@ -114,7 +114,7 @@ export default function PrivacyPage() {
         </li>
         <li>
           <strong>Right to object / restriction</strong> — contact us at
-          privacy@rivalscan.com.
+          privacy@kironyx.com.
         </li>
         <li>
           <strong>Right to lodge a complaint</strong> — with the supervisory
@@ -139,7 +139,7 @@ export default function PrivacyPage() {
 
       <h2>10. Children</h2>
       <p>
-        RivalScan is a B2B service not intended for individuals under 16. If
+        Kironyx is a B2B service not intended for individuals under 16. If
         you believe a minor has created an account, contact us so we can erase
         the data.
       </p>
@@ -153,9 +153,9 @@ export default function PrivacyPage() {
 
       <h2>12. Contact</h2>
       <p>
-        Privacy inquiries: <a href="mailto:privacy@rivalscan.com">privacy@rivalscan.com</a>.
+        Privacy inquiries: <a href="mailto:privacy@kironyx.com">privacy@kironyx.com</a>.
         Data Protection Officer (for EU/UK data subjects):{" "}
-        <a href="mailto:dpo@rivalscan.com">dpo@rivalscan.com</a>.
+        <a href="mailto:dpo@kironyx.com">dpo@kironyx.com</a>.
       </p>
     </>
   );

@@ -1,5 +1,5 @@
 import { createHash } from 'crypto';
-import { getSecret } from './secrets';
+import { getSecret, API_SECRETS_PATH } from './secrets';
 import { generateId } from '../utils/id';
 import { computeAnthropicCostUsd } from '../utils/anthropic-pricing';
 import { getIndustryConfig, type IndustryResearchConfig } from '../utils/industry-research';
@@ -458,7 +458,7 @@ export async function analyzeChange(
   _newContent: string,
   diffPatch: string
 ): Promise<AiAnalysis> {
-  const secrets = await getSecret('rivalscan/api-keys');
+  const secrets = await getSecret(API_SECRETS_PATH);
 
   const prompt = `You are a competitive intelligence analyst. Analyze the following change detected on a competitor's website.
 
@@ -541,7 +541,7 @@ export async function generateWeeklySummary(input: {
     stage?: string;
   }>;
 }): Promise<string> {
-  const secrets = await getSecret('rivalscan/api-keys');
+  const secrets = await getSecret(API_SECRETS_PATH);
 
   const changeList = input.changes
     .map((c, i) => `${i + 1}. [${c.changeType.toUpperCase()}] ${c.competitorName}: ${c.summary} (Significance: ${c.significanceScore}/10)`)
@@ -652,7 +652,7 @@ export async function generateComparativeBriefing(input: {
   /** Per-category SoV rows for the user's own brand (percent only). */
   sovByCategory: Record<string, { percent: number; rank: number; outOf: number }>;
 }): Promise<{ briefingText: string; suggestedAngles: string[] }> {
-  const secrets = await getSecret('rivalscan/api-keys');
+  const secrets = await getSecret(API_SECRETS_PATH);
 
   const sentTotal =
     input.brand.sentiment.positive + input.brand.sentiment.neutral + input.brand.sentiment.negative;
@@ -784,7 +784,7 @@ export async function deepResearch(input: {
     generatedAt: string;
   };
 }): Promise<Omit<ResearchFinding, 'id' | 'generatedAt'>> {
-  const secrets = await getSecret('rivalscan/api-keys');
+  const secrets = await getSecret(API_SECRETS_PATH);
   const isSelf = input.targetKind === 'self';
 
   const userContextLine = isSelf
@@ -1068,7 +1068,7 @@ export async function detectResearchDeltas(input: {
     derivedState?: DerivedState;
   };
 }): Promise<ResearchDelta[]> {
-  const secrets = await getSecret('rivalscan/api-keys');
+  const secrets = await getSecret(API_SECRETS_PATH);
 
   const compactFinding = (f: { categories: Record<ResearchCategory, FindingItem[]> }) =>
     Object.fromEntries(
@@ -1238,7 +1238,7 @@ export async function scoreCompetitorThreat(input: {
   recentChanges: Array<{ summary: string; significance: number; detectedAt: string }>;
   momentum: Momentum;
 }): Promise<{ threatLevel: ThreatLevel; reasoning: string }> {
-  const secrets = await getSecret('rivalscan/api-keys');
+  const secrets = await getSecret(API_SECRETS_PATH);
 
   // Compact the categories — only need top items by importance to score threat
   const compactCategories = (Object.keys(input.latestFinding.categories) as ResearchCategory[])
@@ -1361,7 +1361,7 @@ export async function predictNextMoves(input: {
   momentumChangePercent?: number;
   threatLevel?: ThreatLevel;
 }): Promise<PredictedMove[]> {
-  const secrets = await getSecret('rivalscan/api-keys');
+  const secrets = await getSecret(API_SECRETS_PATH);
 
   const ninetyDaysAgo = Date.now() - 90 * 24 * 60 * 60 * 1000;
 
@@ -1634,7 +1634,7 @@ export async function evaluatePriorPredictions(input: {
     return elapsedDays > horizonDays[h];
   };
 
-  const secrets = await getSecret('rivalscan/api-keys');
+  const secrets = await getSecret(API_SECRETS_PATH);
 
   const compactCategories = (Object.keys(input.latestFinding.categories) as ResearchCategory[])
     .map((cat) => {
@@ -1861,7 +1861,7 @@ export async function generateRecommendations(input: {
     return [];
   }
 
-  const secrets = await getSecret('rivalscan/api-keys');
+  const secrets = await getSecret(API_SECRETS_PATH);
 
   const userContextLine =
     input.userCompanyName || input.userIndustry
@@ -2146,7 +2146,7 @@ export async function suggestCompetitors(input: {
     confidence: 'high' | 'medium' | 'low';
   }>
 > {
-  const secrets = await getSecret('rivalscan/api-keys');
+  const secrets = await getSecret(API_SECRETS_PATH);
 
   const prompt = `You are a competitive intelligence analyst helping a user identify their primary business competitors. Suggest 5–8 specific companies the user should consider tracking.
 
@@ -2275,7 +2275,7 @@ export async function classifyResearchTarget(input: {
     | 'protected-group-target'
     | 'unable-to-determine';
 }> {
-  const secrets = await getSecret('rivalscan/api-keys');
+  const secrets = await getSecret(API_SECRETS_PATH);
 
   const prompt = `You are an input-safety classifier for a competitive intelligence tool. The tool researches BUSINESS ENTITIES (companies, organizations, brands). It must NOT research individual people, non-commercial targets, or anything that would constitute harassment or stalking.
 
@@ -2417,7 +2417,7 @@ export async function suggestWinAgainstTactics(input: {
   threatLevel?: ThreatLevel;
   recentChanges: Array<{ summary: string; significance: number }>;
 }): Promise<WinAgainstTactic[]> {
-  const secrets = await getSecret('rivalscan/api-keys');
+  const secrets = await getSecret(API_SECRETS_PATH);
 
   const compactChanges = input.recentChanges
     .filter((c) => c.significance >= 5)

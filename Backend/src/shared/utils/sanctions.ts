@@ -103,7 +103,7 @@ export function checkSanctions(input: { name: string; url: string }): SanctionsC
         return {
           isBlocked: true,
           reason:
-            'This appears to describe an individual person rather than a business entity. RivalScan researches companies, not people. If this is a company, please use the official company name (e.g., "Acme Corp" not "John Smith of Acme").',
+            'This appears to describe an individual person rather than a business entity. Kironyx researches companies, not people. If this is a company, please use the official company name (e.g., "Acme Corp" not "John Smith of Acme").',
           category: 'personal-name-pattern',
         };
       }

@@ -22,7 +22,7 @@ export interface SlackPayload {
  * don't require us to register a Slack app, store OAuth tokens, refresh
  * scopes, or route the user through an install flow. The user creates an
  * incoming webhook in their workspace's Slack admin once, pastes the URL into
- * RivalScan, and we POST to it. Trade-off: we can't post to arbitrary
+ * Kironyx, and we POST to it. Trade-off: we can't post to arbitrary
  * channels — the webhook is bound to one channel the user picked at create
  * time. That's the right shape for "send my weekly digest to #competitive".
  *
@@ -97,7 +97,7 @@ export function buildCriticalAlertBlocks(input: {
       elements: [
         {
           type: 'button',
-          text: { type: 'plain_text', text: 'View on RivalScan', emoji: true },
+          text: { type: 'plain_text', text: 'View on Kironyx', emoji: true },
           url: input.dashboardUrl,
         },
       ],

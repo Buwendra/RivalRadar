@@ -9,7 +9,7 @@ import { ReconsentBanner } from "@/components/shared/reconsent-banner";
 import { CookieNoticeBanner } from "@/components/shared/cookie-notice-banner";
 import { usersApi } from "@/lib/api/users";
 
-const PING_SESSION_KEY = "rs_pinged_this_session";
+const PING_SESSION_KEY = "kx_pinged_this_session";
 
 export default function DashboardLayout({
   children,

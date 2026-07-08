@@ -154,7 +154,16 @@
       "Bash(cd ../Frontend && grep -n \"new URL\" \"src/app/\\(dashboard\\)/dashboard/changes/[id]/page.tsx\" && sed -n '1,15p' src/lib/utils/format-date.ts && grep -n \"safeHostname\" src/lib/utils/source-quality.ts | head -2)",
       "Read(//c/Work/personal/**)",
       "Bash(echo \"TSC:$?\")",
-      "Bash(node -e \"const t=require\\('./RivalScan-dev-Api.template.json'\\);console.log\\(Object.keys\\(t.Resources\\).length\\)\")"
+      "Bash(node -e \"const t=require\\('./RivalScan-dev-Api.template.json'\\);console.log\\(Object.keys\\(t.Resources\\).length\\)\")",
+      "Bash(grep -n 'rs_\\\\|`kx_`' /c/Work/personal/RivalRadar/CLAUDE.md)",
+      "Bash(grep -o '<image[^>]\\\\{0,120\\\\}' /c/Work/personal/RivalRadar/Frontend/public/logo.svg)",
+      "Bash(mkdir -p /c/Users/Ewis/AppData/Local/Temp/claude/c--Work-personal-RivalRadar/a0576677-664f-4f75-ac33-fff8667dd159/scratchpad)",
+      "Read(//c/Users/Ewis/AppData/Local/Temp/claude/c--Work-personal-RivalRadar/a0576677-664f-4f75-ac33-fff8667dd159/scratchpad/**)",
+      "Bash(sed -i \"s|    // Secrets for external APIs\\\\n||\" lib/stacks/api.stack.ts)",
+      "Bash(perl -0pi -e \"s|\\(// Secrets for external APIs\\\\r?\\\\n\\)\\(    const apiSecrets = secretsmanager\\\\.Secret\\\\.fromSecretNameV2\\\\\\(\\\\r?\\\\n      this, 'ApiSecrets', 'kironyx/api-keys'\\)|// Secrets for external APIs. Path literal must match API_SECRETS_PATH in\\\\n    // src/shared/services/secrets.ts \\(stacks can't import runtime code\\).\\\\n\\\\$2|\" lib/stacks/api.stack.ts)",
+      "Bash(perl -0pi -e \"s|\\(    const apiSecrets = secretsmanager\\\\.Secret\\\\.fromSecretNameV2\\\\\\(\\\\r?\\\\n      this, 'ApiSecrets', 'kironyx/api-keys'\\)|    // Path literal must match API_SECRETS_PATH in src/shared/services/secrets.ts\\\\n    // \\(stacks can't import runtime code\\).\\\\n\\\\$1|\" lib/stacks/pipeline.stack.ts)",
+      "Bash(npm install *)",
+      "Bash(git checkout *)"
     ]
   }
 }

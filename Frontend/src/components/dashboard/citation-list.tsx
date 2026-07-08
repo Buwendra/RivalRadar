@@ -6,7 +6,7 @@
  * Extracted from research-card so the same rendering is shared by the research
  * card, the change-detail page, and the Brand Health card. Dedupes by URL
  * (with an ×N occurrence badge) and shows each source's date: the source's own
- * publication date when available, otherwise the date RivalScan accessed it
+ * publication date when available, otherwise the date Kironyx accessed it
  * (labelled accordingly so we never imply a publish date we don't have).
  */
 

@@ -93,7 +93,7 @@ Effort: S = single session, M = 1–2 sessions, L = 3+ sessions, XL = external p
 
 5. **Outage alerting.**
    - CloudWatch alarms on: research Lambda error rate > 10% over 15min, weekly digest Lambda errors at all (single failure → page), SES bounce rate > 5%, Anthropic 5xx rate > 20% over 5min.
-   - Alarms route to a single SNS topic `RivalScan-${stage}-Alerts` → owner email for now (later, Slack/PagerDuty in Phase 3 + 8).
+   - Alarms route to a single SNS topic `Kironyx-${stage}-Alerts` → owner email for now (later, Slack/PagerDuty in Phase 3 + 8).
 
 ### Architecture decisions
 
@@ -212,7 +212,7 @@ Effort: S = single session, M = 1–2 sessions, L = 3+ sessions, XL = external p
 2. **Slack integration.**
    - OAuth flow: `Frontend/src/app/(dashboard)/settings/integrations/slack/connect/page.tsx` initiates → backend `api/integrations/slack/oauth-callback.ts` exchanges code → store encrypted webhook URL on User (or Workspace once Phase 4 lands) record.
    - Workspace-level (Phase 4) eventually; user-level (Phase 3) for now.
-   - Slack adapter posts Block Kit messages — header, change summary, threat level chip, citation link, "View on RivalScan" button.
+   - Slack adapter posts Block Kit messages — header, change summary, threat level chip, citation link, "View on Kironyx" button.
 
 3. **Generic webhook.**
    - User pastes a URL in settings → we sign payloads with HMAC (per-user secret) → POST as `application/json`.

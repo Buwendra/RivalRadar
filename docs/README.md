@@ -37,7 +37,7 @@ How to operate the system — deploy, test, page response, secret rotation.
 | [runbooks/DEPLOYMENT.md](runbooks/DEPLOYMENT.md) | Step-by-step deploy of Backend (CDK) and Frontend (Amplify) from a clean machine. | Engineering, ops |
 | [runbooks/TESTING.md](runbooks/TESTING.md) | End-to-end smoke tests, especially for SES + research pipeline. | Engineering, QA |
 | [runbooks/INCIDENT_RUNBOOK.md](runbooks/INCIDENT_RUNBOOK.md) | Severity definitions, on-call escalation, response playbooks for the 5 most common incidents. | On-call |
-| [runbooks/SECRET_ROTATION_RUNBOOK.md](runbooks/SECRET_ROTATION_RUNBOOK.md) | Quarterly cadence + emergency-leak procedure for the `rivalscan/api-keys` Secrets Manager entry. | Engineering, ops |
+| [runbooks/SECRET_ROTATION_RUNBOOK.md](runbooks/SECRET_ROTATION_RUNBOOK.md) | Quarterly cadence + emergency-leak procedure for the `kironyx/api-keys` Secrets Manager entry. | Engineering, ops |
 
 ## Security
 

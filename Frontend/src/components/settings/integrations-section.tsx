@@ -50,7 +50,7 @@ const PROVIDERS: ProviderConfig[] = [
     title: "Custom webhook",
     description: "POST signed JSON payloads to your own endpoint.",
     Icon: Webhook,
-    placeholder: "https://your-app.example.com/webhooks/rivalscan",
+    placeholder: "https://your-app.example.com/webhooks/kironyx",
     helpText:
       "We'll POST JSON envelopes signed with HMAC-SHA256. You'll get a signing secret to verify on your end (shown once).",
   },
@@ -124,7 +124,7 @@ export function IntegrationsSection() {
       <CardHeader>
         <CardTitle>Integrations</CardTitle>
         <CardDescription>
-          Connect Slack or your own webhook to receive RivalScan alerts outside email.
+          Connect Slack or your own webhook to receive Kironyx alerts outside email.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -152,7 +152,7 @@ export function IntegrationsSection() {
             </div>
             <p className="mt-2 text-xs text-amber-200/80">
               Use this secret to verify the HMAC-SHA256 signature on every payload
-              we send. Verify the <code className="font-mono">X-RivalScan-Signature</code>{" "}
+              we send. Verify the <code className="font-mono">X-Kironyx-Signature</code>{" "}
               header against <code className="font-mono">{`{timestamp}.{body}`}</code>.
             </p>
           </div>

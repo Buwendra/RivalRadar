@@ -51,7 +51,7 @@ export function PublicFooter() {
         <Separator className="my-8 bg-brand-700" />
 
         <p className="text-center text-xs text-muted-foreground">
-          &copy; {new Date().getFullYear()} RivalScan. All rights reserved.
+          &copy; {new Date().getFullYear()} Kironyx. All rights reserved.
         </p>
       </div>
     </footer>

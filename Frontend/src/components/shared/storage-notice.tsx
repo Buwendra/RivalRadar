@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { X } from "lucide-react";
 
-const STORAGE_KEY = "rs_storage_notice_ack";
+const STORAGE_KEY = "kx_storage_notice_ack";
 
 /**
  * Storage / cookie disclosure banner.

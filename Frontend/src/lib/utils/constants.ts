@@ -1,6 +1,6 @@
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
-export const APP_NAME = "RivalScan";
+export const APP_NAME = "Kironyx";
 
 // Versioned policies — bump these (and the matching backend constants) when
 // you publish a new ToS or Privacy Policy. The frontend sends these on

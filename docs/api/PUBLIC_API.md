@@ -1,4 +1,4 @@
-# RivalScan Public API
+# Kironyx Public API
 
 Read-only programmatic access to your workspace's competitor intelligence. Available on **Strategist** and **Command** plans.
 
@@ -9,7 +9,7 @@ Read-only programmatic access to your workspace's competitor intelligence. Avail
 
 ```bash
 curl -H "X-API-Key: rsk_live_..." \
-  https://api.rivalscan.com/v1/competitors
+  https://api.kironyx.com/v1/competitors
 ```
 
 The base URL is your API Gateway URL. For local testing it's whatever `NEXT_PUBLIC_API_URL` points at.
@@ -279,5 +279,5 @@ Additive changes (new optional fields, new endpoints) land in `/v1` without warn
 - DELETE endpoints (delete competitor, delete recommendation)
 - Per-key custom rate limits
 - Per-endpoint scopes (today: `read` and `write` are the only two scopes; finer granularity like "read + write competitors but not recommendations" is roadmap)
-- Webhooks for live events (today's webhook integration is one-way push from RivalScan; v1 has no subscribe-to-events flow)
+- Webhooks for live events (today's webhook integration is one-way push from Kironyx; v1 has no subscribe-to-events flow)
 - Bulk endpoints (`POST /v1/competitors/bulk-import` mirroring the dashboard's CSV import)

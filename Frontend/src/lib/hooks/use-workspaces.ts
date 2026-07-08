@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { workspacesApi } from "@/lib/api/workspaces";
 
-export const CURRENT_WORKSPACE_STORAGE_KEY = "rs_current_workspace_id";
+export const CURRENT_WORKSPACE_STORAGE_KEY = "kx_current_workspace_id";
 
 export function useWorkspaces() {
   return useQuery({

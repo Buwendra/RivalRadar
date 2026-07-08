@@ -7,7 +7,7 @@
  * Buffer; the Lambda handler is responsible for data fetching + S3 upload.
  *
  * Layout (all single PDF, multi-page):
- *   1. Cover  — RivalScan title + dateRange + "Prepared for X" + confidential stamp
+ *   1. Cover  — Kironyx title + dateRange + "Prepared for X" + confidential stamp
  *   2. Threat-ranked competitor table
  *   3. Top changes section (top 10 by significance)
  *   4. Recommended actions section (top 5)
@@ -166,10 +166,10 @@ export async function renderBriefingPdf(input: RenderBriefingInput): Promise<Buf
         size: 'LETTER',
         margins: { top: 50, bottom: 50, left: 50, right: 50 },
         info: {
-          Title: 'RivalScan Weekly Briefing',
-          Author: 'RivalScan',
+          Title: 'Kironyx Weekly Briefing',
+          Author: 'Kironyx',
           Subject: 'Competitive Intelligence Briefing',
-          Creator: 'RivalScan',
+          Creator: 'Kironyx',
         },
       });
 
@@ -190,7 +190,7 @@ export async function renderBriefingPdf(input: RenderBriefingInput): Promise<Buf
         .fillColor(COLOR.brand)
         .fontSize(28)
         .font('Helvetica-Bold')
-        .text('RivalScan', 50, 80);
+        .text('Kironyx', 50, 80);
       doc
         .fillColor(COLOR.textMuted)
         .fontSize(12)

@@ -7,7 +7,7 @@ import { useChanges } from "@/lib/hooks/use-changes";
 import { useIntegrations } from "@/lib/hooks/use-integrations";
 import { useWorkspaceMembers } from "@/lib/hooks/use-workspaces";
 
-const DISMISSED_KEY = "rs_onboarding_dismissed";
+const DISMISSED_KEY = "kx_onboarding_dismissed";
 
 export type ChecklistTaskId =
   | "add-competitor"

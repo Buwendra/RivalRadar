@@ -82,7 +82,7 @@ export const handler = apiHandler(async (event) => {
 
   const since = body.since ?? new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
   const today = new Date().toISOString().slice(0, 10);
-  const filename = `rivalscan-${body.type}-${today}.csv`;
+  const filename = `kironyx-${body.type}-${today}.csv`;
   let csv = '';
   let rowCount = 0;
 

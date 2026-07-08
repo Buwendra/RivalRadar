@@ -1,5 +1,5 @@
+import Image from "next/image";
 import { cn } from "@/lib/utils";
-import { Shield } from "lucide-react";
 
 interface LogoProps {
   className?: string;
@@ -9,12 +9,19 @@ interface LogoProps {
 export function Logo({ className, iconOnly = false }: LogoProps) {
   return (
     <div className={cn("flex items-center gap-2", className)}>
-      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-        <Shield className="h-5 w-5 text-primary-foreground" />
-      </div>
+      {/* unoptimized: SVG sources bypass the Next image optimizer (it rejects
+          SVG unless dangerouslyAllowSVG is enabled globally) */}
+      <Image
+        src="/logo.svg"
+        alt="Kironyx logo"
+        width={32}
+        height={32}
+        unoptimized
+        className="h-8 w-8 rounded-lg"
+      />
       {!iconOnly && (
         <span className="text-lg font-bold tracking-tight text-foreground">
-          Rival<span className="text-primary">Scan</span>
+          Kiron<span className="text-primary">yx</span>
         </span>
       )}
     </div>

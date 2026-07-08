@@ -99,7 +99,7 @@ export function AudioBriefingCard() {
           <a href={briefing.url}>Download the briefing</a>
         </audio>
         <p className="text-xs text-muted-foreground">
-          Narrated by RivalScan. Tap play, or download to listen on the go.
+          Narrated by Kironyx. Tap play, or download to listen on the go.
         </p>
       </CardContent>
     </Card>

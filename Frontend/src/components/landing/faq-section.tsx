@@ -7,9 +7,9 @@ import {
 
 const faqs = [
   {
-    question: "How does RivalScan detect changes?",
+    question: "How does Kironyx detect changes?",
     answer:
-      "RivalScan runs Claude-powered deep web research on each competitor, searching the live web across news, product, funding, hiring, and social signals. Each new research run is compared against the previous one to surface meaningful changes — from pricing updates to feature launches — with the supporting sources cited alongside every finding.",
+      "Kironyx runs Claude-powered deep web research on each competitor, searching the live web across news, product, funding, hiring, and social signals. Each new research run is compared against the previous one to surface meaningful changes — from pricing updates to feature launches — with the supporting sources cited alongside every finding.",
   },
   {
     question: "How accurate is the AI analysis?",
@@ -19,12 +19,12 @@ const faqs = [
   {
     question: "What can I monitor?",
     answer:
-      "RivalScan tracks each competitor across five intelligence categories — news, product, funding, hiring, and social — plus derived signals like momentum, threat level, and strategic direction. It's a comprehensive view of their strategic moves, not just a single web page.",
+      "Kironyx tracks each competitor across five intelligence categories — news, product, funding, hiring, and social — plus derived signals like momentum, threat level, and strategic direction. It's a comprehensive view of their strategic moves, not just a single web page.",
   },
   {
     question: "How is this different from Google Alerts?",
     answer:
-      "Google Alerts just forwards keyword matches. RivalScan actively researches each competitor across the web, analyzes the strategic significance of what it finds, and delivers a scored, cited briefing — surfacing pricing shifts, funding events, and hiring signals you'd otherwise miss, not just raw notifications.",
+      "Google Alerts just forwards keyword matches. Kironyx actively researches each competitor across the web, analyzes the strategic significance of what it finds, and delivers a scored, cited briefing — surfacing pricing shifts, funding events, and hiring signals you'd otherwise miss, not just raw notifications.",
   },
   {
     question: "Can I cancel anytime?",
@@ -34,7 +34,7 @@ const faqs = [
   {
     question: "How quickly will I see my first insights?",
     answer:
-      "After completing the 2-minute onboarding wizard, RivalScan immediately kicks off deep research on each competitor you added. Your first cited findings land within minutes, and research re-runs on a recurring schedule (or on demand) to keep your competitive picture current.",
+      "After completing the 2-minute onboarding wizard, Kironyx immediately kicks off deep research on each competitor you added. Your first cited findings land within minutes, and research re-runs on a recurring schedule (or on demand) to keep your competitive picture current.",
   },
 ];
 

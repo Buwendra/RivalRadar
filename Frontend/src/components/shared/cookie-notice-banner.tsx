@@ -16,7 +16,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
-const DISMISS_KEY = "rs_cookie_notice_acknowledged";
+const DISMISS_KEY = "kx_cookie_notice_acknowledged";
 
 export function CookieNoticeBanner() {
   // Default to ack'd to avoid hydration flash: server renders nothing, then
@@ -48,7 +48,7 @@ export function CookieNoticeBanner() {
       className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-2xl rounded-md border border-brand-700 bg-brand-900/95 p-4 shadow-lg backdrop-blur"
     >
       <p className="text-sm leading-relaxed">
-        RivalScan uses browser storage (<code className="rounded bg-brand-800 px-1 text-xs">localStorage</code>)
+        Kironyx uses browser storage (<code className="rounded bg-brand-800 px-1 text-xs">localStorage</code>)
         to keep you signed in. No tracking cookies, no third-party analytics.
         See our{" "}
         <Link

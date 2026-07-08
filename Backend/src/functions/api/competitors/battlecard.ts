@@ -189,7 +189,7 @@ export const handler = apiHandler(async (event) => {
   const now = new Date();
   const createdAt = now.toISOString();
   const ymd = createdAt.slice(0, 10);
-  const filename = `rivalscan-battlecard-${slugify(competitor.name)}-${ymd}.pdf`;
+  const filename = `kironyx-battlecard-${slugify(competitor.name)}-${ymd}.pdf`;
 
   const bucket = process.env.BUCKET_NAME;
   if (!bucket)

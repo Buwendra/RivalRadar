@@ -14,7 +14,7 @@ if (!process.env.CDK_DEFAULT_ACCOUNT) {
   throw new Error('CDK_DEFAULT_ACCOUNT is not set. Run: export CDK_DEFAULT_ACCOUNT=$(aws sts get-caller-identity --query Account --output text)');
 }
 if (!process.env.FRONTEND_URL) {
-  throw new Error('FRONTEND_URL is not set. Required for CORS. Example: export FRONTEND_URL=https://rivalscan.com');
+  throw new Error('FRONTEND_URL is not set. Required for CORS. Example: export FRONTEND_URL=https://kironyx.com');
 }
 
 const app = new cdk.App();
@@ -25,7 +25,7 @@ const env = {
 };
 
 const stage = app.node.tryGetContext('stage') ?? 'dev';
-const prefix = `RivalScan-${stage}`;
+const prefix = `Kironyx-${stage}`;
 
 const databaseStack = new DatabaseStack(app, `${prefix}-Database`, { env });
 const storageStack = new StorageStack(app, `${prefix}-Storage`, { env });

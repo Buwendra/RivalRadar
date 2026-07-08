@@ -4,7 +4,7 @@
  * detects the removed items as new deltas and populates the dashboard.
  *
  * Usage:
- *   TABLE_NAME=RivalScan-dev-Database-Table npx ts-node scripts/trim-research.ts Deepseek
+ *   TABLE_NAME=Kironyx-dev-Database-Table npx ts-node scripts/trim-research.ts Deepseek
  */
 import { DynamoDBClient, ScanCommand } from '@aws-sdk/client-dynamodb';
 import {

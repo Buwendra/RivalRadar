@@ -72,7 +72,7 @@ export class MonitoringStack extends cdk.Stack {
     // without touching alarm wiring.
     this.alertsTopic = new sns.Topic(this, 'AlertsTopic', {
       topicName: `${this.stackName}-Alerts`,
-      displayName: 'RivalScan operational alerts',
+      displayName: 'Kironyx operational alerts',
     });
     if (alertEmail) {
       this.alertsTopic.addSubscription(new subs.EmailSubscription(alertEmail));

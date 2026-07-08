@@ -4,7 +4,7 @@
 
 ## Inventory
 
-All application secrets live in **AWS Secrets Manager** under the `rivalscan/api-keys` secret. The Lambda runtime fetches them lazily via `Backend/src/shared/services/secrets.ts`, which caches each fetch for 5 minutes per Lambda instance.
+All application secrets live in **AWS Secrets Manager** under the `kironyx/api-keys` secret. The Lambda runtime fetches them lazily via `Backend/src/shared/services/secrets.ts`, which caches each fetch for 5 minutes per Lambda instance.
 
 | Secret key | Provider | Rotation cadence | Notes |
 |---|---|---|---|
@@ -25,20 +25,20 @@ Cognito user-pool client secrets are managed by Cognito itself and rotated autom
 The procedure is identical for `ANTHROPIC_API_KEY`, `PADDLE_SECRET_KEY`, `PADDLE_WEBHOOK_SECRET` — only the provider console differs.
 
 1. **Generate the new secret at the provider.**
-   - Anthropic: console.anthropic.com → Settings → API Keys → Create Key. Name it with the rotation date (e.g. `rivalscan-2026-q2`).
+   - Anthropic: console.anthropic.com → Settings → API Keys → Create Key. Name it with the rotation date (e.g. `kironyx-2026-q2`).
    - Paddle: vendors.paddle.com → Developer Tools → Authentication. Generate new key.
    - **Don't revoke the old key yet** — there's a brief window where both must be valid.
 
 2. **Update AWS Secrets Manager.**
 
    ```bash
-   aws secretsmanager get-secret-value --secret-id rivalscan/api-keys --query SecretString --output text > /tmp/secret.json
+   aws secretsmanager get-secret-value --secret-id kironyx/api-keys --query SecretString --output text > /tmp/secret.json
    # Edit /tmp/secret.json — update the relevant key with the new value
-   aws secretsmanager update-secret --secret-id rivalscan/api-keys --secret-string file:///tmp/secret.json
+   aws secretsmanager update-secret --secret-id kironyx/api-keys --secret-string file:///tmp/secret.json
    rm /tmp/secret.json    # IMPORTANT: never leave plaintext secrets on disk
    ```
 
-   Or via console: AWS Console → Secrets Manager → `rivalscan/api-keys` → Retrieve secret value → Edit.
+   Or via console: AWS Console → Secrets Manager → `kironyx/api-keys` → Retrieve secret value → Edit.
 
 3. **Wait 5 minutes.** Lambda's in-memory cache (`Backend/src/shared/services/secrets.ts`, 5-minute TTL) flushes lazily. New invocations will pick up the new value automatically. No redeploy needed.
 
@@ -62,8 +62,8 @@ If you suspect a secret is leaked (committed to git, posted in a screenshot, cop
 3. **Audit usage.** For Anthropic: check the [usage dashboard](https://console.anthropic.com/settings/usage) for spikes. For Paddle: check the [transactions log](https://vendors.paddle.com/transactions). For both, take the timestamp of the suspected leak and look for unusual API calls in the 24 hours after.
 4. **CloudTrail check.** Search the audit-logs bucket (Phase 9b) for any unusual access patterns to Secrets Manager during the leak window:
    ```
-   aws s3 ls s3://rivalscan-dev-audit-logs/AWSLogs/<account>/CloudTrail/
-   # download the day's logs, grep for GetSecretValue against rivalscan/api-keys
+   aws s3 ls s3://kironyx-dev-audit-logs/AWSLogs/<account>/CloudTrail/
+   # download the day's logs, grep for GetSecretValue against kironyx/api-keys
    ```
 5. **Communications.** If customer data was at risk via the leak, follow [INCIDENT_RUNBOOK.md](INCIDENT_RUNBOOK.md) → "Customer data breach" playbook. GDPR Art. 33 requires notification within 72 hours of becoming aware.
 6. **Post-mortem.** Write up how it leaked + the prevention plan within 7 days. File under `incidents/YYYY-MM-DD-secret-leak.md`.

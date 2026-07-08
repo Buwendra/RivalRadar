@@ -1,4 +1,4 @@
-# RivalScan — Security Questionnaire (Pre-filled)
+# Kironyx — Security Questionnaire (Pre-filled)
 
 > Pre-filled answers to standard B2B procurement security questions. Format mirrors **SIG Lite** (Standardized Information Gathering, lightweight). Easy to convert to Vanta / SecureFrame / SecurityPal / customer-bespoke questionnaires.
 >
@@ -8,7 +8,7 @@
 
 | Field | Value |
 |---|---|
-| Vendor name | RivalScan |
+| Vendor name | Kironyx |
 | Service description | AI-powered competitive-intelligence monitoring for SMBs |
 | Hosting region | AWS us-east-1 (N. Virginia) |
 | Architecture | Single-tenant (per-workspace) on shared serverless infrastructure |
@@ -121,7 +121,7 @@
 |---|---|---|---|
 | J.1 | Is the service GDPR-compliant? | **Yes** | Art. 15+20 (export) and Art. 17 (deletion) shipped. Art. 18 (restriction-of-processing self-suspend) shipped Phase 9a. Sub-processor disclosure at `/legal/sub-processors`. |
 | J.2 | Is the service CCPA-compliant? | **Yes** | §1798.110 right-to-know via `/users/me/export`. §1798.105 right-to-delete via `/users/me`. Privacy Policy includes notice at collection. |
-| J.3 | Is HIPAA covered? | **No (out of scope)** | RivalScan does not process protected health information (PHI). HIPAA BAA not offered. |
+| J.3 | Is HIPAA covered? | **No (out of scope)** | Kironyx does not process protected health information (PHI). HIPAA BAA not offered. |
 | J.4 | Is PCI DSS applicable? | **No** | Paddle is the merchant of record; we never see cardholder data. Our scope is limited to receiving billing event webhooks. |
 | J.5 | Is SOC 2 attested? | **In progress** | Phase 10a (this kit) prepares the evidence base. Type 1 audit firm engagement deferred until first enterprise pull. |
 
@@ -153,7 +153,7 @@
 | M.2 | What are the documented RTO and RPO? | **RTO 4 hours, RPO 1 hour (target)** | Targets only — not yet validated in a drill. CDK redeploy + DynamoDB PITR support these targets technically. |
 | M.3 | Is the service available during single-AZ failure? | **Yes** | All managed services (Lambda, DynamoDB, S3, API Gateway, Cognito, SES) are multi-AZ by AWS default in us-east-1. |
 | M.4 | Is there a multi-region failover? | **No** | Single-region deployment in us-east-1. Cross-region failover roadmap. |
-| M.5 | Is there a public status page? | **Yes** | Phase 8c shipped at `https://status.rivalscan.com` (S3 + CloudFront + Lambda auto-updater driven by CloudWatch alarms). |
+| M.5 | Is there a public status page? | **Yes** | Phase 8c shipped at `https://status.kironyx.com` (S3 + CloudFront + Lambda auto-updater driven by CloudWatch alarms). |
 
 ## N. Application & Interface Security
 
@@ -170,7 +170,7 @@
 |---|---|---|---|
 | O.1 | Is vulnerability scanning performed? | **Yes (dependencies)** | Phase 9b: weekly `npm audit --audit-level=high` for both Backend + Frontend; Dependabot weekly grouped PRs. CI fails on high/critical. |
 | O.2 | Is penetration testing performed? | **Roadmap** | External pen test scheduled for Phase 7.6 (`COMPLIANCE_ROADMAP.md`); typically a SOC 2 Type 2 prerequisite. |
-| O.3 | Is there a vulnerability disclosure policy? | **Yes** | `https://app.rivalscan.com/.well-known/security.txt` per RFC 9116. Inbound `security@` mailbox monitored. |
+| O.3 | Is there a vulnerability disclosure policy? | **Yes** | `https://app.kironyx.com/.well-known/security.txt` per RFC 9116. Inbound `security@` mailbox monitored. |
 | O.4 | Is a bug bounty program offered? | **No** | Disclosure via `security@` is the channel. Bug bounty deferred until customer base + budget warrant. |
 | O.5 | Is threat modeling performed for new features? | **Partial** | Each major phase plan in `PRODUCT_GAPS_ROADMAP.md` and `COMPLIANCE_ROADMAP.md` includes a "Risks" section. Formal STRIDE / PASTA: roadmap. |
 

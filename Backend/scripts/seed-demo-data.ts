@@ -14,8 +14,8 @@
  *
  * Usage (from Backend/):
  *   set -a && source .env && set +a
- *   TABLE_NAME=RivalScan-dev-Database-Table \
- *   RESEARCH_PIPELINE_ARN=arn:aws:states:us-east-1:076561717141:stateMachine:RivalScan-dev-Pipeline-ResearchPipeline \
+ *   TABLE_NAME=Kironyx-dev-Database-Table \
+ *   RESEARCH_PIPELINE_ARN=arn:aws:states:us-east-1:076561717141:stateMachine:Kironyx-dev-Pipeline-ResearchPipeline \
  *   npx ts-node scripts/seed-demo-data.ts
  *
  * Idempotent on re-run: skips competitors that already exist by name and
@@ -83,8 +83,8 @@ const COMPETITORS_TO_ADD: CompetitorSeed[] = [
 ];
 
 const SELF_BRAND: CompetitorSeed = {
-  name: 'RivalScan',
-  url: 'https://rivalscan.com',
+  name: 'Kironyx',
+  url: 'https://kironyx.com',
   pagesToTrack: ['homepage'],
   targetKind: 'self',
 };

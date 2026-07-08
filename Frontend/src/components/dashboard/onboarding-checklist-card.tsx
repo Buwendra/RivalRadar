@@ -32,7 +32,7 @@ export function OnboardingChecklistCard({ onAddCompetitor }: OnboardingChecklist
           <div>
             <CardTitle className="flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-primary" />
-              Get the most out of RivalScan
+              Get the most out of Kironyx
             </CardTitle>
             <CardDescription className="mt-1">
               {doneCount} of {tasks.length} done. Each step compounds the value

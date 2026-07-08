@@ -10,7 +10,7 @@ import { usersApi } from "@/lib/api/users";
 import { ApiClientError } from "@/lib/api/client";
 import { TOS_VERSION, PRIVACY_VERSION } from "@/lib/utils/constants";
 
-const DISMISS_KEY = "rs_reconsent_dismissed";
+const DISMISS_KEY = "kx_reconsent_dismissed";
 
 /**
  * Phase 9a — re-consent banner. When the published TOS_VERSION /
@@ -95,7 +95,7 @@ export function ReconsentBanner() {
             .
           </p>
           <p className="text-xs text-amber-200/80">
-            Please review and confirm to keep using RivalScan.
+            Please review and confirm to keep using Kironyx.
           </p>
         </div>
         <div className="flex flex-shrink-0 items-center gap-2">

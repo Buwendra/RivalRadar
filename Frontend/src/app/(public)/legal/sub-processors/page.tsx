@@ -1,5 +1,5 @@
 export const metadata = {
-  title: "Sub-processors — RivalScan",
+  title: "Sub-processors — Kironyx",
 };
 
 export default function SubProcessorsPage() {
@@ -9,7 +9,7 @@ export default function SubProcessorsPage() {
       <p className="text-xs text-muted-foreground">Last updated: 2026-04-30</p>
 
       <p>
-        RivalScan engages the third-party sub-processors below to provide our
+        Kironyx engages the third-party sub-processors below to provide our
         service. This list is published in fulfillment of GDPR Art. 28(2)
         transparency requirements and equivalent obligations under other
         privacy regimes.
@@ -128,7 +128,7 @@ export default function SubProcessorsPage() {
         sub-processors at least 30 days before that sub-processor begins
         processing personal data, with an opportunity to object. To subscribe
         to change notifications, email{" "}
-        <a href="mailto:privacy@rivalscan.com">privacy@rivalscan.com</a> with
+        <a href="mailto:privacy@kironyx.com">privacy@kironyx.com</a> with
         subject &quot;sub-processor updates&quot;.
       </p>
 
@@ -137,7 +137,7 @@ export default function SubProcessorsPage() {
         For sub-processor due-diligence requests, copies of executed
         Standard Contractual Clauses, or specific compliance documentation
         beyond what&apos;s listed above, contact{" "}
-        <a href="mailto:legal@rivalscan.com">legal@rivalscan.com</a>.
+        <a href="mailto:legal@kironyx.com">legal@kironyx.com</a>.
       </p>
     </>
   );

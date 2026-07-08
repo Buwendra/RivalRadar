@@ -178,7 +178,7 @@ async function generateAndSendForUser(
 
     const exportId = generateId();
     const ymd = now.toISOString().slice(0, 10);
-    const filename = `rivalscan-monthly-${ymd}.pdf`;
+    const filename = `kironyx-monthly-${ymd}.pdf`;
     const key = `exports/USER#${user.userId}/scheduled-${month}-${exportId}.pdf`;
 
     await s3.send(
@@ -207,7 +207,7 @@ async function generateAndSendForUser(
     const html = `
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff;">
         <div style="background: #1e3a5f; padding: 24px 32px; border-radius: 8px 8px 0 0;">
-          <h1 style="color: white; margin: 0; font-size: 20px;">RivalScan</h1>
+          <h1 style="color: white; margin: 0; font-size: 20px;">Kironyx</h1>
           <p style="color: #93c5fd; margin: 4px 0 0;">Your monthly executive briefing — ${monthLabel}</p>
         </div>
         <div style="padding: 24px 32px;">

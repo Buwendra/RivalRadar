@@ -98,13 +98,13 @@ export const handler = apiHandler(async (event) => {
   try {
     await sendEmail(
       body.email,
-      `${ctx.callerEmail} invited you to ${ctx.workspaceName} on RivalScan`,
+      `${ctx.callerEmail} invited you to ${ctx.workspaceName} on Kironyx`,
       `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 0 auto;">
           <div style="padding: 24px 28px;">
             <p>Hi,</p>
             <p><strong>${ctx.callerEmail}</strong> invited you to join the
-            <strong>${ctx.workspaceName}</strong> workspace on RivalScan —
+            <strong>${ctx.workspaceName}</strong> workspace on Kironyx —
             a competitive intelligence platform that tracks your competitors
             and surfaces strategic insights every week.</p>
             <div style="text-align: center; margin: 24px 0;">
@@ -114,7 +114,7 @@ export const handler = apiHandler(async (event) => {
             </div>
             <p style="color: #6b7280; font-size: 12px;">
               The invitation expires in ${TTL_DAYS} days. If you don't have a
-              RivalScan account yet, you'll be prompted to sign up first.
+              Kironyx account yet, you'll be prompted to sign up first.
             </p>
           </div>
         </div>

@@ -30,7 +30,7 @@ The plans below are designed to be executed in sequence; each one cites the exis
 ## Issue 1 — Sub-processor notification subscription endpoint 🔴
 
 ### What it is
-GDPR Art. 28(2) requires the data controller (RivalScan) to give customers a way to **be notified** when a sub-processor changes, with a **30-day objection window** before the change takes effect. The current `/legal/sub-processors` page lists the four sub-processors (AWS, Anthropic, Paddle, GitHub) in a static table — there's no mechanism for a customer to subscribe to updates.
+GDPR Art. 28(2) requires the data controller (Kironyx) to give customers a way to **be notified** when a sub-processor changes, with a **30-day objection window** before the change takes effect. The current `/legal/sub-processors` page lists the four sub-processors (AWS, Anthropic, Paddle, GitHub) in a static table — there's no mechanism for a customer to subscribe to updates.
 
 ### Why it blocks launch
 Without this, any B2B prospect doing diligence will flag it; some won't sign without it. It's a hard pre-condition for accepting EU customers.
@@ -95,7 +95,7 @@ No state machine needed — this fires once when you make a sub-processor change
 ## Issue 2 — Cookie / storage notice banner 🔴
 
 ### What it is
-ePrivacy Directive Recital 25 (the EU "cookie law") requires sites to **disclose** storage and cookie use, even when consent isn't needed (functional/auth tokens are exempt from consent under Recital 25, but disclosure is still mandatory). RivalScan uses `localStorage` extensively (`rs_id_token`, `rs_access_token`, etc.) and has no disclosure banner today.
+ePrivacy Directive Recital 25 (the EU "cookie law") requires sites to **disclose** storage and cookie use, even when consent isn't needed (functional/auth tokens are exempt from consent under Recital 25, but disclosure is still mandatory). Kironyx uses `localStorage` extensively (`rs_id_token`, `rs_access_token`, etc.) and has no disclosure banner today.
 
 ### Why it blocks launch
 EU regulators have issued fines for missing cookie banners even when no marketing cookies are set. It's a free-tier compliance item with no real downside to shipping.
@@ -130,7 +130,7 @@ export function CookieNoticeBanner() {
   return (
     <div className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-2xl rounded-md border border-brand-700 bg-brand-900/95 p-4 shadow-lg backdrop-blur">
       <p className="text-sm">
-        RivalScan uses browser storage (localStorage) to keep you signed in.
+        Kironyx uses browser storage (localStorage) to keep you signed in.
         No tracking cookies; no third-party analytics. See our{" "}
         <Link href="/legal/privacy" className="text-primary hover:underline">
           Privacy Policy
@@ -400,7 +400,7 @@ Deploy. Result: parent stack has all routes (with RETAIN). Nested stacks exist b
 For each route, the manual flow is:
 1. Remove the route from the parent stack's `addRoute()` calls. It disappears from CFN's view but `RETAIN` keeps the physical resource alive in AWS.
 2. Add the route's definition to the appropriate nested stack with a known logical ID.
-3. Run `cdk import RivalScan-dev-Api-CoreRoutes` (interactive). CDK detects the new logical ID, asks for the existing physical resource ID, and imports it.
+3. Run `cdk import Kironyx-dev-Api-CoreRoutes` (interactive). CDK detects the new logical ID, asks for the existing physical resource ID, and imports it.
 4. Verify no functional change at the live API.
 5. Repeat for the next batch.
 
@@ -539,7 +539,7 @@ The window self-rotates per-minute; DDB TTL handles cleanup.
 ## Issue 9 — AI audit log completeness 🟡
 
 ### What it is
-COMPLIANCE Phase 1.5 mandates: every Claude response stored with timestamp, competitor, user for **defamation defense**. Today's `ai_call_completed` log line has `aiCallId`, `promptHash`, `costUsd` — cost-centric. **The actual response text isn't logged anywhere**, which means if someone claims RivalScan's AI defamed them, there's no forensic record of what was generated.
+COMPLIANCE Phase 1.5 mandates: every Claude response stored with timestamp, competitor, user for **defamation defense**. Today's `ai_call_completed` log line has `aiCallId`, `promptHash`, `costUsd` — cost-centric. **The actual response text isn't logged anywhere**, which means if someone claims Kironyx's AI defamed them, there's no forensic record of what was generated.
 
 ### Why it matters
 This is real legal exposure once the product has paying users. The COMPLIANCE roadmap calls this out explicitly. Untreated, the first defamation claim is undefended.

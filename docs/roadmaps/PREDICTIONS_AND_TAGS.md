@@ -76,7 +76,7 @@ For each prediction: **what it answers → inputs → output shape → user valu
 | What it answers | "What are they about to do next?" |
 | Inputs | Current ResearchFinding + the last 2-3 findings (trend) + competitor's stated strategy if captured |
 | Output | Top 3 predictions, each `{ move, probability: 0-1, reasoning, timeHorizon: '30d' \| '60d' \| '90d' }` |
-| User value | The highest wow-factor feature. Makes RivalScan feel clairvoyant. Directly answers the founder's "what's coming?" question. |
+| User value | The highest wow-factor feature. Makes Kironyx feel clairvoyant. Directly answers the founder's "what's coming?" question. |
 | Feasibility | Needs dedicated Sonnet call (adds ~$0.02/competitor/research). Structured JSON output. Can skip first-run competitors. |
 
 #### A4. Pricing change probability

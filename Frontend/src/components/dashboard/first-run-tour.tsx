@@ -5,7 +5,7 @@ import { X, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-const STORAGE_KEY = "rs_tour_dismissed";
+const STORAGE_KEY = "kx_tour_dismissed";
 
 interface TourStep {
   /** Optional — if absent, step is centered (used for welcome). */
@@ -16,7 +16,7 @@ interface TourStep {
 
 const STEPS: TourStep[] = [
   {
-    title: "Welcome to RivalScan",
+    title: "Welcome to Kironyx",
     body:
       "Quick 30-second tour of what's on your dashboard. You can skip any time.",
   },

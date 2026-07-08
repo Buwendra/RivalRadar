@@ -45,14 +45,14 @@ function authHeaders(requireAuth: boolean): Record<string, string> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (!requireAuth) return headers;
 
-  const token = localStorage.getItem("rs_id_token");
+  const token = localStorage.getItem("kx_id_token");
   if (!token) {
     redirectToSignIn();
     throw new ApiClientError("UNAUTHENTICATED", 401, "Not authenticated");
   }
   headers["Authorization"] = `Bearer ${token}`;
 
-  const workspaceId = localStorage.getItem("rs_current_workspace_id");
+  const workspaceId = localStorage.getItem("kx_current_workspace_id");
   if (workspaceId) {
     headers["X-Workspace-Id"] = workspaceId;
   }

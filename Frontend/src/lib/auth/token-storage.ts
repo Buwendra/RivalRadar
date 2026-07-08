@@ -1,8 +1,8 @@
 const KEYS = {
-  ACCESS_TOKEN: "rs_access_token",
-  ID_TOKEN: "rs_id_token",
-  REFRESH_TOKEN: "rs_refresh_token",
-  EXPIRES_AT: "rs_expires_at",
+  ACCESS_TOKEN: "kx_access_token",
+  ID_TOKEN: "kx_id_token",
+  REFRESH_TOKEN: "kx_refresh_token",
+  EXPIRES_AT: "kx_expires_at",
 } as const;
 
 export interface AuthTokens {

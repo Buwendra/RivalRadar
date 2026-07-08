@@ -2,7 +2,7 @@
  * One-shot utility: delete a specific ResearchFinding by PK+SK.
  *
  * Usage:
- *   TABLE_NAME=RivalScan-dev-Database-Table npx ts-node scripts/delete-research.ts \
+ *   TABLE_NAME=Kironyx-dev-Database-Table npx ts-node scripts/delete-research.ts \
  *     COMP#<competitorId> RESEARCH#<timestamp>
  *
  * Or, with --latest to delete the most recent finding for a competitor name:

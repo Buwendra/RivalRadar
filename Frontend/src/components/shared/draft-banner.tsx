@@ -17,8 +17,8 @@ export function DraftBanner({ kind }: { kind: "policy" | "agreement" }) {
           below reflect our current operating commitments, but the document
           will be revised before public launch. For any pre-launch questions,
           contact{" "}
-          <a href="mailto:legal@rivalscan.com" className="underline">
-            legal@rivalscan.com
+          <a href="mailto:legal@kironyx.com" className="underline">
+            legal@kironyx.com
           </a>
           .
         </p>

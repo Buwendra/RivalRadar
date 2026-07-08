@@ -12,7 +12,7 @@
  * the digest because audio generation failed.
  */
 
-import { getSecret } from './secrets';
+import { getSecret, API_SECRETS_PATH } from './secrets';
 import { logger } from '../utils/logger';
 
 // "Rachel" — ElevenLabs default warm female voice. Stable choice for a
@@ -38,11 +38,11 @@ export async function generateAudioBriefing(
   const trimmed = text.trim();
   if (!trimmed) return null;
 
-  const secrets = await getSecret('rivalscan/api-keys');
+  const secrets = await getSecret(API_SECRETS_PATH);
   const apiKey = secrets.ELEVENLABS_API_KEY;
   if (!apiKey) {
     logger.warn('elevenlabs_key_missing', {
-      message: 'ELEVENLABS_API_KEY absent from rivalscan/api-keys — skipping audio briefing',
+      message: 'ELEVENLABS_API_KEY absent from kironyx/api-keys — skipping audio briefing',
     });
     return null;
   }

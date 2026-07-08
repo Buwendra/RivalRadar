@@ -22,7 +22,7 @@ export function HeroSection() {
         </h1>
 
         <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground sm:text-xl">
-          Stop manually checking competitor websites. RivalScan monitors
+          Stop manually checking competitor websites. Kironyx monitors
           your competitors daily with AI, then delivers strategic briefs
           so you can act — not just observe.
         </p>

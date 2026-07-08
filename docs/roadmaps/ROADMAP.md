@@ -519,7 +519,7 @@ Each phase follows the same template:
 
 1. Make the code changes.
 2. `cd Backend && npx tsc --noEmit` and `cd Frontend && npx tsc --noEmit && npm run lint`.
-3. `cd Backend && npx cdk deploy RivalScan-dev-Pipeline RivalScan-dev-Api` (or `RivalScan-dev-Pipeline` alone if no API signature changes).
+3. `cd Backend && npx cdk deploy Kironyx-dev-Pipeline Kironyx-dev-Api` (or `Kironyx-dev-Pipeline` alone if no API signature changes).
 4. Commit + push → Amplify auto-builds frontend.
 5. E2E verify per phase's Verification section.
 6. Check CloudWatch Logs for the DeepResearch Lambda and confirm no new errors.

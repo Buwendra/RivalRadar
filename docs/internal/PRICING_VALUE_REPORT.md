@@ -1,4 +1,4 @@
-# RivalScan — Pricing Structure & Component Value Report
+# Kironyx — Pricing Structure & Component Value Report
 
 > **Audience:** Internal product / strategy.
 > **Scope:** How the tier structure works and what value each product component delivers to the user.
@@ -13,7 +13,7 @@
 
 ## 1. Overview
 
-RivalScan sells a three-tier ladder — **Scout → Strategist → Command** — where each tier is a strict
+Kironyx sells a three-tier ladder — **Scout → Strategist → Command** — where each tier is a strict
 superset of the one below it: more capacity, plus a few exclusive capabilities at the top.
 
 Two independent mechanisms define the structure, and they are enforced separately in code:
