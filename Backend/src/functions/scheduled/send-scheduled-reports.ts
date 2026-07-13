@@ -223,6 +223,10 @@ async function generateAndSendForUser(
             ${topChanges.length} change${topChanges.length === 1 ? '' : 's'} this month ·
             ${recommendations.length} active recommendation${recommendations.length === 1 ? '' : 's'}
           </p>
+          <p style="color: #6b7280; font-size: 13px;">
+            For the other side of the picture — how the market is covering your own brand — open
+            <a href="${process.env.FRONTEND_URL}/dashboard/your-brand" style="color: #047857;">Brand Pulse</a>.
+          </p>
           <p style="color: #9ca3af; font-size: 12px; margin-top: 24px;">
             The download link expires in 30 days. You can disable monthly briefings any time in your dashboard settings.
           </p>

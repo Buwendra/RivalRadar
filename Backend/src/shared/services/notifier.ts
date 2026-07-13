@@ -140,6 +140,12 @@ export async function dispatchCriticalAlert(
         <p style="margin-top: 20px;">
           <a href="${dashboardUrl}" style="background: #2563eb; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none;">View on Kironyx</a>
         </p>
+        <p style="margin-top: 16px; font-size: 12px; color: #6b7280;">
+          See where you stand: <a href="${dashboardUrl}/your-brand" style="color: #047857;">Brand Pulse</a>
+        </p>
+        <p style="font-size: 11px; color: #9ca3af;">
+          AI-generated analysis. May contain errors. For internal evaluation only — not legal, financial, or investment advice.
+        </p>
       </div>
     `;
     const r = await sendEmailNotification({ to: input.user.email, subject, html });

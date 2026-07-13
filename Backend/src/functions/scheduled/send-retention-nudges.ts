@@ -142,7 +142,7 @@ async function buildAndSendNudge(
       </div>
       <div style="padding: 24px 28px;">
         <p>Hi ${candidate.name},</p>
-        <p>It's been ${dayLabel} since you checked in. Your competitors haven't been resting${changeCount > 0 ? ` — we've detected <strong>${changeCount} change${changeCount === 1 ? '' : 's'}</strong> in your portfolio` : ''}.</p>
+        <p>It's been ${dayLabel} since you checked in. Your market hasn't stood still${changeCount > 0 ? ` — we've detected <strong>${changeCount} change${changeCount === 1 ? '' : 's'}</strong> across the companies you track` : ''}. See what moved, and where you now stand.</p>
         <div style="text-align: center; margin: 24px 0;">
           <a href="${dashboardUrl}" style="background: #2563eb; color: white; padding: 12px 28px; border-radius: 6px; text-decoration: none; font-weight: 500;">
             See what's new

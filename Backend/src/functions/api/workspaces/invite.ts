@@ -105,8 +105,9 @@ export const handler = apiHandler(async (event) => {
             <p>Hi,</p>
             <p><strong>${ctx.callerEmail}</strong> invited you to join the
             <strong>${ctx.workspaceName}</strong> workspace on Kironyx —
-            a competitive intelligence platform that tracks your competitors
-            and surfaces strategic insights every week.</p>
+            the platform that runs the same AI research on your competitors
+            and your own brand, and shows the team side by side where you
+            stand each week.</p>
             <div style="text-align: center; margin: 24px 0;">
               <a href="${acceptUrl}" style="background: #2563eb; color: white; padding: 12px 28px; border-radius: 6px; text-decoration: none; font-weight: 500;">
                 Accept invitation
