@@ -187,8 +187,8 @@ function MatrixView({ router }: { router: ReturnType<typeof useRouter> }) {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Compare"
-        description="All competitors side by side — threat, momentum, derived state. Click a row for the full profile."
+        title="How You Stack Up"
+        description="You and every competitor side by side — threat, momentum, posture. Click a row for the full profile."
       >
         <Button
           variant="outline"
@@ -404,12 +404,12 @@ function EmptyState({ hasAnyCompetitors }: { hasAnyCompetitors: boolean }) {
       <GitCompare className="h-10 w-10 text-muted-foreground" />
       <div>
         <h3 className="text-lg font-semibold">
-          {hasAnyCompetitors ? "No matches" : "Add competitors to compare"}
+          {hasAnyCompetitors ? "No matches" : "Add competitors to see how you stack up"}
         </h3>
         <p className="mt-1 max-w-md text-sm text-muted-foreground">
           {hasAnyCompetitors
             ? "Try clearing the filter to see your full set."
-            : "Side-by-side analysis is the fastest way to spot the rival you should pay attention to. Add at least one competitor to get started."}
+            : "Side-by-side analysis is the fastest way to spot the rival you should pay attention to — and the gap between you. Add at least one competitor to get started."}
         </p>
       </div>
       {!hasAnyCompetitors && (
@@ -425,18 +425,18 @@ function UpgradeGate() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Compare"
-        description="Cross-competitor side-by-side analysis."
+        title="How You Stack Up"
+        description="Side-by-side analysis of you and your full competitive set."
       />
       <div className="flex flex-col items-center justify-center gap-4 rounded-md border border-brand-700/60 bg-brand-900 px-6 py-16 text-center">
         <Lock className="h-10 w-10 text-muted-foreground" />
         <div>
           <h3 className="text-lg font-semibold">Strategist plan required</h3>
           <p className="mt-2 max-w-md text-sm text-muted-foreground">
-            The comparison matrix unlocks at Strategist. See every competitor
-            ranked side-by-side with their threat, momentum, funding state,
-            hiring posture, and strategic direction — with one-click CSV
-            export.
+            The comparison matrix unlocks at Strategist. See yourself in the
+            matrix: every competitor ranked side by side with you — threat,
+            momentum, funding state, hiring posture, and strategic direction —
+            with one-click CSV export.
           </p>
         </div>
         <Button asChild>

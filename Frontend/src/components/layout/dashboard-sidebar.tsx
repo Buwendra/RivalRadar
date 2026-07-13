@@ -71,18 +71,19 @@ export function DashboardSidebar({ onAddCompetitor }: DashboardSidebarProps) {
   }
   const navItems: NavItem[] = [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-    // Phase 23 — "Your Brand" sits between Dashboard and the rest because
-    // it's the workspace's home for self-monitoring; gated by brandPulse.
+    // "Your Brand" and "How You Stack Up" sit directly under Dashboard: the
+    // self-brand pillar and the comparative view are co-equal with the
+    // competitor list below. Your Brand is gated by brandPulse.
     ...(brandPulseEnabled
       ? [{ label: "Your Brand", href: "/dashboard/your-brand", icon: Sparkles }]
       : []),
-    { label: "Recommendations", href: "/dashboard/recommendations", icon: Lightbulb },
     {
-      label: "Compare",
+      label: "How You Stack Up",
       href: "/dashboard/compare",
       icon: GitCompare,
-      // Phase 24 — Share of Voice nests under Compare. Sub-item is gated on
-      // brandPulse since SoV is part of the comparative-analytics surface.
+      // Phase 24 — Share of Voice nests under the comparative view. Sub-item
+      // is gated on brandPulse since SoV is part of the comparative-analytics
+      // surface.
       subItems: brandPulseEnabled
         ? [
             {
@@ -93,6 +94,7 @@ export function DashboardSidebar({ onAddCompetitor }: DashboardSidebarProps) {
           ]
         : undefined,
     },
+    { label: "Recommendations", href: "/dashboard/recommendations", icon: Lightbulb },
     { label: "Methodology", href: "/dashboard/methodology", icon: BookOpen },
     { label: "Settings", href: "/dashboard/settings", icon: Settings },
   ];
@@ -216,7 +218,7 @@ export function DashboardSidebar({ onAddCompetitor }: DashboardSidebarProps) {
           </div>
         ) : (
           <p className="px-3 py-2 text-xs text-muted-foreground">
-            No competitors yet. Add one to get started.
+            No competitors yet. Add one to see how you stack up.
           </p>
         )}
       </ScrollArea>

@@ -76,7 +76,7 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <PageHeader
         title="Dashboard"
-        description="Your competitive intelligence feed"
+        description="Competitor moves, your position, and the gap between them"
       >
         <div className="flex items-center gap-2">
           <ExportButton />
@@ -97,6 +97,10 @@ export default function DashboardPage() {
 
       <ActiveResearchPanel />
 
+      {/* Mirror first, field second: your own brand's health reads before
+          the ranked competitor strip. */}
+      {brandPulseEnabled && <BrandHealthScoreCard size="sm" />}
+
       <div data-tour="competitor-strip">
         <CompetitorRankedStrip competitors={competitors} />
       </div>
@@ -104,8 +108,6 @@ export default function DashboardPage() {
       <div data-tour="recommendations">
         <RecommendationsCard />
       </div>
-
-      {brandPulseEnabled && <BrandHealthScoreCard size="sm" />}
 
       <div data-tour="stats-cards">
         <StatsCards
