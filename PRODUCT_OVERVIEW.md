@@ -2,11 +2,12 @@
 
 ## At a glance
 
-Kironyx is competitive intelligence for teams that don't have a competitive-intelligence
-analyst. Tell us who your competitors are; we research the open web every week, surface
-only what's actually changed and matters, and tell you what to do about it. The result
-is one Monday-morning briefing — sourced, scored, and short — that replaces a Sunday
-spent Googling competitors.
+Kironyx is competitive self-awareness for teams that don't have an analyst — competitive
+intelligence and brand monitoring in one engine. Tell us who your competitors are, and
+who *you* are; every week the same AI research runs on both, surfaces only what's
+actually changed and matters, and shows you where you stand. The result is one
+Monday-morning briefing — sourced, scored, side by side — that replaces a Sunday spent
+Googling competitors. Not a spy tool: a mirror.
 
 It's built for the gap between *free tools that drown you in noise* (Google Alerts, RSS)
 and *enterprise platforms that cost more than a junior salary* (Crayon and Klue typically
@@ -34,8 +35,14 @@ deal-breakers.
 what competitors are doing — works for a while, then doesn't, because nobody owns it, the
 searching is inconsistent, and the synthesis lives in one person's head.
 
-Kironyx exists to give SMB teams the *outcome* of an enterprise CI program — a weekly
-briefing with the things that matter — without the price tag or the headcount.
+**And even the tools that work are one-directional.** They tell you about *them*. A
+separate brand-monitoring tool tells you about *you*. Nobody puts both in the same table,
+so the question that actually matters — *where do we stand?* — never gets a direct
+answer.
+
+Kironyx exists to give SMB teams the *outcome* of an enterprise CI programme and a
+brand-monitoring programme in one — a weekly briefing with the things that matter, and
+where you stand on each — without the price tag or the headcount.
 
 ---
 
@@ -47,7 +54,8 @@ workspace usually serves more than one of them.
 **Founders and product leads at SaaS or tech companies.** You feel the market move and
 worry you don't know fast enough. You want to know when a competitor raises, ships, or
 repositions, and you want to know within days — not when a customer mentions it on a
-sales call. You don't have time to read fifty sources a week.
+sales call. You don't have time to read fifty sources a week — and when something does
+move, your first question is what it means for where you stand.
 
 **Marketing, PMM, and GTM leads operationalising competitive intel.** You need to brief
 the sales team weekly with real signal, not Slack scraps. You want exports, integrations,
@@ -58,7 +66,8 @@ one.
 **PR, comms, and brand leads.** You care less about what competitors are *building* and
 more about how the *market* is talking about your brand versus theirs. You want a
 sentiment trend, a share-of-voice number, and a PR-flavoured briefing of where the
-narrative is. Our Brand Pulse surface is built for you.
+narrative is. Brand Pulse — the self-brand half of the engine, included on every tier —
+is built for you.
 
 ---
 
@@ -71,7 +80,8 @@ funding amount, the investors, the headcount they'll likely hire, and a fast ass
 of what it means for your positioning. Kironyx surfaces the funding event, re-scores
 the competitor's threat level with reasoning written for your business context, and adds
 an evidence-backed prediction of the moves they'll likely make over the next 30, 60, and
-90 days.
+90 days. And because your own brand runs through the same engine, you can immediately
+check the other side of the story: has their raise dented your share of voice yet?
 
 **"Sales lost a deal to X — what's their pitch?"** Five minutes before the next prospect
 call, you want a one-page brief: positioning, recent product moves, current customers,
@@ -81,13 +91,14 @@ shareable as a 30-day public link, so a sales rep can open it without logging in
 
 **"Are we keeping up?"** Once you're tracking five or ten competitors, the question
 shifts from any one of them to the *portfolio*. Our comparator matrix lays them all out
-as rows — threat, momentum, stage, signal tags — so you can see at a glance who's
+as rows — you included, pinned at the top as the reference line — threat, momentum,
+stage, signal tags — so you can see at a glance who's
 accelerating, who's gone quiet, and who's repositioning. Share of Voice ranks whose
 narrative is dominating the news, product, funding, hiring, and social conversation —
 your brand included, ranked honestly.
 
-**"What's the market saying about us this quarter?"** Brand Pulse points the same
-research engine at your *own* brand, reframed as media intelligence. You get a coverage
+**"What's the market saying about us this quarter?"** Brand Pulse points the identical
+research engine at your *own* brand — the mirror half of the product. You get a coverage
 feed, a twelve-week sentiment trend, a 0–100 Brand Health Score with a confidence badge,
 and an opt-in PR-flavoured weekly briefing that contrasts your momentum against
 competitors' and suggests two or three narrative angles.
@@ -106,8 +117,8 @@ to a warehouse via the public `/v1` API. PDF and CSV exports cover everything in
 ## How it works, in 30 seconds
 
 1. **You tell us who your competitors are.** We'll suggest five to eight likely ones from
-   your company profile, and you can edit. You can also point us at your own brand if
-   you want Brand Pulse.
+   your company profile, and you can edit. Point us at your own brand too and it runs
+   through the identical pipeline, ranked honestly alongside them — that's Brand Pulse.
 2. **We research the open web with AI on a recurring cadence.** For each competitor we
    pull structured findings across five categories — news, product, funding, hiring,
    social — each with source citations, a sentiment tag, and a time-sensitivity tag.
@@ -188,18 +199,20 @@ before a call; onboarding a new AE to your competitive landscape.
 
 ### Comparator matrix
 
-A portfolio view of every competitor as a row, with threat, momentum, stage, and tags
-as columns. Sortable, filterable, exportable.
+The portfolio-level "where you stand vs. everyone" view: every competitor as a row, with
+your own brand pinned at the top as the reference line, and threat, momentum, stage, and
+tags as columns. Sortable, filterable, exportable.
 
 *When you'd reach for it:* anything that involves "the portfolio" — board updates,
 weekly internal reviews, deciding who to add or drop from active tracking.
 
 ### Brand Pulse
 
-The same research engine, pointed at your own brand and reframed as media intelligence
-("how is the market perceiving us?"). You get a coverage feed, a twelve-week sentiment
-time series, and a **Brand Health Score** — a 0–100 composite of sentiment, share of
-voice, and momentum, with a confidence badge keyed to mention volume.
+The same research engine, pointed at your own brand — because the sharpest competitive
+question isn't "what are they doing?" but "how do we stack up?". You get a coverage
+feed, a twelve-week sentiment time series, and a **Brand Health Score** — a 0–100
+composite of sentiment, share of voice, and momentum, with a confidence badge keyed to
+mention volume.
 
 *When you'd reach for it:* PR and comms reviews; quarterly brand health check-ins; tying
 the brand work back to a single number a CEO understands.
@@ -237,7 +250,7 @@ deal signals.
 - **Public API (`/v1`)** — X-API-Key read and write access, for syncing into a
   warehouse, building a custom dashboard, or wiring up automations.
 - **Scheduled reports** — automated monthly executive PDF, delivered on the 1st of every
-  month (Command tier).Wha
+  month (Command tier).
 
 ### Teams and roles
 
@@ -286,6 +299,11 @@ going to hire one in the next eighteen months.
 beats heroics: the system runs every week even when you're on holiday, sick, or in a
 quarter-end scramble.
 
+**vs. running a competitor tracker plus a separate brand-monitoring tool** — one engine,
+one feed, one digest. Your brand and your competitors are researched the same way and
+ranked in the same tables, so every insight arrives as a gap, not a headline: not
+"competitor X is up" but "competitor X is up and here's where that leaves you."
+
 ---
 
 ## What Kironyx isn't
@@ -327,8 +345,8 @@ seat / saved-view / API-key counts, custom recommendation focus areas (you name 
 three themes and the weekly recommendations bias toward them), and scheduled monthly
 executive PDF reports.
 
-Brand Pulse, predicted moves, battlecards, and onboarding suggestions are available on
-every tier.
+Brand Pulse is on every tier because self-awareness isn't an upsell — the comparison is
+the product. Predicted moves, battlecards, and onboarding suggestions are universal too.
 
 ---
 
