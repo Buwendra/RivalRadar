@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Cpu,
-  Clock,
+  Sparkles,
   FileText,
   BarChart3,
   Users,
@@ -13,19 +13,19 @@ const features = [
     icon: Cpu,
     title: "AI-Powered Analysis",
     description:
-      "Claude AI analyzes every change with structured insights — change type, significance score, strategic implications, and recommended actions.",
+      "Claude AI analyzes every change with structured insights — change type, significance score, strategic implications, and what the move means for your position, not just their headline.",
   },
   {
-    icon: Clock,
-    title: "Daily Monitoring",
+    icon: Sparkles,
+    title: "Your Brand, Same Engine",
     description:
-      "Automated daily scraping of competitor websites. No manual checking needed — we catch every pricing, feature, and messaging change.",
+      "Brand Pulse runs the identical deep research on you — coverage, sentiment, share of voice — on every plan, so every competitor insight arrives with “and here's where you stand.”",
   },
   {
     icon: FileText,
     title: "Weekly Strategic Briefs",
     description:
-      "Get a curated weekly email digest with the most important changes, trends, and AI-generated strategic recommendations.",
+      "Get a curated weekly digest of the moves that matter, with AI-generated strategic recommendations — plus an opt-in comparative brief on how you stack up against the field.",
   },
   {
     icon: BarChart3,
@@ -37,13 +37,13 @@ const features = [
     icon: Users,
     title: "Multi-Competitor Tracking",
     description:
-      "Monitor up to 25 competitors at once. Track pricing pages, feature pages, blogs, careers, and homepages for a complete picture.",
+      "Stay ahead of up to 25 competitors and see exactly where you stand against each — across news, product, funding, hiring, and social signals.",
   },
   {
     icon: Bell,
-    title: "Real-Time Alerts",
+    title: "Same-Day Alerts",
     description:
-      "Get instant email alerts when high-significance changes (7+) are detected. Never miss a competitor's major strategic move.",
+      "When research detects a high-significance change (7+), an email lands the day we find it — so you know immediately whether you're exposed.",
   },
 ];
 
@@ -56,7 +56,7 @@ export function FeaturesSection() {
             Everything you need to stay ahead
           </h2>
           <p className="mt-4 text-muted-foreground">
-            Enterprise-grade competitive intelligence at a price that makes sense for growing teams.
+            Competitive intelligence and brand monitoring in one engine, at a price that makes sense for growing teams.
           </p>
         </div>
 

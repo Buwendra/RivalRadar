@@ -11,20 +11,19 @@ export function HeroSection() {
       <div className="relative mx-auto max-w-4xl text-center">
         <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-sm text-primary">
           <Zap className="h-3.5 w-3.5" />
-          AI-Powered Competitive Intelligence
+          Competitive intelligence + brand monitoring in one
         </div>
 
         <h1 className="text-4xl font-bold leading-tight tracking-tight sm:text-5xl md:text-6xl">
-          Know what your competitors{" "}
-          <span className="text-primary">did this week</span>
+          Know what your competitors did this week
           <br />
-          — automatically
+          — <span className="text-primary">and exactly where you stand</span>
         </h1>
 
         <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground sm:text-xl">
-          Stop manually checking competitor websites. Kironyx monitors
-          your competitors daily with AI, then delivers strategic briefs
-          so you can act — not just observe.
+          Stop manually checking competitor websites. Kironyx runs the same
+          AI deep research on your competitors and on your own brand, then
+          shows you the gap — so you act on where you stand, not on guesses.
         </p>
 
         <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">

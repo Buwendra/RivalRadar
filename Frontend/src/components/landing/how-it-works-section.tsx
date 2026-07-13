@@ -3,21 +3,21 @@ import { Globe, Cpu, Mail } from "lucide-react";
 const steps = [
   {
     icon: Globe,
-    title: "1. Add Competitor URLs",
+    title: "1. Add Your Competitors — and Yourself",
     description:
-      "Enter your competitor websites and choose which pages to monitor — pricing, features, blog, careers, or homepage.",
+      "Enter your competitor websites and your own. Your brand runs through the same research engine, so every insight arrives with a benchmark.",
   },
   {
     icon: Cpu,
-    title: "2. AI Monitors Daily",
+    title: "2. AI Researches Everyone Weekly",
     description:
-      "Our AI scrapes your competitors every day, detects changes, and analyzes their strategic significance on a 1-10 scale.",
+      "Claude-powered deep research scans the live web for each competitor — and for your own brand — every week or on demand, scoring each finding 1-10 for strategic significance.",
   },
   {
     icon: Mail,
-    title: "3. Get Strategic Briefs",
+    title: "3. See What Moved — and the Gap",
     description:
-      "Receive weekly intelligence digests with actionable insights, or instant alerts when high-significance changes are detected.",
+      "A weekly brief of what changed and where you stand, plus same-day email alerts when research surfaces a high-significance move.",
   },
 ];
 

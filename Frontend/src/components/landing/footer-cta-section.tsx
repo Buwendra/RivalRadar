@@ -7,11 +7,11 @@ export function FooterCTASection() {
     <section className="px-4 py-20 sm:px-6">
       <div className="mx-auto max-w-4xl rounded-2xl border border-primary/20 bg-gradient-to-b from-primary/10 to-transparent p-12 text-center">
         <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-          Stop guessing what your competitors are doing
+          Stop guessing — about them, or about yourself
         </h2>
         <p className="mx-auto mt-4 max-w-xl text-muted-foreground">
-          Join hundreds of founders and marketing leaders who stay ahead with
-          AI-powered competitive intelligence. Setup takes 2 minutes.
+          Join hundreds of founders and marketing leaders who track their
+          competitors and their own brand side by side. Setup takes 2 minutes.
         </p>
         <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
           <Button

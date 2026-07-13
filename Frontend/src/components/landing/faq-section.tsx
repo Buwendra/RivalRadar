@@ -12,6 +12,11 @@ const faqs = [
       "Kironyx runs Claude-powered deep web research on each competitor, searching the live web across news, product, funding, hiring, and social signals. Each new research run is compared against the previous one to surface meaningful changes — from pricing updates to feature launches — with the supporting sources cited alongside every finding.",
   },
   {
+    question: "Do you monitor my own brand too?",
+    answer:
+      "Yes — Brand Pulse is included on every plan. The same deep-research engine that tracks your competitors runs on your own brand, giving you a coverage feed, a sentiment trend, a Brand Health Score, and your share of voice ranked honestly alongside the competitors you track. It also powers the opt-in weekly Comparative Brief that shows exactly where you stand.",
+  },
+  {
     question: "How accurate is the AI analysis?",
     answer:
       "Our analysis is powered by Claude AI from Anthropic. Each detected change is scored with a structured framework that identifies change type, a significance score (1-10), strategic implications, and recommended actions. Every finding links back to the web sources it was drawn from, so you can always verify the underlying evidence.",
@@ -19,7 +24,7 @@ const faqs = [
   {
     question: "What can I monitor?",
     answer:
-      "Kironyx tracks each competitor across five intelligence categories — news, product, funding, hiring, and social — plus derived signals like momentum, threat level, and strategic direction. It's a comprehensive view of their strategic moves, not just a single web page.",
+      "Kironyx tracks each competitor across five intelligence categories — news, product, funding, hiring, and social — plus derived signals like momentum, threat level, and strategic direction. And it's not just them: Brand Pulse runs the same research on your own brand, so every competitor view comes with a benchmark.",
   },
   {
     question: "How is this different from Google Alerts?",

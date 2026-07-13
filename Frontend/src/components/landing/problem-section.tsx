@@ -33,7 +33,7 @@ export function ProblemSection() {
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
             Your competitors are changing their pricing, launching features, and
-            shifting strategy every week. Are you the last to know?
+            shifting strategy every week. Do you know where you stand?
           </p>
         </div>
 

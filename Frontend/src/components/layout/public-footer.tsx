@@ -10,8 +10,8 @@ export function PublicFooter() {
           <div className="md:col-span-2">
             <Logo />
             <p className="mt-3 max-w-sm text-sm text-muted-foreground">
-              AI-powered competitive intelligence for SMBs. Know what your
-              competitors are doing — automatically.
+              Competitive intelligence + brand monitoring in one. Know what
+              your market did this week — and where you stand.
             </p>
           </div>
 
