@@ -92,7 +92,9 @@ export default function MethodologyPage() {
             <strong className="text-foreground">Significance</strong> are assigned by an AI model
             against a fixed rubric. <strong className="text-foreground">Share of Voice</strong> is a
             standard marketing measure; the rest are internal indicators, not externally certified
-            ratings.
+            ratings. Your own brand&apos;s scores — Brand Health, Share of Voice, sentiment,
+            momentum — come from the identical research cycle that runs on your competitors, so
+            the two sides are directly comparable.
           </p>
           <p>
             They are decision aids, not guarantees — always check the underlying sources (cited on

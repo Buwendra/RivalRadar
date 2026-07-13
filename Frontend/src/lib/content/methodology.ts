@@ -79,6 +79,7 @@ export const METHODOLOGY: MetricDoc[] = [
     ],
     notes: [
       "Because it is assigned by an AI model, the threat level is a judgement, not a deterministic calculation — it can shift between research runs as the evidence changes.",
+      "Threat is only scored for competitors — Kironyx never scores your own brand as a threat to you, which is why the self-brand row shows no threat level.",
     ],
   },
   {
@@ -87,7 +88,7 @@ export const METHODOLOGY: MetricDoc[] = [
     title: "Momentum",
     provenance: "Rule-based",
     oneLiner:
-      "The direction of a competitor's activity — the most recent 7 days of detected changes vs. a smoothed prior baseline.",
+      "The direction of a tracked company's activity — competitors and your own brand alike — over the most recent 7 days of detected changes vs. a smoothed prior baseline.",
     formula: "change% = (last 7 days − average prior week) ÷ (average prior week + 2)",
     rubric: [
       { label: "Rising", detail: "≥ +25%" },
@@ -101,7 +102,7 @@ export const METHODOLOGY: MetricDoc[] = [
     ],
     notes: [
       "The prior baseline is the average weekly activity over the rest of the window, with light smoothing (the “+2”) so a very small baseline can't turn a normal week into a wild percentage.",
-      "Momentum measures the volume of detected activity, not whether that activity is good or bad for the competitor.",
+      "Momentum measures the volume of detected activity, not whether that activity is good or bad for the company.",
     ],
   },
   {
@@ -184,7 +185,7 @@ export const METHODOLOGY: MetricDoc[] = [
     title: "Per-finding signals",
     provenance: "AI model · per change",
     oneLiner:
-      "Each research finding is tagged with importance, sentiment, and time-sensitivity, plus a derived posture for the competitor.",
+      "Each research finding is tagged with importance, sentiment, and time-sensitivity, plus a derived posture for the company.",
     rubric: [
       { label: "Importance (1–3)", detail: "How strategically material the finding is (3 = most)." },
       { label: "Sentiment", detail: "External tone of the coverage — positive / neutral / negative (not our opinion)." },
@@ -192,7 +193,7 @@ export const METHODOLOGY: MetricDoc[] = [
       {
         label: "Derived state",
         detail:
-          "The competitor's posture across stage, funding, hiring, strategic direction, tech positioning, and pacing.",
+          "The company's posture across stage, funding, hiring, strategic direction, tech positioning, and pacing.",
       },
     ],
   },

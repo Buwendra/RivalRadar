@@ -103,11 +103,11 @@ export default function YourBrandPage() {
         <Card className="border-brand-700 bg-brand-900">
           <CardContent className="space-y-4 p-8 text-center">
             <Sparkles className="mx-auto h-10 w-10 text-emerald-400" />
-            <h2 className="text-xl font-semibold">Monitor your own brand</h2>
+            <h2 className="text-xl font-semibold">Turn the engine on yourself</h2>
             <p className="mx-auto max-w-xl text-sm text-muted-foreground">
               Track how the market is talking about you — third-party coverage, sentiment,
               and narratives forming around your brand. Same deep-research engine you use
-              for competitors.
+              for competitors, so every comparison includes your side of the story.
             </p>
             <Button
               onClick={() => setSetupOpen(true)}
@@ -143,7 +143,7 @@ export default function YourBrandPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title={data.name} description="How the market is talking about you.">
+      <PageHeader title={data.name} description="How the market is talking about you — and how that compares to your set.">
         <Button variant="outline" asChild>
           <a href={data.url} target="_blank" rel="noopener noreferrer">
             <ExternalLink className="mr-2 h-4 w-4" />
