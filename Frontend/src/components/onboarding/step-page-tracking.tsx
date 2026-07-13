@@ -14,9 +14,11 @@ export function StepPageTracking({ competitors, onTogglePage }: StepPageTracking
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold">Choose pages to monitor</h2>
+        <h2 className="text-xl font-semibold">Choose what to watch</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Select which pages to track for each competitor. We&apos;ll detect changes on these pages daily.
+          Pick the parts of each competitor&apos;s business to focus on. Our AI
+          deep research runs weekly — and whenever you ask — and files what it
+          finds under these areas.
         </p>
       </div>
 

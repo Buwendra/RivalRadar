@@ -118,7 +118,11 @@ export default function OnboardingPage() {
         privacyVersion: PRIVACY_VERSION,
       });
       await refreshUser();
-      toast.success("Setup complete! Your competitors are being scanned.");
+      toast.success(
+        companyUrl.trim()
+          ? "Setup complete! Deep research is running on your competitors — and on your brand."
+          : "Setup complete! Deep research is running on your competitors."
+      );
       router.push("/dashboard");
     } catch (err) {
       if (err instanceof ApiClientError) {
