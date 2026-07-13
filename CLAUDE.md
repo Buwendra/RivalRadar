@@ -52,6 +52,7 @@ The current product roadmap and design rationale lives in [docs/roadmaps/ROADMAP
 | `/docs/security/` | Security posture, audit material, vendor risk register, change management |
 | `/docs/api/` | Public API reference |
 | `/docs/internal/` | Material intentionally not public (e.g. pricing-value analysis) |
+| `/docs/demo/`, `/docs/examples/` | Sample competitive-intelligence reports used for demos |
 | `/docs/LAUNCH_ISSUES.md` | Numbered launch-blocking issues (1–11+) with per-issue fix plans; recent commits reference these by number (e.g. "Issue 7/8/9") |
 | `/Frontend/README.md` | Frontend dev guide |
 | `/Presentation/index.html` | Standalone single-file HTML demo deck (Tailwind CDN) — not part of any build or CI |
@@ -399,13 +400,14 @@ Lambda timeout 5 min, memory 1024 MB (web_search responses can be large).
 **Trigger entry points for the research pipeline**:
 - Onboarding completion (`api/users/onboard.ts`) starts the ResearchPipeline with all newly-created competitors AND the self-brand row when `companyWebsite` was provided
 - Manual "Research Now" buttons: `POST /competitors/{id}/research` for a single competitor, `POST /brand/research` for the self-brand row
-- Sunday 6am UTC recurring-research enqueuer (`scheduled/enqueue-recurring-research.ts`) walks the active-competitor index and re-runs research based on each row's `researchCadenceDays` (or the tier default from `PLAN_LIMITS`), measured from `lastResearchedAt`. It passes each row's `targetKind` through so scheduled self-brand runs keep the `'self'` framing (Wave 1 — they used to get threat scores + predicted moves written onto the self row every Sunday)
+- Sunday 6am UTC recurring-research enqueuer (`pipeline/enqueue-recurring-research.ts`) walks the active-competitor index and re-runs research based on each row's `researchCadenceDays` (or the tier default from `PLAN_LIMITS`), measured from `lastResearchedAt`. It passes each row's `targetKind` through so scheduled self-brand runs keep the `'self'` framing (Wave 1 — they used to get threat scores + predicted moves written onto the self row every Sunday)
 
-**Other EventBridge schedules** (all in `pipeline.stack.ts`):
+**Other EventBridge schedules** (in `pipeline.stack.ts` unless noted):
 - Mon  8am UTC — WeeklyDigest state machine
 - Mon  9am UTC — `send-saved-view-digests` Lambda (Phase 15)
 - Mon 10am UTC — ComparativeBriefing state machine (Phase 24)
 - Sun  6am UTC — recurring-research enqueuer
+- Sat  7am UTC — `refresh-ofac-sdn` (Compliance Phase 1 OFAC SDN drift check — wired in `monitoring.stack.ts`, not Pipeline)
 - Daily 3am UTC — `aggregate-ai-costs` (per-user CostDay rollup, drives monthly cost-cap enforcement)
 - Daily 4am UTC — `send-retention-nudges` (Phase 8a, 90-day per-user cooldown; stamps `lastRetentionNudgeAt` BEFORE sending so a failed stamp can't re-mail daily)
 - 1st of month 8am UTC — `send-scheduled-reports` (Phase 6c, Command-tier PDF briefing)
