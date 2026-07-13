@@ -135,7 +135,7 @@ export const handler = async (event: Event): Promise<{ sent: boolean }> => {
             : ''
         }
 
-        <h2 style="font-size: 16px; margin: 24px 0 12px;">Comparative briefing</h2>
+        <h2 style="font-size: 16px; margin: 24px 0 12px;">You vs. the field</h2>
         <div style="background: #f0f9ff; border-left: 4px solid #2563eb; padding: 16px; border-radius: 0 8px 8px 0;">
           ${briefingHtml}
         </div>
@@ -153,7 +153,7 @@ export const handler = async (event: Event): Promise<{ sent: boolean }> => {
 
       <div style="background: #f9fafb; padding: 16px 32px; border-radius: 0 0 8px 8px; text-align: center;">
         <p style="color: #9ca3af; font-size: 12px; margin: 0 0 8px;">
-          Kironyx — AI Market Intelligence for SMBs
+          Kironyx — AI competitive intelligence + brand monitoring for SMBs
         </p>
         <p style="color: #9ca3af; font-size: 11px; margin: 0; line-height: 1.5;">
           AI-generated analysis. May contain errors. For internal evaluation only — not legal, financial, or investment advice.<br>
@@ -169,7 +169,7 @@ export const handler = async (event: Event): Promise<{ sent: boolean }> => {
 
   const result = await sendEmailNotification({
     to: event.email,
-    subject: `Your Comparative Brief — ${dateRange}`,
+    subject: `Where you stand this week — ${dateRange}`,
     html,
   });
 

@@ -151,6 +151,7 @@ export const handler = async (
       <div style="padding: 24px 32px;">
         <p style="color: #6b7280; margin: 0 0 20px;">${dateRange}</p>
         <p>Hi ${event.name},</p>
+        <p style="color: #374151; margin: 0 0 4px;">Here's what moved on the competitor side of your market this week.</p>
 
         ${audioCta}
 
@@ -204,6 +205,13 @@ export const handler = async (
           ${event.strategicSummary.split('\n').map((p: string) => `<p style="margin: 8px 0; line-height: 1.6;">${p}</p>`).join('')}
         </div>
 
+        <div style="background: #ecfdf5; border-left: 4px solid #059669; padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 24px 0 0;">
+          <p style="margin: 0; font-size: 13px; color: #065f46;">
+            The other side of the mirror — how you're covered, and where you broke through — lives in
+            <a href="${process.env.FRONTEND_URL}/dashboard/your-brand" style="color: #047857; font-weight: 600;">Brand Pulse</a>.
+          </p>
+        </div>
+
         <div style="text-align: center; margin: 32px 0;">
           <a href="${process.env.FRONTEND_URL}/dashboard" style="background: #2563eb; color: white; padding: 12px 28px; border-radius: 6px; text-decoration: none; font-weight: 500;">
             View Full Dashboard
@@ -213,7 +221,7 @@ export const handler = async (
 
       <div style="background: #f9fafb; padding: 16px 32px; border-radius: 0 0 8px 8px; text-align: center;">
         <p style="color: #9ca3af; font-size: 12px; margin: 0 0 8px;">
-          Kironyx — AI Competitive Intelligence for SMBs
+          Kironyx — AI competitive intelligence + brand monitoring for SMBs
         </p>
         <p style="color: #9ca3af; font-size: 11px; margin: 0; line-height: 1.5;">
           AI-generated analysis. May contain errors. For internal evaluation only — not legal, financial, or investment advice.<br>
@@ -239,7 +247,7 @@ export const handler = async (
         name: event.name,
         notificationPreferences: userRecord?.notificationPreferences,
       },
-      emailSubject: `Your Weekly Competitive Brief — ${dateRange}`,
+      emailSubject: `What your competitors did this week — ${dateRange}`,
       emailHtml: html,
       changeCount: event.topChanges.length,
       ...(top ? { topRecommendation: { title: top.title, body: top.body } } : {}),
