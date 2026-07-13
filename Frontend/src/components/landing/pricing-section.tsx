@@ -8,11 +8,11 @@ const plans = [
   {
     name: "Scout",
     price: 49,
-    description: "For founders keeping an eye on the competition.",
+    description: "See where you stand against your first competitors.",
     features: [
-      "3 competitors",
+      "Stay ahead of 3 competitors — benchmarked against your own brand",
+      "Brand Pulse self-monitoring included",
       "Weekly strategic digest",
-      "Dashboard access",
       "30-day change history",
       "Email support",
     ],
@@ -24,9 +24,11 @@ const plans = [
     price: 99,
     description: "For teams that compete to win every deal.",
     features: [
-      "10 competitors",
-      "Daily strategic digests",
-      "Slack alerts",
+      "Stay ahead of 10 competitors — and see the gap on each",
+      "Brand Pulse self-monitoring included",
+      "Weekly strategic digest + audio briefing",
+      "Side-by-side comparison matrix — with you in it",
+      "Slack alerts + API access",
       "90-day change history",
       "Battlecard templates",
       "Priority support",
@@ -39,11 +41,11 @@ const plans = [
     price: 199,
     description: "For organizations that dominate their market.",
     features: [
-      "25 competitors",
-      "Real-time alerts",
-      "API access",
+      "Stay ahead of 25 competitors — the full field, benchmarked",
+      "Brand Pulse self-monitoring included",
+      "Monthly executive PDF briefings",
+      "Custom analysis focus areas",
       "1-year change history",
-      "Custom analysis prompts",
       "Dedicated support",
     ],
     cta: "Start Free Trial",
@@ -65,8 +67,8 @@ export function PricingSection({ showHeading = true }: PricingSectionProps) {
               Simple, transparent pricing
             </h2>
             <p className="mt-4 text-muted-foreground">
-              Enterprise-grade intelligence without the enterprise price tag.
-              Cancel anytime.
+              Competitive intelligence + brand monitoring in one, without the
+              enterprise price tag. Cancel anytime.
             </p>
           </div>
         )}
@@ -96,8 +98,8 @@ export function PricingSection({ showHeading = true }: PricingSectionProps) {
               <CardContent className="space-y-4">
                 <ul className="space-y-3">
                   {plan.features.map((feature) => (
-                    <li key={feature} className="flex items-center gap-2 text-sm">
-                      <Check className="h-4 w-4 text-significance-low" />
+                    <li key={feature} className="flex items-start gap-2 text-sm">
+                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-significance-low" />
                       {feature}
                     </li>
                   ))}

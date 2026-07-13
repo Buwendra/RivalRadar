@@ -6,7 +6,7 @@ import { FooterCTASection } from "@/components/landing/footer-cta-section";
 export const metadata: Metadata = {
   title: "Pricing",
   description:
-    "Simple, transparent pricing for AI-powered competitive intelligence. Plans starting at $49/month.",
+    "Simple, transparent pricing for competitive intelligence + brand monitoring in one. Brand Pulse self-monitoring on every plan. Plans starting at $49/month.",
 };
 
 export default function PricingPage() {
@@ -17,8 +17,9 @@ export default function PricingPage() {
           Simple, transparent pricing
         </h1>
         <p className="mx-auto mt-4 max-w-xl text-lg text-muted-foreground">
-          Enterprise-grade competitive intelligence without the enterprise price
-          tag. Start free, upgrade as you grow.
+          Competitive intelligence and brand monitoring in one, without the
+          enterprise price tag. Brand Pulse self-monitoring is included on
+          every plan. Start free, upgrade as you grow.
         </p>
       </section>
       <PricingSection showHeading={false} />
