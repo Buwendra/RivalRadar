@@ -18,11 +18,11 @@ const geistMono = localFont({
 
 export const metadata: Metadata = {
   title: {
-    default: "Kironyx — AI Competitive Intelligence for SMBs",
+    default: "Kironyx — AI Competitive Intelligence & Brand Monitoring for SMBs",
     template: "%s | Kironyx",
   },
   description:
-    "Know what your competitors did this week — automatically. AI-powered competitive monitoring at 1/200th the price of enterprise tools.",
+    "Know what your competitors did this week — and exactly where you stand. AI deep research on them and on your own brand, side by side, at 1/200th the price of enterprise tools.",
 };
 
 export default function RootLayout({
