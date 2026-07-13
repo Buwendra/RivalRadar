@@ -23,6 +23,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { CompetitorTagChips } from "@/components/dashboard/competitor-tag-chips";
 import { useAuth } from "@/lib/auth/use-auth";
+import { useBrand } from "@/lib/hooks/use-brand";
 import { useCapability } from "@/lib/hooks/use-capability";
 import { useCompetitorMatrix } from "@/lib/hooks/use-competitor-matrix";
 import { exportsApi, triggerCsvDownload } from "@/lib/api/exports";
@@ -144,6 +145,10 @@ export default function ComparePage() {
 
 function MatrixView({ router }: { router: ReturnType<typeof useRouter> }) {
   const query = useCompetitorMatrix();
+  // The self-brand row comes back from the matrix endpoint like any other
+  // row; match it by id against GET /brand (same Competitor-row id space).
+  const { data: brand } = useBrand();
+  const selfId = brand?.id;
   const [threatFilter, setThreatFilter] = useState<"all" | ThreatLevel>("all");
   const [sortKey, setSortKey] = useState<SortKey>("default");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
@@ -155,8 +160,15 @@ function MatrixView({ router }: { router: ReturnType<typeof useRouter> }) {
       threatFilter === "all"
         ? base
         : base.filter((r) => r.threatLevel === threatFilter);
-    return [...filtered].sort((a, b) => compareRows(a, b, sortKey, sortDir));
-  }, [query.data, threatFilter, sortKey, sortDir]);
+    const selfRow = selfId
+      ? filtered.find((r) => r.id === selfId)
+      : undefined;
+    const rest = selfRow ? filtered.filter((r) => r.id !== selfId) : filtered;
+    const sorted = [...rest].sort((a, b) => compareRows(a, b, sortKey, sortDir));
+    // Pin the self-brand row to the top: it's the fixed reference line the
+    // matrix is read against, not a rank claim.
+    return selfRow ? [selfRow, ...sorted] : sorted;
+  }, [query.data, threatFilter, sortKey, sortDir, selfId]);
 
   const handleSort = (key: SortKey) => {
     if (key === "default") return;
@@ -174,7 +186,7 @@ function MatrixView({ router }: { router: ReturnType<typeof useRouter> }) {
       const result = await exportsApi.csv("competitor-matrix");
       triggerCsvDownload({ csv: result.csv, filename: result.filename });
       toast.success(
-        `Exported ${result.rowCount} competitor${result.rowCount === 1 ? "" : "s"}`
+        `Exported ${result.rowCount} row${result.rowCount === 1 ? "" : "s"}`
       );
     } catch (err) {
       const msg = err instanceof ApiClientError ? err.message : "Export failed";
@@ -280,14 +292,36 @@ function MatrixView({ router }: { router: ReturnType<typeof useRouter> }) {
               {rows.map((row) => {
                 const MomentumIcon =
                   MOMENTUM_ICON[row.momentum ?? "insufficient-data"].icon;
+                const isSelf = row.id === selfId;
                 return (
                   <tr
                     key={row.id}
-                    onClick={() => router.push(`/dashboard/competitors/${row.id}`)}
-                    className="cursor-pointer border-b border-brand-700/60 transition-colors hover:bg-brand-800"
+                    onClick={() =>
+                      router.push(
+                        // The competitor detail endpoint 404s on the self row
+                        // by design — its home is the Your Brand page.
+                        isSelf
+                          ? "/dashboard/your-brand"
+                          : `/dashboard/competitors/${row.id}`
+                      )
+                    }
+                    className={cn(
+                      "cursor-pointer border-b border-brand-700/60 transition-colors hover:bg-brand-800",
+                      isSelf && "bg-emerald-950/20"
+                    )}
                   >
                     <td className="px-3 py-3 align-top font-medium">
-                      <div className="text-foreground">{row.name}</div>
+                      <div className="flex items-center gap-2 text-foreground">
+                        {row.name}
+                        {isSelf && (
+                          <Badge
+                            variant="outline"
+                            className="border-emerald-900/60 bg-emerald-950/40 px-1.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-300"
+                          >
+                            You
+                          </Badge>
+                        )}
+                      </div>
                       <div className="truncate text-xs text-muted-foreground">
                         {row.url}
                       </div>
