@@ -1,6 +1,6 @@
 # Kironyx Public API
 
-Read-only programmatic access to your workspace's competitor intelligence. Available on **Strategist** and **Command** plans.
+Programmatic read/write access to your workspace's intelligence — competitors and your own brand alike. Available on **Strategist** and **Command** plans.
 
 ## Quickstart
 

@@ -9,7 +9,7 @@
 | Field | Value |
 |---|---|
 | Vendor name | Kironyx |
-| Service description | AI-powered competitive-intelligence monitoring for SMBs |
+| Service description | AI-powered competitive-intelligence and brand-monitoring SaaS for SMBs |
 | Hosting region | AWS us-east-1 (N. Virginia) |
 | Architecture | Single-tenant (per-workspace) on shared serverless infrastructure |
 | Sub-processors | AWS, Anthropic, Paddle (payments), Amplify (frontend hosting), Cognito (auth) |

@@ -1,6 +1,6 @@
 # Kironyx
 
-AI-powered competitive intelligence + brand monitoring for SMBs. Claude-powered deep web research on each competitor (and on your own brand), strategic delta detection, threat scoring, and weekly briefings delivered via email + Slack + webhook.
+Competitive self-awareness for SMBs — AI competitive intelligence + brand monitoring in one engine. Claude-powered deep web research runs on your competitors and your own brand alike, benchmarks them side by side (share of voice, brand health, comparator matrix), and delivers strategic delta detection, threat scoring, and weekly comparative briefings via email + Slack + webhook.
 
 Priced at $49–$199/month to fill the gap between free tools (Google Alerts) and $20k+/year enterprise platforms (Crayon, Klue).
 

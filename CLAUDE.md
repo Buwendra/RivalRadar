@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Kironyx is an AI-powered competitive intelligence monitoring SaaS for SMBs. It runs Claude-powered deep web research on each competitor, detects strategically significant changes, scores their implications, and delivers weekly strategic briefings via email. Priced at $49–$199/month to fill the gap between free tools (Google Alerts) and $20K+/year enterprise platforms (Crayon, Klue).
+Kironyx is an AI-powered competitive-intelligence + brand-monitoring SaaS for SMBs, positioned as "competitive self-awareness". It runs Claude-powered deep web research on each competitor **and on the customer's own brand** (Brand Pulse, `targetKind: 'self'`), benchmarks them side by side, detects strategically significant changes, scores their implications, and delivers weekly strategic + comparative briefings via email. Priced at $49–$199/month to fill the gap between free tools (Google Alerts) and $20K+/year enterprise platforms (Crayon, Klue).
 
 **Naming**: the git repo / directory is `RivalRadar`, but the product and all code identifiers (stack names, secret paths, UI copy) use **`Kironyx`** — they refer to the same thing. Use `Kironyx` in code. (The product was called **RivalScan** until July 2026 — commits, git history, and the old AWS `RivalScan-*` stacks predate the rebrand.)
 
