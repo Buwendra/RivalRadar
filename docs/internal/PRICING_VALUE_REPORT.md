@@ -96,7 +96,9 @@ Each component below lists **what it is**, the **value to the user**, and **whic
 
 ### 4.1 Core intelligence — *all tiers*
 
-These are the reason the product exists; they are available from Scout up.
+These are the reason the product exists; they are available from Scout up. The identical
+pipeline also runs against the workspace's own brand (`targetKind: 'self'`) — see §4.2; the
+engine is bidirectional by design.
 
 - **AI Deep Research pipeline.** For every competitor, Claude runs a managed web-search loop and returns
   structured findings across five categories — **news, product, funding, hiring, social** — each with
@@ -122,12 +124,13 @@ These are the reason the product exists; they are available from Scout up.
 - **Weekly digest email.** Monday email with the top recommended actions, the top changes of the week, and
   a strategic prose briefing. *Value:* the passive-consumption surface for users who never open the app.
 
-### 4.2 Brand & comparative analytics — *all tiers*
+### 4.2 The comparative core — *all tiers*
 
 Brand Pulse and its comparative views are intentionally available on every tier (see §5).
 
-- **Brand Pulse (self-brand monitoring).** The same research engine pointed at the user's *own* brand,
-  reframed as media intelligence ("how is the market perceiving us?"). Surfaces a coverage feed, a 12-week
+- **Brand Pulse (self-brand monitoring).** The user's *own* brand, run through the identical
+  deep-research pipeline and benchmarked side by side with competitors — the second half of the
+  product's bidirectional core, not an add-on. Surfaces a coverage feed, a 12-week
   sentiment time-series, and the Brand Health Score. *Value:* combines competitive *and* self-monitoring in
   one product, reaching the PR/comms persona, not just product/strategy.
 - **Brand Health Score (0–100).** A composite of three equally weighted components — sentiment, share of
@@ -149,8 +152,9 @@ This band is the first paywall: features that signal a team has moved from "one 
 - **Slack integration** — high-significance changes pushed to a channel in real time. *Value:* alerts where
   the team already works, without email latency.
 - **Webhook integration** — HMAC-signed POSTs on saved-view matches. *Value:* custom routing and automation.
-- **Comparator matrix** — all competitors as rows with threat/momentum/stage/tags columns. *Value:*
-  at-a-glance portfolio health.
+- **Comparator matrix** — all competitors as rows, with the user's own brand pinned on top as the
+  reference line, and threat/momentum/stage/tags columns. *Value:* at-a-glance "where do we stand"
+  portfolio health.
 - **Saved views + subscriptions** — reusable named filter sets (e.g. "AI competitors' product launches"),
   individually subscribable by teammates. *Value:* personalized, repeatable focus. Capacity: 5 (Strategist)
   / 25 (Command); locked on Scout.
@@ -193,10 +197,13 @@ Available regardless of tier (subject to the underlying feature's own rules):
 
 Why the lines are drawn where they are:
 
-- **Brand Pulse and predicted moves ship on every tier.** Both are wedge features. Brand Pulse opens the
-  product to the PR/comms persona rather than only product/strategy buyers, and the marginal compute to run
-  it is small enough to absorb everywhere (per the `capabilities.ts` doc-comment). Putting them behind a
-  paywall would blunt the top-of-funnel reach they exist to create.
+- **Brand Pulse ships on every tier because it is half the product's core promise.** Kironyx is
+  positioned as bidirectional — competitive intelligence benchmarked against the customer's own brand —
+  so a tier without the self-brand row would be selling one-directional competitor tracking, which is
+  no longer what the product is. It also opens the product to the PR/comms persona rather than only
+  product/strategy buyers, and the marginal compute to run it is small enough to absorb everywhere (per
+  the `capabilities.ts` doc-comment). **Predicted moves remain universal** for the same top-of-funnel
+  reason: putting either behind a paywall would blunt the reach they exist to create.
 - **Exports, integrations, and the API are the Strategist paywall.** These are operational-maturity signals:
   a solo user evaluating the product rarely needs Slack alerts, CSV pipelines, or programmatic access, but a
   team operationalizing competitive intelligence does. They are the most natural "we've outgrown Scout"
@@ -216,6 +223,6 @@ Why the lines are drawn where they are:
 
 The structure is deliberately simple: a strict superset ladder with two clean upgrade triggers — *capacity*
 (more competitors, history, seats, views, keys) and *capability* (Strategist unlocks team/operational
-features; Command unlocks power-user automation). The core intelligence engine and the brand-monitoring
-wedge are universal, ensuring every paying user experiences the product's central value while still having a
-clear reason to climb the ladder.
+features; Command unlocks power-user automation). The core intelligence engine and the comparative core
+(Brand Pulse and its analytics) are universal, ensuring every paying user experiences the product's central
+value — the side-by-side comparison — while still having a clear reason to climb the ladder.
