@@ -51,7 +51,7 @@ The current product roadmap and design rationale lives in [docs/roadmaps/ROADMAP
 | `/docs/runbooks/` | How to operate the system — deploy, test, page response, secret rotation |
 | `/docs/security/` | Security posture, audit material, vendor risk register, change management |
 | `/docs/api/` | Public API reference |
-| `/docs/internal/` | Material intentionally not public (e.g. pricing-value analysis) |
+| `/docs/internal/` | Material intentionally not public (pricing-value analysis, business scope) |
 | `/docs/demo/`, `/docs/examples/` | Sample competitive-intelligence reports used for demos |
 | `/docs/LAUNCH_ISSUES.md` | Numbered launch-blocking issues (1–11+) with per-issue fix plans; recent commits reference these by number (e.g. "Issue 7/8/9") |
 | `/Frontend/README.md` | Frontend dev guide |

@@ -65,6 +65,7 @@ Material intentionally NOT public.
 
 | Doc | Purpose | Audience |
 |---|---|---|
+| [internal/BUSINESS_SCOPE.md](internal/BUSINESS_SCOPE.md) | Business scope, market, differentiation, and GTM around the comparative ("mirror") model. Successor to the deleted `Initial_Plan.md`. | Internal team only |
 | [internal/PRICING_VALUE_REPORT.md](internal/PRICING_VALUE_REPORT.md) | Tier-by-tier capability + plan-limit analysis. Deliberately excludes pricing figures — those live in code (`PLAN_LIMITS`) and the public marketing site. | Internal team only |
 
 ---
