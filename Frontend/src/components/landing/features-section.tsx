@@ -7,6 +7,7 @@ import {
   Users,
   Bell,
 } from "lucide-react";
+import { Reveal } from "./reveal";
 
 const features = [
   {
@@ -51,26 +52,34 @@ export function FeaturesSection() {
   return (
     <section className="border-t border-brand-700 bg-brand-900/50 px-4 py-20 sm:px-6">
       <div className="mx-auto max-w-6xl">
-        <div className="text-center">
-          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-            Everything you need to stay ahead
-          </h2>
-          <p className="mt-4 text-muted-foreground">
-            Competitive intelligence and brand monitoring in one engine, at a price that makes sense for growing teams.
-          </p>
-        </div>
+        <Reveal>
+          <div className="text-center">
+            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+              Everything you need to stay ahead
+            </h2>
+            <p className="mt-4 text-muted-foreground">
+              Competitive intelligence and brand monitoring in one engine, at a price that makes sense for growing teams.
+            </p>
+          </div>
+        </Reveal>
 
         <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {features.map((feature) => (
-            <Card key={feature.title} className="border-brand-700 bg-brand-900">
-              <CardContent className="p-6">
-                <feature.icon className="h-8 w-8 text-primary" />
-                <h3 className="mt-4 text-lg font-semibold">{feature.title}</h3>
-                <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-                  {feature.description}
-                </p>
-              </CardContent>
-            </Card>
+          {features.map((feature, index) => (
+            <Reveal key={feature.title} delay={(index % 3) * 100}>
+              <Card className="group relative h-full overflow-hidden border-brand-700 bg-brand-900 transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/10">
+                <CardContent className="p-6">
+                  <div
+                    className="pointer-events-none absolute -top-24 left-1/2 h-48 w-48 -translate-x-1/2 rounded-full bg-primary/10 opacity-0 blur-2xl transition-opacity duration-500 group-hover:opacity-100"
+                    aria-hidden
+                  />
+                  <feature.icon className="h-8 w-8 text-primary transition-transform duration-300 group-hover:scale-110" />
+                  <h3 className="mt-4 text-lg font-semibold">{feature.title}</h3>
+                  <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+                    {feature.description}
+                  </p>
+                </CardContent>
+              </Card>
+            </Reveal>
           ))}
         </div>
       </div>

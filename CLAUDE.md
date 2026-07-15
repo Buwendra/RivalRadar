@@ -46,6 +46,8 @@ The current product roadmap and design rationale lives in [docs/roadmaps/ROADMAP
 | `/CLAUDE.md` (this file) | Architecture + conventions reference for Claude Code |
 | `/README.md` | Top-level project orientation |
 | `/PRODUCT_OVERVIEW.md` | Public-safe product narrative |
+| `/PLAN.md` | July 2026 repositioning plan (competitor-analysis → bidirectional "cross-check" framing) — surface-by-surface copy/IA changes with hard guardrails (no `PLAN_LIMITS`/`CAPABILITIES` value changes, AI disclaimers preserved) |
+| `/REPOSITIONING_SUMMARY.md` | Before/after record of what that repositioning actually changed, per surface |
 | `/docs/README.md` | Documentation index |
 | `/docs/roadmaps/` | What's planned + what's shipped (with status badges) |
 | `/docs/runbooks/` | How to operate the system — deploy, test, page response, secret rotation |
@@ -56,6 +58,8 @@ The current product roadmap and design rationale lives in [docs/roadmaps/ROADMAP
 | `/docs/LAUNCH_ISSUES.md` | Numbered launch-blocking issues (1–11+) with per-issue fix plans; recent commits reference these by number (e.g. "Issue 7/8/9") |
 | `/Frontend/README.md` | Frontend dev guide |
 | `/Presentation/index.html` | Standalone single-file HTML demo deck (Tailwind CDN) — not part of any build or CI |
+
+Spelling is a per-file convention: frontend copy + internal docs use US English; `PRODUCT_OVERVIEW.md` and customer-facing docs use UK English. Match the file you're editing.
 
 ## Master phase timeline
 
@@ -287,6 +291,8 @@ The enrichment block is wrapped in try/catch — Haiku failures don't break mome
 The workspace's own brand is monitored using the same deep-research engine as competitors, persisted as a **Competitor row with `targetKind: 'self'`**. Exactly one self row per workspace; created at onboarding when the user supplies `companyWebsite`, or via the `POST /brand/setup` endpoint for legacy users (renders an empty-state CTA on the Your Brand page).
 
 The discriminator approach (vs a separate Brand entity) means every key builder, query helper, enrichment block, and the entire `deep-research.ts` Lambda is reused as-is. The cost is a **filter-discipline rule**: every endpoint that lists competitors must exclude self rows. Use `competitorsOnly()` / `isCompetitorTarget()` from `shared/utils/competitor-target.ts`. Already applied to: `competitors/list`, `competitors/create` + `bulk-import` (so self doesn't consume a plan-limit slot), `v1/competitors` + `v1/competitors-create`, `search`, the weekly digest pipeline (aggregate-changes, generate-recommendations, send-saved-view-digests), the PDF/CSV exports. Account delete and GDPR export deliberately do NOT filter — they want everything. `competitors/get`, `competitors/research`, and `competitors/battlecard` 404 on self rows so the UI surface stays consistent (and no one pays for "win against yourself" tactics).
+
+**Deliberate non-filter exception — the comparator matrix**: the matrix endpoint returns the self row like any other, and the frontend (`dashboard/compare/page.tsx`) matches it by id against `GET /brand`, pins it to the top as the reference line with a "You" badge (emerald, matching the Share-of-Voice self-series color), and routes its click to `/dashboard/your-brand` (the competitor detail endpoint 404s on self rows). Don't "fix" the matrix by filtering self out — the You row is the point.
 
 The self-brand surface is `/brand/*`: `GET /brand`, `POST /brand/research`, `GET /brand/coverage`, `GET /brand/sentiment`, `GET /brand/health` (Phase 24), `POST /brand/setup`. Handlers share `loadSelfBrand()`, `loadUserForBrand()`, and `assertBrandPulseCapability()` from `api/brand/_shared.ts`. The frontend mirror is at `Frontend/src/app/(dashboard)/dashboard/your-brand/`.
 

@@ -44,3 +44,54 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer utilities {
+  /* Animated gradient headline text — pair with .animate-gradient-shift */
+  .text-gradient-primary {
+    background-image: linear-gradient(
+      90deg,
+      hsl(217 91% 60%),
+      hsl(202 95% 74%),
+      hsl(217 91% 60%)
+    );
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Faint blueprint grid faded by a radial mask (hero background) */
+  .bg-grid-fade {
+    background-image:
+      linear-gradient(to right, rgba(53, 71, 128, 0.35) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(53, 71, 128, 0.35) 1px, transparent 1px);
+    background-size: 56px 56px;
+    -webkit-mask-image: radial-gradient(
+      ellipse 80% 60% at 50% 0%,
+      black 30%,
+      transparent 100%
+    );
+    mask-image: radial-gradient(
+      ellipse 80% 60% at 50% 0%,
+      black 30%,
+      transparent 100%
+    );
+  }
+}
+
+/* Reduced motion: stop decorative loops and make entrances instant.
+   Targeted selectors (not a blanket * rule) so Radix/app animations
+   elsewhere keep their existing behavior. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-aurora,
+  .animate-aurora-slow,
+  .animate-gradient-shift,
+  .animate-glow-pulse {
+    animation: none !important;
+  }
+  .animate-fade-up,
+  .animate-fade-in {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+  }
+}

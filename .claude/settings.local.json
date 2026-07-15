@@ -163,7 +163,16 @@
       "Bash(perl -0pi -e \"s|\\(// Secrets for external APIs\\\\r?\\\\n\\)\\(    const apiSecrets = secretsmanager\\\\.Secret\\\\.fromSecretNameV2\\\\\\(\\\\r?\\\\n      this, 'ApiSecrets', 'kironyx/api-keys'\\)|// Secrets for external APIs. Path literal must match API_SECRETS_PATH in\\\\n    // src/shared/services/secrets.ts \\(stacks can't import runtime code\\).\\\\n\\\\$2|\" lib/stacks/api.stack.ts)",
       "Bash(perl -0pi -e \"s|\\(    const apiSecrets = secretsmanager\\\\.Secret\\\\.fromSecretNameV2\\\\\\(\\\\r?\\\\n      this, 'ApiSecrets', 'kironyx/api-keys'\\)|    // Path literal must match API_SECRETS_PATH in src/shared/services/secrets.ts\\\\n    // \\(stacks can't import runtime code\\).\\\\n\\\\$1|\" lib/stacks/pipeline.stack.ts)",
       "Bash(npm install *)",
-      "Bash(git checkout *)"
+      "Bash(git checkout *)",
+      "Bash(git config *)",
+      "Bash(gh auth *)",
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_take_screenshot",
+      "mcp__playwright__browser_evaluate",
+      "mcp__playwright__browser_resize",
+      "Bash(curl -s http://localhost:3000/)",
+      "Bash(grep -o \"68%\\\\|3.8/10\\\\|\\\\$20K+/yr\")",
+      "mcp__playwright__browser_run_code_unsafe"
     ]
   }
 }
