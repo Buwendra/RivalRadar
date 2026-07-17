@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Shield, Zap, TrendingUp } from "lucide-react";
+import { HeroMockup } from "./hero-mockup";
+import { CategoryMarquee } from "./category-marquee";
 
 export function HeroSection() {
   return (
@@ -84,6 +86,11 @@ export function HeroSection() {
             1/200th the price of enterprise tools
           </div>
         </div>
+      </div>
+
+      <div className="relative">
+        <HeroMockup />
+        <CategoryMarquee />
       </div>
     </section>
   );

@@ -172,7 +172,8 @@
       "mcp__playwright__browser_resize",
       "Bash(curl -s http://localhost:3000/)",
       "Bash(grep -o \"68%\\\\|3.8/10\\\\|\\\\$20K+/yr\")",
-      "mcp__playwright__browser_run_code_unsafe"
+      "mcp__playwright__browser_run_code_unsafe",
+      "Bash(sed -i 's/className=\"mb-4 /className=\"/g' src/components/landing/features-section.tsx)"
     ]
   }
 }

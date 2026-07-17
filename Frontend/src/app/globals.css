@@ -77,6 +77,24 @@
       transparent 100%
     );
   }
+
+  /* Horizontal edge fade for the scrolling category ticker */
+  .mask-fade-x {
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent,
+      black 10%,
+      black 90%,
+      transparent
+    );
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      black 10%,
+      black 90%,
+      transparent
+    );
+  }
 }
 
 /* Reduced motion: stop decorative loops and make entrances instant.
@@ -86,7 +104,9 @@
   .animate-aurora,
   .animate-aurora-slow,
   .animate-gradient-shift,
-  .animate-glow-pulse {
+  .animate-glow-pulse,
+  .animate-marquee,
+  .animate-ping {
     animation: none !important;
   }
   .animate-fade-up,
