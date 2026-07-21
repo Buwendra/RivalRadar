@@ -15,7 +15,9 @@ Read the diff first (`git diff HEAD`, or the range you were given), then check i
 
 Deliberate exceptions — do **not** flag these: the comparator matrix returns the self row on purpose (it's the "You" reference line), and account deletion plus GDPR export intentionally take everything.
 
-Baseline note: at the time this agent was written, only 5 files referenced these helpers while `CLAUDE.md` documents roughly 8 surfaces that should. If you have budget, audit that gap and report it even if the current diff doesn't touch it.
+**Known baseline — read before reporting.** Filtering is currently complete, but it is expressed two different ways. Four files use the helper (`api/competitors/create.ts`, `api/competitors/list.ts`, `api/v1/competitors.ts`, `api/v1/competitors-create.ts`); at least seven filter inline with `targetKind !== 'self'` instead (`api/competitors/bulk-import.ts:236`, `api/search/search.ts:175`, `scheduled/aggregate-changes.ts:74`, `scheduled/generate-recommendations.ts:98`, `scheduled/send-saved-view-digests.ts:235`, `api/exports/csv.ts:128`, `api/exports/pdf.ts:83`).
+
+So: an inline `targetKind !== 'self'` check is **correct behaviour**, not a defect. Report it only as an optional consistency nit, and only if the diff already touches that line. The genuine bug is a competitor-listing path with **no self-brand handling at all** — that is what you are hunting.
 
 **2. Read-modify-write where an atomic helper exists.** `shared/db/queries.ts` has a purpose-built toolkit: `transactWrite`, `initCounterIfAbsent`, `incrementWithCeiling`, `decrementFloorZero`, `putItemIfNotExists`, `atomicAddGuarded`, `appendToList`. Plan limits, cost accumulation, the one-self-row-per-workspace claim, and research-run event timelines all depend on these. A get-then-put pattern in new code is a race condition, and every instance of it was deliberately purged once already.
 
