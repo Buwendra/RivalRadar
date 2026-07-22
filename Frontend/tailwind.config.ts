@@ -17,6 +17,19 @@ const config: Config = {
           700: "#253262",
           600: "#354780",
         },
+        // Warm near-black ladder — public marketing surface only (paired with
+        // the .theme-forest semantic-variable override in globals.css). Barely
+        // warm rather than pure neutral so the cream and the film grain read
+        // warm rather than clinical.
+        obsidian: {
+          950: "#0E0D0C",
+          900: "#161513",
+          800: "#201E1B",
+          700: "#2E2B27",
+          600: "#423E39",
+        },
+        // Parchment cream — the marketing surface's primary foreground.
+        ink: "#E1D9C1",
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
@@ -55,10 +68,13 @@ const config: Config = {
           medium: "#EAB308",
           high: "#EF4444",
         },
+        // Cream CTA. Gold is imagery-only under this palette, so the primary
+        // button is cream-on-near-black (~14:1) rather than an outline — it
+        // keeps a strong conversion affordance without reintroducing gold UI.
         cta: {
-          DEFAULT: "#F59E0B",
-          hover: "#FBBF24",
-          active: "#D97706",
+          DEFAULT: "#E1D9C1",
+          hover: "#F0EADA",
+          active: "#C7BFA7",
         },
       },
       borderRadius: {
@@ -69,6 +85,13 @@ const config: Config = {
       fontFamily: {
         sans: ["var(--font-geist-sans)", "system-ui", "sans-serif"],
         mono: ["var(--font-geist-mono)", "monospace"],
+        display: [
+          "var(--font-display)",
+          "Georgia",
+          "Cambria",
+          "Times New Roman",
+          "serif",
+        ],
       },
       keyframes: {
         "accordion-down": {
@@ -84,21 +107,13 @@ const config: Config = {
           "50%": { transform: "translate3d(60px, -40px, 0) scale(1.15)" },
           "100%": { transform: "translate3d(-40px, 30px, 0) scale(0.95)" },
         },
-        "gradient-shift": {
-          "0%, 100%": { backgroundPosition: "0% 50%" },
-          "50%": { backgroundPosition: "100% 50%" },
-        },
         "fade-up": {
-          from: { opacity: "0", transform: "translateY(24px)" },
+          from: { opacity: "0", transform: "translateY(8px)" },
           to: { opacity: "1", transform: "translateY(0)" },
         },
         "fade-in": {
           from: { opacity: "0" },
           to: { opacity: "1" },
-        },
-        "glow-pulse": {
-          "0%, 100%": { opacity: "0.6" },
-          "50%": { opacity: "1" },
         },
         marquee: {
           from: { transform: "translateX(0)" },
@@ -109,12 +124,9 @@ const config: Config = {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         aurora: "aurora-drift 26s ease-in-out infinite alternate",
-        "aurora-slow": "aurora-drift 34s ease-in-out infinite alternate-reverse",
-        "gradient-shift": "gradient-shift 6s ease-in-out infinite",
-        "fade-up": "fade-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) both",
-        "fade-in": "fade-in 1s ease-out both",
-        "glow-pulse": "glow-pulse 4s ease-in-out infinite",
-        marquee: "marquee 40s linear infinite",
+        "fade-up": "fade-up 0.35s cubic-bezier(0.16, 1, 0.3, 1) both",
+        "fade-in": "fade-in 0.5s ease-out both",
+        marquee: "marquee 50s linear infinite",
       },
     },
   },

@@ -34,11 +34,60 @@
 
     --radius: 0.5rem;
   }
+
+  /* Cream-on-black theme — public marketing surface only. Applied on the
+     (public) layout wrapper; the app keeps the cool :root values.
+
+     The rule that makes this palette work: the INTERFACE is parchment cream on
+     a warm near-black, and warm gold appears ONLY as light inside imagery —
+     the signal fields, the dashboard mockup's ring. Never as a UI colour.
+     Putting gold back on a button or a link breaks the whole idea.
+
+     `--primary` is therefore the cream, and `--glow` carries the gold for the
+     canvas effects to read. The class is still named `theme-forest` from an
+     earlier green palette; only the colours have moved since. */
+  .theme-forest {
+    --background: 30 8% 5%;
+    --foreground: 45 35% 82%;
+
+    --card: 30 7% 8%;
+    --card-foreground: 45 35% 82%;
+
+    --popover: 30 7% 8%;
+    --popover-foreground: 45 35% 82%;
+
+    --primary: 45 35% 82%;
+    --primary-foreground: 30 8% 5%;
+
+    --secondary: 30 6% 13%;
+    --secondary-foreground: 45 35% 82%;
+
+    --muted: 30 6% 13%;
+    --muted-foreground: 40 11% 72%;
+
+    --accent: 30 6% 17%;
+    --accent-foreground: 45 35% 82%;
+
+    --border: 35 8% 21%;
+    --input: 35 8% 21%;
+    --ring: 45 35% 82%;
+
+    /* Imagery-only warm light. Read by the signal fields; not a UI token. */
+    --glow: 40 94% 56%;
+  }
+
+  .theme-forest ::selection {
+    background-color: hsl(45 35% 82% / 0.22);
+  }
 }
 
 @layer base {
   * {
     @apply border-border;
+  }
+  html {
+    /* Inter/Geist alternate glyphs + slashed zero: quiet typographic identity */
+    font-feature-settings: "ss03", "cv01", "zero";
   }
   body {
     @apply bg-background text-foreground;
@@ -46,13 +95,19 @@
 }
 
 @layer utilities {
-  /* Animated gradient headline text — pair with .animate-gradient-shift */
+  /* Fractal-noise grain: kills gradient banding, adds material feel.
+     Apply to a fixed, pointer-events-none overlay on marketing pages. */
+  .bg-noise {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* Gradient headline text (static): cream → bright parchment → cream */
   .text-gradient-primary {
     background-image: linear-gradient(
       90deg,
-      hsl(217 91% 60%),
-      hsl(202 95% 74%),
-      hsl(217 91% 60%)
+      hsl(45 35% 82%),
+      hsl(45 48% 93%),
+      hsl(45 35% 82%)
     );
     background-size: 200% auto;
     -webkit-background-clip: text;
@@ -63,8 +118,8 @@
   /* Faint blueprint grid faded by a radial mask (hero background) */
   .bg-grid-fade {
     background-image:
-      linear-gradient(to right, rgba(53, 71, 128, 0.35) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(53, 71, 128, 0.35) 1px, transparent 1px);
+      linear-gradient(to right, rgba(225, 217, 193, 0.09) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(225, 217, 193, 0.09) 1px, transparent 1px);
     background-size: 56px 56px;
     -webkit-mask-image: radial-gradient(
       ellipse 80% 60% at 50% 0%,
@@ -97,14 +152,36 @@
   }
 }
 
+/* Gold rim-light pulse on the hero dashboard, fired by the SignalCollapse
+   canvas at the moment the signal field collapses into it. This is imagery
+   light, not UI — it is the one place gold is still allowed (see `--glow`).
+
+   Deliberately OUTSIDE @layer utilities and not a Tailwind keyframe: this
+   class is only ever applied from JS, so Tailwind's content scan would never
+   see it and would purge it. Plain top-level CSS is never purged. */
+.signal-ignite {
+  animation: signal-ignite 950ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes signal-ignite {
+  0% {
+    border-color: hsl(40 94% 56% / 0.9);
+    box-shadow:
+      0 0 0 1px hsl(40 94% 56% / 0.45),
+      0 0 70px -8px hsl(40 94% 56% / 0.6),
+      inset 0 1px 0 rgba(225,217,193, 0.08);
+  }
+  100% {
+    border-color: rgba(225,217,193, 0.1);
+    box-shadow: inset 0 1px 0 rgba(225,217,193, 0.08);
+  }
+}
+
 /* Reduced motion: stop decorative loops and make entrances instant.
    Targeted selectors (not a blanket * rule) so Radix/app animations
    elsewhere keep their existing behavior. */
 @media (prefers-reduced-motion: reduce) {
   .animate-aurora,
-  .animate-aurora-slow,
-  .animate-gradient-shift,
-  .animate-glow-pulse,
   .animate-marquee,
   .animate-ping {
     animation: none !important;
@@ -113,5 +190,10 @@
   .animate-fade-in {
     animation-duration: 0.01ms !important;
     animation-delay: 0ms !important;
+  }
+  /* The canvas itself renders a single settled frame under reduced motion
+     (see signal-collapse.tsx); this covers the DOM cue it fires. */
+  .signal-ignite {
+    animation: none !important;
   }
 }

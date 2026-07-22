@@ -64,7 +64,7 @@ export default function AcceptInvitationPage() {
   if (authLoading || state.status === "pending") {
     return (
       <div className="mx-auto max-w-md py-16">
-        <Card className="border-brand-700 bg-brand-900">
+        <Card className="border-obsidian-700 bg-obsidian-900">
           <CardContent className="flex flex-col items-center gap-4 py-12">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
             <p className="text-sm text-muted-foreground">
@@ -79,7 +79,7 @@ export default function AcceptInvitationPage() {
   if (state.status === "success") {
     return (
       <div className="mx-auto max-w-md py-16">
-        <Card className="border-brand-700 bg-brand-900">
+        <Card className="border-obsidian-700 bg-obsidian-900">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CheckCircle2 className="h-5 w-5 text-emerald-400" />
@@ -102,7 +102,7 @@ export default function AcceptInvitationPage() {
 
   return (
     <div className="mx-auto max-w-md py-16">
-      <Card className="border-brand-700 bg-brand-900">
+      <Card className="border-obsidian-700 bg-obsidian-900">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <AlertCircle className="h-5 w-5 text-destructive" />

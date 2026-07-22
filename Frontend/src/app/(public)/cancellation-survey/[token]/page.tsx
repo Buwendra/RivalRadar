@@ -57,7 +57,7 @@ export default function CancellationSurveyPage() {
   if (submitted) {
     return (
       <div className="mx-auto max-w-xl py-12">
-        <Card className="border-brand-700 bg-brand-900">
+        <Card className="border-obsidian-700 bg-obsidian-900">
           <CardContent className="flex flex-col items-center gap-4 py-12">
             <CheckCircle2 className="h-12 w-12 text-emerald-400" />
             <h2 className="text-xl font-semibold">Thanks for the feedback</h2>
@@ -75,7 +75,7 @@ export default function CancellationSurveyPage() {
 
   return (
     <div className="mx-auto max-w-xl py-12">
-      <Card className="border-brand-700 bg-brand-900">
+      <Card className="border-obsidian-700 bg-obsidian-900">
         <CardHeader>
           <CardTitle>Sorry to see you go</CardTitle>
           <CardDescription>
@@ -94,7 +94,7 @@ export default function CancellationSurveyPage() {
               <ul className="space-y-1.5">
                 {REASON_OPTIONS.map((opt) => (
                   <li key={opt.value}>
-                    <label className="flex cursor-pointer items-start gap-3 rounded-md border border-brand-700/60 bg-brand-950/30 p-3 transition-colors hover:bg-brand-950/50">
+                    <label className="flex cursor-pointer items-start gap-3 rounded-md border border-obsidian-700/60 bg-obsidian-950/30 p-3 transition-colors hover:bg-obsidian-950/50">
                       <input
                         type="radio"
                         name="reason"

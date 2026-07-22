@@ -1,5 +1,6 @@
 import { Logo } from "@/components/shared/logo";
 import Link from "next/link";
+import { StorageNotice } from "@/components/shared/storage-notice";
 
 export default function OnboardingLayout({
   children,
@@ -16,6 +17,7 @@ export default function OnboardingLayout({
       <main className="flex flex-1 flex-col items-center px-4 py-8">
         <div className="w-full max-w-2xl">{children}</div>
       </main>
+      <StorageNotice />
     </div>
   );
 }

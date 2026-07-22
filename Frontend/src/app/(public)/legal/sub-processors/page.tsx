@@ -20,7 +20,7 @@ export default function SubProcessorsPage() {
       <div className="not-prose overflow-x-auto">
         <table className="w-full border-collapse text-sm">
           <thead>
-            <tr className="border-b border-brand-700 text-left text-xs uppercase tracking-wide text-muted-foreground">
+            <tr className="border-b border-obsidian-700 text-left text-xs uppercase tracking-wide text-muted-foreground">
               <th className="py-2 pr-4">Sub-processor</th>
               <th className="py-2 pr-4">Purpose</th>
               <th className="py-2 pr-4">Region</th>
@@ -28,7 +28,7 @@ export default function SubProcessorsPage() {
             </tr>
           </thead>
           <tbody>
-            <tr className="border-b border-brand-700/60">
+            <tr className="border-b border-obsidian-700/60">
               <td className="py-3 pr-4 align-top font-medium">
                 Amazon Web Services (AWS)
               </td>
@@ -43,7 +43,7 @@ export default function SubProcessorsPage() {
                 SOC 2 Type II, ISO 27001, ISO 27017, ISO 27018
               </td>
             </tr>
-            <tr className="border-b border-brand-700/60">
+            <tr className="border-b border-obsidian-700/60">
               <td className="py-3 pr-4 align-top font-medium">AWS Amplify</td>
               <td className="py-3 pr-4 align-top text-muted-foreground">
                 Frontend hosting and CI/CD
@@ -55,7 +55,7 @@ export default function SubProcessorsPage() {
                 Inherits AWS compliance posture
               </td>
             </tr>
-            <tr className="border-b border-brand-700/60">
+            <tr className="border-b border-obsidian-700/60">
               <td className="py-3 pr-4 align-top font-medium">Anthropic</td>
               <td className="py-3 pr-4 align-top text-muted-foreground">
                 AI model API (Claude Sonnet 4.5, Haiku 4.5, web_search tool)
@@ -67,7 +67,7 @@ export default function SubProcessorsPage() {
                 SOC 2 Type II
               </td>
             </tr>
-            <tr className="border-b border-brand-700/60">
+            <tr className="border-b border-obsidian-700/60">
               <td className="py-3 pr-4 align-top font-medium">Paddle</td>
               <td className="py-3 pr-4 align-top text-muted-foreground">
                 Payment processing and merchant of record (subscriptions,
@@ -80,7 +80,7 @@ export default function SubProcessorsPage() {
                 PCI DSS Level 1, SOC 2 Type II
               </td>
             </tr>
-            <tr className="border-b border-brand-700/60">
+            <tr className="border-b border-obsidian-700/60">
               <td className="py-3 pr-4 align-top font-medium">GitHub</td>
               <td className="py-3 pr-4 align-top text-muted-foreground">
                 Source code hosting; CI integration with Amplify

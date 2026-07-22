@@ -74,7 +74,7 @@ export function LiveFeed() {
   }, []);
 
   return (
-    <div className="flex h-full flex-col rounded-lg border border-brand-700/60 bg-brand-950/50 p-4">
+    <div className="flex h-full flex-col rounded-lg border border-ink/[0.06] bg-obsidian-950/50 p-4">
       <div className="flex items-center gap-2">
         <span className="relative flex h-2 w-2">
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-significance-low opacity-75" />
@@ -91,10 +91,10 @@ export function LiveFeed() {
             // entering at the top) plays fade-up; persisting rows don't.
             <div
               key={index}
-              className="animate-fade-up rounded-md border border-brand-700/40 bg-brand-900/80 p-3"
+              className="animate-fade-up rounded-md border border-ink/[0.06] bg-obsidian-900/80 p-3"
             >
               <div className="flex items-center gap-2 text-xs">
-                <span className="rounded-full bg-primary/10 px-2 py-0.5 font-medium text-primary">
+                <span className="rounded-full bg-ink/[0.06] px-2 py-0.5 font-medium text-ink/70">
                   {item.category}
                 </span>
                 <span className="truncate text-muted-foreground">

@@ -7,6 +7,7 @@ import { DashboardHeader } from "@/components/layout/dashboard-header";
 import { MobileSidebar } from "@/components/layout/mobile-sidebar";
 import { ReconsentBanner } from "@/components/shared/reconsent-banner";
 import { CookieNoticeBanner } from "@/components/shared/cookie-notice-banner";
+import { StorageNotice } from "@/components/shared/storage-notice";
 import { usersApi } from "@/lib/api/users";
 
 const PING_SESSION_KEY = "kx_pinged_this_session";
@@ -55,6 +56,7 @@ export default function DashboardLayout({
         </div>
       </div>
       <CookieNoticeBanner />
+      <StorageNotice />
     </AuthGuard>
   );
 }

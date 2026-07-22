@@ -13,7 +13,7 @@ export default function PricingPage() {
   return (
     <>
       <section className="px-4 pt-20 text-center sm:px-6">
-        <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
+        <h1 className="font-display text-4xl font-medium tracking-[-0.01em] sm:text-5xl">
           Simple, transparent pricing
         </h1>
         <p className="mx-auto mt-4 max-w-xl text-lg text-muted-foreground">

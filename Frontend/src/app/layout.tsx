@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { AppProviders } from "@/lib/providers/app-providers";
-import { StorageNotice } from "@/components/shared/storage-notice";
 import "./globals.css";
 
 const geistSans = localFont({
@@ -35,10 +34,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
       >
-        <AppProviders>
-          {children}
-          <StorageNotice />
-        </AppProviders>
+        {/* StorageNotice mounts per route-group layout so it inherits each
+            surface's theme scope (warm on marketing, cool in the app) */}
+        <AppProviders>{children}</AppProviders>
       </body>
     </html>
   );

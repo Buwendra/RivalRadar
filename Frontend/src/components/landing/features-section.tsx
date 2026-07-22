@@ -1,49 +1,36 @@
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Cpu,
-  Sparkles,
-  FileText,
-  BarChart3,
-  Users,
-  Bell,
-} from "lucide-react";
+import { Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Reveal } from "./reveal";
+import { SignalField } from "./signal-field";
 
 const features = [
   {
-    icon: Cpu,
-    title: "AI-Powered Analysis",
+    title: "Every change, scored and explained",
     description:
-      "Claude AI analyzes every change with structured insights — change type, significance score, strategic implications, and what the move means for your position, not just their headline.",
+      "Claude analyzes each change with structured insights — change type, significance score, strategic implications, and what the move means for your position, not just their headline.",
   },
   {
-    icon: Sparkles,
-    title: "Your Brand, Same Engine",
+    title: "It watches you the same way",
     description:
       "Brand Pulse runs the identical deep research on you — coverage, sentiment, share of voice — on every plan, so every competitor insight arrives with “and here's where you stand.”",
   },
   {
-    icon: FileText,
-    title: "Weekly Strategic Briefs",
+    title: "One brief, every Monday",
     description:
-      "Get a curated weekly digest of the moves that matter, with AI-generated strategic recommendations — plus an opt-in comparative brief on how you stack up against the field.",
+      "A curated weekly digest of the moves that matter, with strategic recommendations — plus an opt-in comparative brief on how you stack up against the field.",
   },
   {
-    icon: BarChart3,
-    title: "Significance Scoring",
+    title: "A 1–10 answer to “does this matter?”",
     description:
-      "Every change is scored 1-10 for significance. Focus on what matters — filter out the noise, act on the critical moves.",
+      "Every change is scored for significance, so you can filter out the noise and act on the critical moves.",
   },
   {
-    icon: Users,
-    title: "Multi-Competitor Tracking",
+    title: "The whole field, ranked by threat",
     description:
       "Stay ahead of up to 25 competitors and see exactly where you stand against each — across news, product, funding, hiring, and social signals.",
   },
   {
-    icon: Bell,
-    title: "Same-Day Alerts",
+    title: "Bad news arrives the same day",
     description:
       "When research detects a high-significance change (7+), an email lands the day we find it — so you know immediately whether you're exposed.",
   },
@@ -56,9 +43,9 @@ function FeatureVisual({ index }: { index: number }) {
     case 0:
       // Mock analyzed finding
       return (
-        <div className="rounded-lg border border-brand-700/60 bg-brand-950/50 p-3" aria-hidden>
+        <div className="rounded-lg border border-ink/[0.06] bg-obsidian-950/50 p-3" aria-hidden>
           <div className="flex items-center gap-2 text-xs">
-            <span className="rounded-full bg-primary/10 px-2 py-0.5 font-medium text-primary">
+            <span className="rounded-full bg-ink/[0.06] px-2 py-0.5 font-medium text-ink/70">
               Product
             </span>
             <span className="truncate text-muted-foreground">
@@ -72,10 +59,10 @@ function FeatureVisual({ index }: { index: number }) {
             Launched usage-based pricing for their enterprise tier
           </p>
           <div className="mt-2 flex gap-1.5 text-xs">
-            <span className="rounded-full bg-brand-800 px-2 py-0.5 text-muted-foreground">
+            <span className="rounded-full bg-obsidian-800 px-2 py-0.5 text-muted-foreground">
               pricing-shift
             </span>
-            <span className="rounded-full bg-brand-800 px-2 py-0.5 text-muted-foreground">
+            <span className="rounded-full bg-obsidian-800 px-2 py-0.5 text-muted-foreground">
               going-upmarket
             </span>
           </div>
@@ -86,19 +73,19 @@ function FeatureVisual({ index }: { index: number }) {
       return (
         <div className="space-y-2.5" aria-hidden>
           <div className="flex items-center gap-3">
-            <span className="w-20 shrink-0 text-xs font-semibold text-emerald-400">
+            <span className="w-20 shrink-0 text-xs font-semibold text-primary">
               You
             </span>
-            <div className="h-2 flex-1 overflow-hidden rounded-full bg-brand-800">
-              <div className="h-full w-[62%] rounded-full bg-emerald-500" />
+            <div className="h-2 flex-1 overflow-hidden rounded-full bg-obsidian-800">
+              <div className="h-full w-[62%] rounded-full bg-primary" />
             </div>
           </div>
           <div className="flex items-center gap-3">
             <span className="w-20 shrink-0 text-xs text-muted-foreground">
               Field avg.
             </span>
-            <div className="h-2 flex-1 overflow-hidden rounded-full bg-brand-800">
-              <div className="h-full w-[41%] rounded-full bg-primary/60" />
+            <div className="h-2 flex-1 overflow-hidden rounded-full bg-obsidian-800">
+              <div className="h-full w-[41%] rounded-full bg-blue-500/60" />
             </div>
           </div>
         </div>
@@ -106,17 +93,17 @@ function FeatureVisual({ index }: { index: number }) {
     case 2:
       // Briefing skeleton lines
       return (
-        <div className="rounded-lg border border-brand-700/60 bg-brand-950/50 p-3" aria-hidden>
+        <div className="rounded-lg border border-ink/[0.06] bg-obsidian-950/50 p-3" aria-hidden>
           <div className="flex items-center justify-between">
-            <div className="h-2.5 w-2/5 rounded bg-brand-700" />
+            <div className="h-2.5 w-2/5 rounded bg-obsidian-700" />
             <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
               Mondays
             </span>
           </div>
           <div className="mt-3 space-y-2">
-            <div className="h-2 w-full rounded bg-brand-800" />
-            <div className="h-2 w-5/6 rounded bg-brand-800" />
-            <div className="h-2 w-4/6 rounded bg-brand-800" />
+            <div className="h-2 w-full rounded bg-obsidian-800" />
+            <div className="h-2 w-5/6 rounded bg-obsidian-800" />
+            <div className="h-2 w-4/6 rounded bg-obsidian-800" />
           </div>
         </div>
       );
@@ -154,7 +141,7 @@ function FeatureVisual({ index }: { index: number }) {
             {["A", "N", "B", "V", "S"].map((initial, i) => (
               <div
                 key={i}
-                className="flex h-8 w-8 items-center justify-center rounded-full border border-brand-700 bg-brand-800 text-xs font-semibold"
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-obsidian-700 bg-obsidian-800 text-xs font-semibold"
               >
                 {initial}
               </div>
@@ -196,54 +183,50 @@ const spans = [
 
 export function FeaturesSection() {
   return (
-    <section className="border-t border-brand-700 bg-brand-900/50 px-4 py-20 sm:px-6">
-      <div className="mx-auto max-w-6xl">
-        <Reveal>
-          <div className="text-center">
-            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-              Everything you need to stay ahead
-            </h2>
-            <p className="mt-4 text-muted-foreground">
-              Competitive intelligence and brand monitoring in one engine, at a price that makes sense for growing teams.
-            </p>
-          </div>
-        </Reveal>
+    <section className="relative overflow-hidden border-t border-ink/[0.06] bg-obsidian-900/40 px-4 py-20 sm:px-6">
+      {/* The settled end state: order, quiet. Deliberately the calmest field on
+          the page — the cards below carry the detail. */}
+      <SignalField mode="lattice" />
+
+      <div className="relative mx-auto max-w-6xl">
+        <div className="max-w-2xl">
+          <h2 className="font-display text-3xl font-medium tracking-[-0.01em] sm:text-4xl">
+            Six things it does well
+          </h2>
+          <p className="mt-4 text-muted-foreground">
+            No feature zoo. Competitive intelligence and brand monitoring in
+            one engine, at a price that makes sense for growing teams.
+          </p>
+        </div>
 
         <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {features.map((feature, index) => (
-            <Reveal
+            <Card
               key={feature.title}
-              delay={(index % 3) * 100}
-              className={spans[index]}
+              className={cn(
+                "group relative h-full overflow-hidden border-ink/[0.08] bg-obsidian-900 shadow-[inset_0_1px_0_rgba(225,217,193,0.06)] transition-colors duration-200 hover:border-ink/[0.16]",
+                spans[index]
+              )}
             >
-              <Card className="group relative h-full overflow-hidden border-brand-700 bg-brand-900 transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/10">
-                <CardContent
-                  className={cn(
-                    "p-6",
-                    index === 5 &&
-                      "flex flex-col gap-6 md:flex-row md:items-center md:justify-between"
-                  )}
-                >
-                  <div
-                    className="pointer-events-none absolute -top-24 left-1/2 h-48 w-48 -translate-x-1/2 rounded-full bg-primary/10 opacity-0 blur-2xl transition-opacity duration-500 group-hover:opacity-100"
-                    aria-hidden
-                  />
-                  <div>
-                    <feature.icon className="h-8 w-8 text-primary transition-transform duration-300 group-hover:scale-110" />
-                    <h3 className="mt-4 text-lg font-semibold">{feature.title}</h3>
-                    <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-                      {feature.description}
-                    </p>
-                    {index !== 5 && (
-                      <div className="mt-4">
-                        <FeatureVisual index={index} />
-                      </div>
-                    )}
-                  </div>
-                  {index === 5 && <FeatureVisual index={index} />}
-                </CardContent>
-              </Card>
-            </Reveal>
+              <CardContent
+                className={cn(
+                  "p-6",
+                  index === 5 &&
+                    "flex flex-col gap-6 md:flex-row md:items-center md:justify-between"
+                )}
+              >
+                <div>
+                  {index !== 5 && <FeatureVisual index={index} />}
+                  <h3 className={cn("text-lg font-semibold", index !== 5 && "mt-5")}>
+                    {feature.title}
+                  </h3>
+                  <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+                    {feature.description}
+                  </p>
+                </div>
+                {index === 5 && <FeatureVisual index={index} />}
+              </CardContent>
+            </Card>
           ))}
         </div>
       </div>
