@@ -59,7 +59,7 @@ export const FRAGMENTS = [
   "podcast",
   "quarterly update",
   "funding round",
-];
+] as const;
 
 const SPRITE_FONT =
   '600 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';

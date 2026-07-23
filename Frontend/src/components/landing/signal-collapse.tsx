@@ -10,23 +10,37 @@ import {
   type FieldContext,
   mountField,
 } from "./signal-runtime";
+import {
+  emitSignalDelivery,
+  FINDING_FRAGMENT_INDEX,
+  FINDINGS,
+  type SignalDeliveryDetail,
+} from "./feed-data";
 
 /**
  * The hero set-piece: the product's job, told as motion.
  *
  * A field of raw web-noise fragments drifts chaotically, then implodes into a
  * single point above the dashboard mockup, flashes, and re-forms as ONE bright
- * line of signal that sinks into the product. Six hundred fragments in, one
- * brief out. After the opening sequence it settles into a calm ambient drift
- * with the occasional fragment igniting and streaking into the dashboard.
+ * line of signal that sinks into the product — and the moment it does, a
+ * delivery event tells the LiveFeed mockup to materialize a new entry: the
+ * gathered noise visibly becoming a row in the dashboard. Six hundred
+ * fragments in, one brief out.
+ *
+ * After the opening sequence it settles into a full-height ambient drift.
+ * Every few seconds one fragment ignites gold — always the word paired to the
+ * NEXT feed finding (see `feed-data.ts`) — and arcs into the feed panel; when
+ * it crosses into the window (the DOM occludes the final approach), another
+ * delivery event births the matching entry. The story loops forever.
  *
  * Shares `signal-runtime` (atlas, palette, loop, reduced-motion handling) with
  * the ambient section fields, but owns its own timeline — this is the only
  * field on the site that tells a beginning-to-end story.
  *
  * The convergence target is whichever element carries `data-signal-target`
- * (the hero mockup). If it isn't present the sequence falls back to a fixed
- * point and still works.
+ * (the hero mockup); streaks aim at `[data-signal-feed]` (the feed panel).
+ * If either is missing the sequence falls back to fixed points and still
+ * works — deliveries then fire at flight end instead of on window crossing.
  */
 
 // Sequence timeline, ms from start.
@@ -38,6 +52,7 @@ const T_SETTLE = 4500; // the line sinks into the dashboard; ambient takes over
 const FLASH_MS = 420;
 const SIGNAL_COUNT = 44; // fragments that survive the collapse as signal
 const CORE_RADIUS = 26;
+const FLIGHT_MS = 1000; // ambient ignition: fixed flight time into the feed
 
 interface Particle {
   x: number;
@@ -51,8 +66,15 @@ interface Particle {
   consumed: boolean;
   /** Index into the resolved signal line, or -1 if this one didn't survive. */
   slot: number;
-  /** Timestamp of an ambient-phase ignition, 0 when idle. */
+  /** Ambient ignition flight start timestamp, 0 when idle. */
   ignitedAt: number;
+  /** Flight origin, recorded at ignition (the bezier's first control point). */
+  ix: number;
+  iy: number;
+  /** Signed perpendicular bend of the flight arc, set at ignition. */
+  bend: number;
+  /** Latched once the flight enters the window rect (delivery fired). */
+  crossed: boolean;
 }
 
 export function SignalCollapse() {
@@ -70,6 +92,35 @@ export function SignalCollapse() {
     let lineW = 0;
     let flashFired = false;
     let nextIgnite = 0;
+    /** Feed panel center — where ambient ignitions deliver to. */
+    let feedX = 0;
+    let feedY = 0;
+    /** Mockup window rect: occlusion boundary for crossing detection. */
+    let winTop = 0;
+    let winLeft = 0;
+    let winRight = 0;
+    let winBottom = 0;
+    let ambientStart = 0;
+    let introDelivered = false;
+    /**
+     * The finding the NEXT delivery will surface. Starts one step "back" so
+     * the first delivered row matches what LiveFeed's own backward rotation
+     * would have shown; deliberately NOT reset on replay, so each replay of
+     * the intro delivers a fresh finding instead of the same one.
+     */
+    let nextFindingIndex = FINDINGS.length - 1;
+    /**
+     * Deliveries queued with a timestamp and pumped from draw(). Living
+     * inside the rAF loop means they die with it — no dispatch after
+     * unmount, hidden tabs, or Strict-Mode remounts, with zero cleanup code.
+     */
+    let pendingDeliveries: Array<{ at: number } & SignalDeliveryDetail> = [];
+
+    const queueDelivery = (at: number, kind: SignalDeliveryDetail["kind"]) => {
+      pendingDeliveries.push({ at, findingIndex: nextFindingIndex, kind });
+      nextFindingIndex =
+        (nextFindingIndex - 1 + FINDINGS.length) % FINDINGS.length;
+    };
 
     const measureTarget = (fc: FieldContext) => {
       const el = document.querySelector<HTMLElement>("[data-signal-target]");
@@ -80,11 +131,26 @@ export function SignalCollapse() {
         coreY = r.top - hostRect.top - 10;
         lineW = r.width * 0.92;
         lineX = r.left - hostRect.left + (r.width - lineW) / 2;
+        winLeft = r.left - hostRect.left;
+        winTop = r.top - hostRect.top;
+        winRight = winLeft + r.width;
+        winBottom = winTop + r.height;
       } else {
         coreX = fc.width / 2;
         coreY = fc.height * 0.62;
         lineW = Math.min(fc.width * 0.8, 900);
         lineX = (fc.width - lineW) / 2;
+        // Empty rect: crossing never triggers; flights deliver at k=1 instead.
+        winLeft = winRight = winTop = winBottom = 0;
+      }
+      const feedEl = document.querySelector<HTMLElement>("[data-signal-feed]");
+      if (feedEl) {
+        const fr = feedEl.getBoundingClientRect();
+        feedX = fr.left - hostRect.left + fr.width / 2;
+        feedY = fr.top - hostRect.top + fr.height / 2;
+      } else {
+        feedX = coreX;
+        feedY = coreY + 120;
       }
     };
 
@@ -102,6 +168,10 @@ export function SignalCollapse() {
       p.consumed = false;
       p.slot = -1;
       p.ignitedAt = 0;
+      p.ix = 0;
+      p.iy = 0;
+      p.bend = 0;
+      p.crossed = false;
     };
 
     const build = (fc: FieldContext) => {
@@ -227,6 +297,8 @@ export function SignalCollapse() {
           measureTarget(fc);
           flashFired = false;
           nextIgnite = 0;
+          introDelivered = false;
+          pendingDeliveries = [];
           for (let i = 0; i < ps.length; i += 1) {
             const slot = ps[i].slot;
             spawn(ps[i], i, fc);
@@ -332,23 +404,69 @@ export function SignalCollapse() {
             if (f < 1) drawFlash(fc, f);
             drawSignalLine(fc, ease, (1 - settle) * 0.85, settle * 14);
           } else {
-            // ---- 4. AMBIENT: a calm field, with the odd fragment igniting and
-            // streaking into the dashboard. Keeps the hero alive, quietly.
+            // ---- 4. AMBIENT: a calm full-height field. Every few seconds one
+            // fragment — the word paired to the next feed finding — ignites
+            // gold and arcs into the feed panel; crossing the window boundary
+            // queues a delivery, and the feed births the matching entry.
+
+            // Pump queued deliveries. Dispatching from draw() means delivery
+            // dies with the rAF loop — nothing fires after unmount or in a
+            // hidden tab.
+            for (let i = pendingDeliveries.length - 1; i >= 0; i -= 1) {
+              if (pendingDeliveries[i].at <= now) {
+                const d = pendingDeliveries.splice(i, 1)[0];
+                emitSignalDelivery({ findingIndex: d.findingIndex, kind: d.kind });
+              }
+            }
+
             if (nextIgnite === 0) {
               nextIgnite = now + 1800;
-              // Recycle everything into the upper field once the sequence ends.
+              ambientStart = t;
+              // Recycle everything across the FULL field once the sequence
+              // ends — the bottom half stays alive; the opaque window occludes
+              // the middle. A slight upward bias reads as "still gathering."
               for (let i = 0; i < ps.length; i += 1) {
                 const p = ps[i];
                 spawn(p, i, fc);
                 p.slot = -1;
-                p.y = Math.random() * Math.max(coreY - 20, height * 0.5);
+                p.vy -= 0.05;
                 p.alpha *= 0.62;
               }
+              // The intro's absorption lands its row now — ambient entry is
+              // the moment the sunken line disappears into the window.
+              if (!introDelivered) {
+                introDelivered = true;
+                queueDelivery(now + 150, "collapse");
+              }
             }
+            // The recycled field fades up instead of popping in.
+            const ambientRamp = clamp01((t - ambientStart) / 800);
+
             if (now > nextIgnite) {
-              nextIgnite = now + 2200 + Math.random() * 2600;
-              const pick = ps[Math.floor(Math.random() * ps.length)];
-              if (pick.ignitedAt === 0) pick.ignitedAt = now;
+              // Each ignition births a feed row, so the cadence is the feed's
+              // update rate — slower than a pure decorative flare would be.
+              nextIgnite = now + 4500 + Math.random() * 3500;
+              // Reject candidates behind the window: an occluded ignition is
+              // an invisible cause for the row that then appears.
+              for (let tries = 0; tries < 8; tries += 1) {
+                const pick = ps[Math.floor(Math.random() * ps.length)];
+                if (pick.ignitedAt !== 0) continue;
+                const hidden =
+                  pick.x > winLeft &&
+                  pick.x < winRight &&
+                  pick.y > winTop &&
+                  pick.y < winBottom;
+                if (hidden) continue;
+                // Content pairing: flare the exact word this finding was
+                // distilled from, so cause and entry match.
+                pick.sprite = FINDING_FRAGMENT_INDEX[nextFindingIndex];
+                pick.ix = pick.x;
+                pick.iy = pick.y;
+                pick.bend = (Math.random() < 0.5 ? -1 : 1) * (0.12 + Math.random() * 0.14);
+                pick.ignitedAt = now;
+                pick.crossed = false;
+                break;
+              }
             }
 
             ctx.lineWidth = 1;
@@ -356,24 +474,44 @@ export function SignalCollapse() {
               const p = ps[i];
 
               if (p.ignitedAt > 0) {
-                const age = now - p.ignitedAt;
-                if (age > 1500) {
+                // Fixed-duration bezier flight into the feed panel: arrival is
+                // guaranteed, so delivery timing is exact. The window occludes
+                // the final approach — the fragment visibly dives INTO it.
+                const k = clamp01((now - p.ignitedAt) / FLIGHT_MS);
+                const e = easeIn(k);
+                const u = 1 - e;
+                const mx = (p.ix + feedX) / 2 - (feedY - p.iy) * p.bend;
+                const my = (p.iy + feedY) / 2 + (feedX - p.ix) * p.bend;
+                const px = p.x;
+                const py = p.y;
+                p.x = u * u * p.ix + 2 * u * e * mx + e * e * feedX;
+                p.y = u * u * p.iy + 2 * u * e * my + e * e * feedY;
+                // Frame delta doubles as the streak direction.
+                p.vx = p.x - px;
+                p.vy = p.y - py;
+
+                const flare = clamp01((now - p.ignitedAt) / 120);
+                blit(ctx, fc.gold[p.sprite], p.x, p.y, flare * 0.9, p.rot);
+                drawStreak(ctx, p, flare * 0.45, 4);
+
+                const inside =
+                  p.x > winLeft &&
+                  p.x < winRight &&
+                  p.y > winTop &&
+                  p.y < winBottom;
+                if (!p.crossed && inside) {
+                  p.crossed = true;
+                  // Small lag sells "it traveled inside to the feed."
+                  queueDelivery(now + 120, "ambient");
+                }
+                if (k >= 1) {
+                  // Fallback geometry (no window rect): deliver on arrival.
+                  if (!p.crossed) queueDelivery(now, "ambient");
                   const keep = p.alpha;
                   spawn(p, i, fc);
                   p.alpha = keep;
-                  p.y = Math.random() * Math.max(coreY - 20, height * 0.5);
-                  continue;
+                  p.vy -= 0.05;
                 }
-                const k = clamp01(age / 1500);
-                const dx = coreX - p.x;
-                const dy = coreY - p.y;
-                const d = Math.hypot(dx, dy) || 1;
-                p.vx += (dx / d) * 0.34 * dt;
-                p.vy += (dy / d) * 0.34 * dt;
-                p.x += p.vx * dt;
-                p.y += p.vy * dt;
-                blit(ctx, fc.gold[p.sprite], p.x, p.y, (1 - k) * 0.85, p.rot);
-                drawStreak(ctx, p, (1 - k) * 0.5, 4);
                 continue;
               }
 
@@ -382,9 +520,18 @@ export function SignalCollapse() {
               p.rot += p.vrot * dt;
               if (p.x < -80) p.x = width + 80;
               else if (p.x > width + 80) p.x = -80;
-              if (p.y < -40) p.y = coreY;
-              else if (p.y > coreY) p.y = -40;
-              blit(ctx, fc.ink[p.sprite], p.x, p.y, p.alpha * 0.24, p.rot);
+              if (p.y < -40) p.y = height + 40;
+              else if (p.y > height + 40) p.y = -40;
+              // Quieter below the window so the marquee keeps the floor.
+              const below = p.y > winBottom && winBottom > 0 ? 0.75 : 1;
+              blit(
+                ctx,
+                fc.ink[p.sprite],
+                p.x,
+                p.y,
+                p.alpha * 0.24 * below * ambientRamp,
+                p.rot
+              );
             }
 
             drawSignalLine(fc, 1, 0.16, 0);
@@ -398,8 +545,9 @@ export function SignalCollapse() {
          * precisely because it's the only frame they ever see.
          */
         still(fc) {
+          // Full field, not just the upper half — the window occludes the
+          // middle, and the ambient loop now lives at full height too.
           for (const p of ps) {
-            if (p.y > coreY) continue;
             blit(fc.ctx, fc.ink[p.sprite], p.x, p.y, p.alpha * 0.34, p.rot);
           }
           fc.ctx.globalAlpha = 1;

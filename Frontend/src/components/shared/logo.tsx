@@ -21,9 +21,10 @@ export function Logo({ className, iconOnly = false }: LogoProps) {
       />
       {!iconOnly && (
         <span className="text-lg font-bold tracking-tight text-foreground">
-          {/* Explicit blue (not the semantic accent) so the wordmark stays
-              identical on the warm marketing theme and in the app */}
-          Kirony<span className="text-blue-500">X</span>
+          {/* Explicit gold literal (not a semantic token) so the wordmark stays
+              identical on the warm marketing theme and in the app. Matches the
+              --glow gold of the recolored compass mark. */}
+          Kirony<span className="text-[#F8B225]">X</span>
         </span>
       )}
     </div>
