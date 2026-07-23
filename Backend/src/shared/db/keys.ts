@@ -166,6 +166,14 @@ export const aiLogSKPrefix = () => 'CALL#';
 export const rateLimitPK = () => 'RATELIMIT#ANTHROPIC_INPUT_TPM';
 export const rateLimitSK = (minuteKey: string) => `MINUTE#${minuteKey}`;
 
+// Auth rate-limit window — durable per-identifier fixed window for the public
+// auth endpoints (signin / signup / resend-verification). One row per
+// (scope, identifier); self-cleans via expiresAt TTL shortly after the
+// window closes. See shared/utils/auth-rate-limit.ts.
+export const authRateLimitPK = (scope: string, identifier: string) =>
+  `RATELIMIT#AUTH#${scope}#${identifier}`;
+export const authRateLimitSK = () => 'WINDOW';
+
 // ─── GSI Key Builders ───
 
 // GSI1: User's changes feed (dashboard)

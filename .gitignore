@@ -2,3 +2,6 @@
 evidence-*/
 ACCESS_REVIEW_LOG.md
 VENDOR_RISK_REVIEW_LOG.md
+
+# Playwright MCP session artifacts (console logs + page snapshots)
+.playwright-mcp/

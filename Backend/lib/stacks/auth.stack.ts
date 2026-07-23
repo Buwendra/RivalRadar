@@ -11,7 +11,10 @@ export class AuthStack extends cdk.Stack {
 
     this.userPool = new cognito.UserPool(this, 'UserPool', {
       userPoolName: `${this.stackName}-UserPool`,
-      selfSignUpEnabled: true,
+      // Pre-launch: self-registration is closed at the identity layer
+      // (AllowAdminCreateUserOnly). Flip back to true alongside the
+      // SIGNUP_ENABLED env flag on the Api stack to re-open sign-ups.
+      selfSignUpEnabled: false,
       signInAliases: { email: true },
       autoVerify: { email: false },
       standardAttributes: {

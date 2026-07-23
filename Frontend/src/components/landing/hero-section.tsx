@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Shield, Zap, TrendingUp } from "lucide-react";
+import { SIGNUP_CTA_HREF, signupCtaLabel } from "@/lib/utils/signup-flag";
 import { HeroMockup } from "./hero-mockup";
 import { CategoryMarquee } from "./category-marquee";
 
@@ -56,8 +57,8 @@ export function HeroSection() {
               size="lg"
               className="relative bg-cta px-8 text-lg text-brand-950 shadow-lg shadow-cta/25 transition-shadow hover:bg-cta-hover hover:shadow-cta/40"
             >
-              <Link href="/sign-up">
-                Start Free Trial
+              <Link href={SIGNUP_CTA_HREF}>
+                {signupCtaLabel("Start Free Trial")}
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
             </Button>

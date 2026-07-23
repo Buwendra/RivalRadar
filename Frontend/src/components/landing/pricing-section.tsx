@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SIGNUP_CTA_HREF, signupCtaLabel } from "@/lib/utils/signup-flag";
 import { Reveal } from "./reveal";
 
 const plans = [
@@ -124,7 +125,7 @@ export function PricingSection({ showHeading = true }: PricingSectionProps) {
                     )}
                     variant={plan.popular ? "default" : "outline"}
                   >
-                    <Link href="/sign-up">{plan.cta}</Link>
+                    <Link href={SIGNUP_CTA_HREF}>{signupCtaLabel(plan.cta)}</Link>
                   </Button>
                 </CardContent>
               </Card>

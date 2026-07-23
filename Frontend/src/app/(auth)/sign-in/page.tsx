@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/shared/loading-spinner";
+import { SIGNUP_ENABLED } from "@/lib/utils/signup-flag";
 
 const signInSchema = z.object({
   email: z.string().email("Please enter a valid email"),
@@ -113,9 +114,15 @@ function SignInForm() {
           </Button>
           <p className="text-center text-sm text-muted-foreground">
             Don&apos;t have an account?{" "}
-            <Link href="/sign-up" className="text-primary hover:underline">
-              Sign up
-            </Link>
+            {SIGNUP_ENABLED ? (
+              <Link href="/sign-up" className="text-primary hover:underline">
+                Sign up
+              </Link>
+            ) : (
+              <Link href="/contact" className="text-primary hover:underline">
+                Contact us
+              </Link>
+            )}
           </p>
         </CardFooter>
       </form>

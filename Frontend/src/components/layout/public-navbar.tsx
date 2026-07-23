@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Logo } from "@/components/shared/logo";
 import { Button } from "@/components/ui/button";
+import { SIGNUP_CTA_HREF, signupCtaLabel } from "@/lib/utils/signup-flag";
 
 export function PublicNavbar() {
   return (
@@ -23,7 +24,7 @@ export function PublicNavbar() {
             <Link href="/sign-in">Sign in</Link>
           </Button>
           <Button asChild size="sm" className="bg-cta text-brand-950 hover:bg-cta-hover">
-            <Link href="/sign-up">Start Free Trial</Link>
+            <Link href={SIGNUP_CTA_HREF}>{signupCtaLabel("Start Free Trial")}</Link>
           </Button>
         </div>
       </div>

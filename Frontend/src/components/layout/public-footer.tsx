@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Logo } from "@/components/shared/logo";
 import { Separator } from "@/components/ui/separator";
+import { SIGNUP_CTA_HREF, signupCtaLabel } from "@/lib/utils/signup-flag";
 
 export function PublicFooter() {
   return (
@@ -24,8 +25,8 @@ export function PublicFooter() {
                 </Link>
               </li>
               <li>
-                <Link href="/sign-up" className="hover:text-foreground">
-                  Get Started
+                <Link href={SIGNUP_CTA_HREF} className="hover:text-foreground">
+                  {signupCtaLabel("Get Started")}
                 </Link>
               </li>
             </ul>

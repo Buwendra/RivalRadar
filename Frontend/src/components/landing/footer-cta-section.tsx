@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
+import { SIGNUP_CTA_HREF, SIGNUP_ENABLED, signupCtaLabel } from "@/lib/utils/signup-flag";
 import { Reveal } from "./reveal";
 
 export function FooterCTASection() {
@@ -30,15 +31,17 @@ export function FooterCTASection() {
                 size="lg"
                 className="relative bg-cta px-8 text-lg text-brand-950 shadow-lg shadow-cta/25 transition-shadow hover:bg-cta-hover hover:shadow-cta/40"
               >
-                <Link href="/sign-up">
-                  Start Your Free Trial
+                <Link href={SIGNUP_CTA_HREF}>
+                  {signupCtaLabel("Start Your Free Trial")}
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Link>
               </Button>
             </div>
           </div>
           <p className="mt-4 text-xs text-muted-foreground">
-            No credit card required. Cancel anytime.
+            {SIGNUP_ENABLED
+              ? "No credit card required. Cancel anytime."
+              : "Currently invite-only — get in touch and we'll set you up."}
           </p>
         </div>
       </Reveal>

@@ -14,7 +14,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/shared/loading-spinner";
-import { CheckCircle2 } from "lucide-react";
+import { SIGNUP_ENABLED } from "@/lib/utils/signup-flag";
+import { CheckCircle2, Lock } from "lucide-react";
 
 const signUpSchema = z
   .object({
@@ -35,6 +36,31 @@ const signUpSchema = z
 
 type SignUpFormData = z.infer<typeof signUpSchema>;
 
+/** Pre-launch: shown instead of the form while sign-ups are closed. The
+ *  form below stays intact so re-enabling is just the env flag + rebuild. */
+function SignUpClosedCard() {
+  return (
+    <Card className="border-brand-700 bg-brand-900">
+      <CardContent className="flex flex-col items-center gap-4 py-8">
+        <Lock className="h-12 w-12 text-muted-foreground" />
+        <h2 className="text-xl font-semibold">Sign-ups are currently closed</h2>
+        <p className="text-center text-sm text-muted-foreground">
+          We&apos;re onboarding new workspaces by invitation while we get ready
+          for launch. Get in touch and we&apos;ll set you up.
+        </p>
+        <div className="mt-2 flex flex-col items-center gap-3 sm:flex-row">
+          <Button asChild className="bg-cta text-brand-950 hover:bg-cta-hover">
+            <Link href="/contact">Contact us</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/sign-in">Sign in</Link>
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function SignUpPage() {
   const { signUp } = useAuth();
   const [error, setError] = useState<string | null>(null);
@@ -51,6 +77,12 @@ export default function SignUpPage() {
     resolver: zodResolver(signUpSchema),
     defaultValues: { name: "", email: "", password: "", confirmPassword: "", legalAccepted: false },
   });
+
+  // After the hooks so the hook order is unconditional (SIGNUP_ENABLED is a
+  // build-time constant, but the linter can't know that).
+  if (!SIGNUP_ENABLED) {
+    return <SignUpClosedCard />;
+  }
 
   const onSubmit = async (data: SignUpFormData) => {
     setError(null);

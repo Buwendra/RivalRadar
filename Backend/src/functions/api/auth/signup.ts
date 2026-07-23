@@ -4,6 +4,7 @@ import {
 } from '@aws-sdk/client-cognito-identity-provider';
 import { apiHandler, parseBody, HttpError, PublicEvent, getSourceIp, getUserAgent } from '../../../shared/middleware/handler';
 import { validate } from '../../../shared/middleware/validation';
+import { enforceAuthRateLimit } from '../../../shared/utils/auth-rate-limit';
 import { putItem } from '../../../shared/db/queries';
 import { userPK, userSK, gsi3EmailKeys } from '../../../shared/db/keys';
 import { generateId } from '../../../shared/utils/id';
@@ -23,9 +24,21 @@ const signupSchema = z.object({
 });
 
 export const handler = apiHandler<PublicEvent>(async (event) => {
+  // Pre-launch kill switch. Cognito's selfSignUpEnabled: false is the hard
+  // backstop; this gate returns a clean error instead of a leaked Cognito
+  // NotAuthorizedException, and makes re-enabling an env toggle.
+  if (process.env.SIGNUP_ENABLED !== 'true') {
+    throw new HttpError(403, 'SIGNUP_DISABLED', 'Sign-ups are currently closed.');
+  }
+
   const body = validate(signupSchema, parseBody(event));
   const sourceIp = getSourceIp(event);
   const userAgent = getUserAgent(event);
+
+  // 5 signups/hour/IP — mass account creation is a cost vector (each account
+  // can trigger paid research). Sits after the kill switch so it only spends
+  // quota when sign-ups are actually open.
+  await enforceAuthRateLimit('SIGNUP_IP', sourceIp, 5, 60 * 60);
 
   logger.info('signup_started', { email: body.email });
   void recordAuthAuditEvent({

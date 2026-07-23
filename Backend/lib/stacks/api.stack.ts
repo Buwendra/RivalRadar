@@ -123,7 +123,12 @@ export class ApiStack extends cdk.Stack {
     };
 
     // ─── Auth Routes (public) ───
-    addRoute('AuthSignup', apigatewayv2.HttpMethod.POST, '/auth/signup', 'api/auth/signup.ts', false);
+    // SIGNUP_ENABLED defaults to off (pre-launch). The handler 403s with
+    // SIGNUP_DISABLED unless the env var is exactly 'true'. Cognito's
+    // selfSignUpEnabled: false (Auth stack) is the hard backstop.
+    addRoute('AuthSignup', apigatewayv2.HttpMethod.POST, '/auth/signup', 'api/auth/signup.ts', false, {
+      SIGNUP_ENABLED: process.env.SIGNUP_ENABLED ?? 'false',
+    });
     addRoute('AuthSignin', apigatewayv2.HttpMethod.POST, '/auth/signin', 'api/auth/signin.ts', false);
     // Public by necessity: the caller's id token is expired when they hit this.
     addRoute('AuthRefresh', apigatewayv2.HttpMethod.POST, '/auth/refresh', 'api/auth/refresh.ts', false);
@@ -416,8 +421,10 @@ export class ApiStack extends cdk.Stack {
     );
 
     // ─── Phase 9: API Gateway Throttling ───
-    // Default loose limit (100 req/s, 200 burst) catches runaway client loops
-    // without affecting normal usage.
+    // Pre-launch limit (20 req/s, 40 burst) — deliberately tight while the
+    // app is domain-hosted but not publicly launched; a handful of real
+    // users won't come near it, and it blunts floods/runaway client loops.
+    // Loosen when opening to the public.
     //
     // NOTE: per-route stricter throttling (e.g. 5 req/s on /auth/signin) is
     // NOT possible on API Gateway HTTP API v2 — the `throttlingBurstLimit` /
@@ -430,8 +437,8 @@ export class ApiStack extends cdk.Stack {
     // as a partial mitigation today.
     const defaultStage = this.httpApi.defaultStage!.node.defaultChild as apigatewayv2.CfnStage;
     defaultStage.defaultRouteSettings = {
-      throttlingBurstLimit: 200,
-      throttlingRateLimit: 100,
+      throttlingBurstLimit: 40,
+      throttlingRateLimit: 20,
     };
 
     // ─── Outputs ───

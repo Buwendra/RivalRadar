@@ -4,6 +4,7 @@ import {
 } from '@aws-sdk/client-cognito-identity-provider';
 import { apiHandler, parseBody, HttpError, PublicEvent, getSourceIp, getUserAgent } from '../../../shared/middleware/handler';
 import { validate } from '../../../shared/middleware/validation';
+import { enforceAuthRateLimit } from '../../../shared/utils/auth-rate-limit';
 import { logger } from '../../../shared/utils/logger';
 import { recordAuthAuditEvent } from '../../../shared/services/audit';
 import { z } from 'zod';
@@ -19,6 +20,13 @@ export const handler = apiHandler<PublicEvent>(async (event) => {
   const body = validate(signinSchema, parseBody(event));
   const sourceIp = getSourceIp(event);
   const userAgent = getUserAgent(event);
+
+  // Durable brute-force limits (WAF is deferred, so this is the app-level
+  // defense; Cognito's own lockout remains the backstop). Per-IP catches
+  // spraying from one host; per-email catches distributed guessing against
+  // one account.
+  await enforceAuthRateLimit('SIGNIN_IP', sourceIp, 10, 5 * 60);
+  await enforceAuthRateLimit('SIGNIN_EMAIL', body.email.toLowerCase(), 5, 15 * 60);
 
   logger.info('signin_attempt', { email: body.email });
 
