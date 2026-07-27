@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { PageHero } from "@/components/marketing/page-hero";
 import { Reveal } from "@/components/landing/reveal";
 import { cn } from "@/lib/utils";
+import { PRIMARY_CTA_HREF, primaryCtaLabel } from "@/lib/utils/signup-flag";
 
 export const metadata: Metadata = {
   title: "Sample Report — What Lands in Your Inbox",
@@ -98,23 +99,25 @@ export default function SampleReportPage() {
           {/* The brief */}
           <Reveal delay={80}>
             <article className="mt-8 overflow-hidden rounded-xl border border-ink/10 bg-obsidian-900 shadow-[inset_0_1px_0_rgba(225,217,193,0.08)]">
-              {/* Email-style header */}
+              {/* Briefing masthead */}
               <header className="border-b border-ink/[0.06] bg-obsidian-950/60 px-6 py-5">
-                <p className="font-mono text-xs uppercase tracking-[0.08em] text-ink/45">
-                  Weekly strategic brief
-                </p>
-                <h2 className="mt-2 text-xl font-semibold tracking-[-0.02em]">
-                  What your competitors did this week
+                <div className="flex items-center justify-between font-mono text-label uppercase text-ink/45">
+                  <span>Kironyx briefing</span>
+                  <span className="nums-tabular">Week of 21 Jul</span>
+                </div>
+                <h2 className="mt-3 font-display text-headline font-medium text-foreground">
+                  What moved this week — and where you stand.
                 </h2>
-                <p className="mt-1 text-sm text-ink/55">
-                  Your workspace · 4 tracked companies · 12 changes detected this week
+                <p className="mt-1.5 text-sm text-ink/55">
+                  Your workspace · 4 tracked companies + your brand · 12 changes
+                  detected
                 </p>
               </header>
 
               <div className="space-y-10 px-6 py-8">
                 {/* At a glance */}
                 <div>
-                  <h3 className="font-mono text-xs uppercase tracking-[0.08em] text-ink/55">
+                  <h3 className="font-mono text-label uppercase text-ink/55">
                     At a glance
                   </h3>
                   <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -137,7 +140,7 @@ export default function SampleReportPage() {
 
                 {/* Top moves */}
                 <div>
-                  <h3 className="font-mono text-xs uppercase tracking-[0.08em] text-ink/55">
+                  <h3 className="font-mono text-label uppercase text-ink/55">
                     The moves that matter
                   </h3>
                   <div className="mt-4 space-y-4">
@@ -172,7 +175,7 @@ export default function SampleReportPage() {
 
                 {/* Recommendations */}
                 <div>
-                  <h3 className="font-mono text-xs uppercase tracking-[0.08em] text-ink/55">
+                  <h3 className="font-mono text-label uppercase text-ink/55">
                     Recommended actions
                   </h3>
                   <ul className="mt-4 space-y-3">
@@ -196,7 +199,7 @@ export default function SampleReportPage() {
 
                 {/* Where you stand */}
                 <div>
-                  <h3 className="font-mono text-xs uppercase tracking-[0.08em] text-ink/55">
+                  <h3 className="font-mono text-label uppercase text-ink/55">
                     Where you stand · share of voice, 30d
                   </h3>
                   <div className="mt-4 space-y-2.5">
@@ -242,15 +245,16 @@ export default function SampleReportPage() {
               <Button
                 asChild
                 size="lg"
-                className="bg-cta px-8 text-obsidian-950 shadow-lg shadow-cta/20 transition-all hover:bg-cta-hover active:scale-[0.98]"
+                className="group bg-cta px-8 text-obsidian-950 shadow-lg shadow-cta/20 transition-[transform,background-color,box-shadow] duration-150 ease-out-strong hover:bg-cta-hover hover:shadow-cta/30 active:scale-[0.97]"
               >
-                <Link href="/sign-up">
-                  Get your first brief this week
-                  <ArrowRight className="ml-2 h-5 w-5" />
+                <Link href={PRIMARY_CTA_HREF}>
+                  {primaryCtaLabel("Get your first brief this week")}
+                  <ArrowRight className="ml-2 h-5 w-5 transition-transform duration-150 ease-out-strong group-hover:translate-x-0.5" />
                 </Link>
               </Button>
               <p className="mt-3 text-sm text-ink/55">
-                Research starts minutes after onboarding. No credit card required.
+                Research starts within minutes of setup. Your own brand is
+                benchmarked from day one.
               </p>
             </div>
           </Reveal>

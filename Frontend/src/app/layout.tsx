@@ -15,13 +15,33 @@ const geistMono = localFont({
   weight: "100 900",
 });
 
+const SITE_URL =
+  process.env.NEXT_PUBLIC_APP_URL ??
+  "https://main.d1zrq9gf129s9u.amplifyapp.com";
+
+const SITE_DESCRIPTION =
+  "One engine, pointed both ways. Kironyx runs the same AI deep research on your competitors and on your own brand, then files the gap between them in a weekly brief — competitive intelligence and brand monitoring in one, at a fraction of enterprise pricing.";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: "Kironyx — AI Competitive Intelligence & Brand Monitoring for SMBs",
+    default:
+      "Kironyx — AI competitive intelligence + brand monitoring, in one",
     template: "%s | Kironyx",
   },
-  description:
-    "Know what your competitors did this week — and exactly where you stand. AI deep research on them and on your own brand, side by side, at 1/200th the price of enterprise tools.",
+  description: SITE_DESCRIPTION,
+  openGraph: {
+    type: "website",
+    siteName: "Kironyx",
+    url: SITE_URL,
+    title: "Kironyx — your brand and your rivals, seen through one lens",
+    description: SITE_DESCRIPTION,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Kironyx — your brand and your rivals, seen through one lens",
+    description: SITE_DESCRIPTION,
+  },
 };
 
 export default function RootLayout({

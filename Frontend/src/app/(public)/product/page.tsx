@@ -1,5 +1,6 @@
 import { Metadata } from "next";
 import Link from "next/link";
+import { PRIMARY_CTA_HREF, primaryCtaLabel } from "@/lib/utils/signup-flag";
 import {
   Globe,
   GitCompareArrows,
@@ -121,9 +122,9 @@ export default function ProductPage() {
         <Button
           asChild
           size="lg"
-          className="bg-cta px-8 text-obsidian-950 shadow-lg shadow-cta/20 transition-all hover:bg-cta-hover active:scale-[0.98]"
+          className="bg-cta px-8 text-obsidian-950 shadow-lg shadow-cta/20 transition-[transform,background-color,box-shadow] duration-150 ease-out-strong hover:bg-cta-hover hover:shadow-cta/30 active:scale-[0.97]"
         >
-          <Link href="/sign-up">Start Free Trial</Link>
+          <Link href={PRIMARY_CTA_HREF}>{primaryCtaLabel("Start free trial")}</Link>
         </Button>
       </PageHero>
 
@@ -131,7 +132,7 @@ export default function ProductPage() {
       <section className="border-t border-ink/[0.06] bg-obsidian-900/40 px-4 py-20 sm:px-6">
         <div className="mx-auto max-w-6xl">
           <Reveal>
-            <h2 className="text-center font-display text-3xl font-medium tracking-[-0.01em] sm:text-4xl">
+            <h2 className="text-center font-display text-display-m font-medium">
               From raw web to weekly brief
             </h2>
           </Reveal>
@@ -161,7 +162,7 @@ export default function ProductPage() {
         <div className="mx-auto max-w-6xl">
           <Reveal>
             <div className="text-center">
-              <h2 className="font-display text-3xl font-medium tracking-[-0.01em] sm:text-4xl">
+              <h2 className="font-display text-display-m font-medium">
                 What the research covers
               </h2>
               <p className="mx-auto mt-4 max-w-2xl text-ink/70">
@@ -194,7 +195,7 @@ export default function ProductPage() {
               <p className="font-mono text-xs uppercase tracking-[0.08em] text-primary/80">
                 Brand Pulse
               </p>
-              <h2 className="mt-3 font-display text-3xl font-medium tracking-[-0.01em] sm:text-4xl">
+              <h2 className="mt-3 font-display text-display-m font-medium">
                 The mirror is the product
               </h2>
               <p className="mt-4 text-[17px] leading-[1.65] text-ink/70">
@@ -256,7 +257,7 @@ export default function ProductPage() {
         <div className="mx-auto max-w-6xl">
           <Reveal>
             <div className="text-center">
-              <h2 className="font-display text-3xl font-medium tracking-[-0.01em] sm:text-4xl">
+              <h2 className="font-display text-display-m font-medium">
                 Signals, not just headlines
               </h2>
               <p className="mx-auto mt-4 max-w-2xl text-ink/70">
@@ -288,7 +289,7 @@ export default function ProductPage() {
       <section className="border-t border-ink/[0.06] bg-obsidian-900/40 px-4 py-20 sm:px-6">
         <div className="mx-auto max-w-3xl">
           <Reveal>
-            <h2 className="text-center font-display text-3xl font-medium tracking-[-0.01em] sm:text-4xl">
+            <h2 className="text-center font-display text-display-m font-medium">
               Delivered where you already work
             </h2>
           </Reveal>

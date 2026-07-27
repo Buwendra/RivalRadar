@@ -4,6 +4,7 @@ import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHero } from "@/components/marketing/page-hero";
 import { Reveal } from "@/components/landing/reveal";
+import { PRIMARY_CTA_HREF, primaryCtaLabel } from "@/lib/utils/signup-flag";
 
 export const metadata: Metadata = {
   title: "About",
@@ -30,7 +31,7 @@ const PRINCIPLES = [
   {
     title: "Priced for the teams doing the work",
     description:
-      "Competitive intelligence shouldn't require procurement. Public pricing, monthly contracts, self-serve setup — the way you'd want to buy software yourself.",
+      "Competitive intelligence shouldn't require procurement. Public pricing, monthly contracts, no sales gauntlet — the way you'd want to buy software yourself.",
   },
 ];
 
@@ -48,8 +49,8 @@ export default function AboutPage() {
         description="Enterprise platforms start at five figures a year. Free alerts forward noise. Kironyx exists for everyone in between."
       />
 
-      <section className="px-4 pb-20 sm:px-6">
-        <div className="mx-auto max-w-3xl space-y-6 text-[17px] leading-[1.65] text-ink/75">
+      <section className="px-6 pb-24 sm:px-8">
+        <div className="mx-auto max-w-3xl space-y-6 text-body-lg leading-relaxed text-ink/75">
           <Reveal>
             <p>
               Small teams lose deals to competitor moves they hear about weeks
@@ -85,7 +86,7 @@ export default function AboutPage() {
       <section className="border-t border-ink/[0.06] bg-obsidian-900/40 px-4 py-20 sm:px-6">
         <div className="mx-auto max-w-4xl">
           <Reveal>
-            <h2 className="text-center font-display text-3xl font-medium tracking-[-0.01em] sm:text-4xl">
+            <h2 className="text-center font-display text-display-m font-medium">
               What we believe
             </h2>
           </Reveal>
@@ -107,22 +108,23 @@ export default function AboutPage() {
       <section className="px-4 py-20 sm:px-6">
         <div className="mx-auto max-w-3xl text-center">
           <Reveal>
-            <h2 className="font-display text-3xl font-medium tracking-[-0.01em] sm:text-4xl">
+            <h2 className="font-display text-display-m font-medium">
               See it on your own market
             </h2>
-            <p className="mx-auto mt-4 max-w-xl text-ink/70">
+            <p className="mx-auto mt-4 max-w-xl text-body-lg text-ink/70">
               The fastest way to judge Kironyx is to point it at your
-              competitors — and yourself. Setup takes two minutes.
+              competitors — and yourself. Tell us who you&apos;re up against and
+              we&apos;ll set you up.
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
               <Button
                 asChild
                 size="lg"
-                className="bg-cta px-8 text-obsidian-950 shadow-lg shadow-cta/20 transition-all hover:bg-cta-hover active:scale-[0.98]"
+                className="group bg-cta px-8 text-obsidian-950 shadow-lg shadow-cta/20 transition-[transform,background-color,box-shadow] duration-150 ease-out-strong hover:bg-cta-hover hover:shadow-cta/30 active:scale-[0.97]"
               >
-                <Link href="/sign-up">
-                  Start Free Trial
-                  <ArrowRight className="ml-2 h-5 w-5" />
+                <Link href={PRIMARY_CTA_HREF}>
+                  {primaryCtaLabel("Start free trial")}
+                  <ArrowRight className="ml-2 h-5 w-5 transition-transform duration-150 ease-out-strong group-hover:translate-x-0.5" />
                 </Link>
               </Button>
               <Button

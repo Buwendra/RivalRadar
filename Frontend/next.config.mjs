@@ -33,9 +33,14 @@ const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   {
+    // Structured-header syntax: allowlist origins must be double-quoted and
+    // cannot use wildcards. The previous `payment=(self 'https://*.paddle.com')`
+    // was invalid, so browsers dropped the ENTIRE policy (every restriction
+    // below silently lost). Payment is delegated to Paddle's exact checkout
+    // origins instead.
     key: "Permissions-Policy",
     value:
-      "camera=(), microphone=(), geolocation=(), payment=(self 'https://*.paddle.com'), usb=(), magnetometer=(), gyroscope=(), accelerometer=()",
+      'camera=(), microphone=(), geolocation=(), payment=(self "https://buy.paddle.com" "https://sandbox-buy.paddle.com"), usb=(), magnetometer=(), gyroscope=(), accelerometer=()',
   },
   { key: "Content-Security-Policy", value: cspDirectives },
 ];

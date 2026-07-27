@@ -46,7 +46,7 @@ const PILLARS = [
     icon: Network,
     title: "Network protection",
     description:
-      "AWS WAF with managed rule sets plus rate-based rules, API Gateway throttling with tighter limits on auth endpoints, per-API-key quotas, and AWS Shield for DDoS absorption.",
+      "Deliberately tight API Gateway throttling — the strictest limits on the auth endpoints — plus per-API-key quotas and durable rate-limiting on sign-in and email verification. Edge DDoS absorption via AWS Shield Standard; managed WAF rules are staged for public launch.",
   },
   {
     icon: Siren,
@@ -113,7 +113,7 @@ export default function SecurityPage() {
       <section className="border-t border-ink/[0.06] bg-obsidian-900/40 px-4 py-20 sm:px-6">
         <div className="mx-auto max-w-6xl">
           <Reveal>
-            <h2 className="text-center font-display text-3xl font-medium tracking-[-0.01em] sm:text-4xl">
+            <h2 className="text-center font-display text-display-m font-medium">
               How it&apos;s protected
             </h2>
           </Reveal>
@@ -137,7 +137,7 @@ export default function SecurityPage() {
       <section className="px-4 py-20 sm:px-6">
         <div className="mx-auto max-w-4xl">
           <Reveal>
-            <h2 className="text-center font-display text-3xl font-medium tracking-[-0.01em] sm:text-4xl">
+            <h2 className="text-center font-display text-display-m font-medium">
               Compliance posture
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-center text-ink/70">

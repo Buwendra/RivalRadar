@@ -11,6 +11,7 @@ import {
 import { PageHero } from "@/components/marketing/page-hero";
 import { Reveal } from "@/components/landing/reveal";
 import { FooterCTASection } from "@/components/landing/footer-cta-section";
+import { PRIMARY_CTA_HREF, primaryCtaLabel } from "@/lib/utils/signup-flag";
 
 export interface CompareRow {
   label: string;
@@ -47,11 +48,11 @@ export function CompareTemplate({
         <Button
           asChild
           size="lg"
-          className="bg-cta px-8 text-obsidian-950 shadow-lg shadow-cta/20 transition-all hover:bg-cta-hover active:scale-[0.98]"
+          className="group bg-cta px-8 text-obsidian-950 shadow-lg shadow-cta/20 transition-[transform,background-color,box-shadow] duration-150 ease-out-strong hover:bg-cta-hover hover:shadow-cta/30 active:scale-[0.97]"
         >
-          <Link href="/sign-up">
-            Try Kironyx free
-            <ArrowRight className="ml-2 h-5 w-5" />
+          <Link href={PRIMARY_CTA_HREF}>
+            {primaryCtaLabel("Try Kironyx free")}
+            <ArrowRight className="ml-2 h-5 w-5 transition-transform duration-150 ease-out-strong group-hover:translate-x-0.5" />
           </Link>
         </Button>
       </PageHero>
@@ -64,7 +65,7 @@ export function CompareTemplate({
               <table className="w-full min-w-[560px] border-collapse bg-obsidian-900 text-sm">
                 <thead>
                   <tr className="border-b border-ink/[0.08] bg-obsidian-950/60 text-left">
-                    <th className="px-5 py-4 font-mono text-xs font-medium uppercase tracking-[0.08em] text-ink/55" />
+                    <th className="px-5 py-4 font-mono text-label uppercase text-ink/55" />
                     <th className="px-5 py-4 font-semibold text-foreground">Kironyx</th>
                     <th className="px-5 py-4 font-medium text-ink/70">
                       {competitorName}
@@ -111,7 +112,7 @@ export function CompareTemplate({
       <section className="border-t border-ink/[0.06] bg-obsidian-900/40 px-4 py-20 sm:px-6">
         <div className="mx-auto max-w-6xl">
           <Reveal>
-            <h2 className="text-center font-display text-3xl font-medium tracking-[-0.01em] sm:text-4xl">
+            <h2 className="text-center font-display text-display-m font-medium">
               Where Kironyx wins
             </h2>
           </Reveal>
@@ -137,7 +138,7 @@ export function CompareTemplate({
         <div className="mx-auto max-w-3xl">
           <Reveal>
             <div className="rounded-xl border border-ink/10 bg-obsidian-900 p-8 shadow-[inset_0_1px_0_rgba(225,217,193,0.08)]">
-              <h2 className="font-display text-2xl font-medium tracking-[-0.01em]">
+              <h2 className="font-display text-headline font-medium">
                 When {competitorName} is the better choice
               </h2>
               <p className="mt-3 text-[17px] leading-[1.65] text-ink/70">{whenTheyWin.intro}</p>
@@ -163,7 +164,7 @@ export function CompareTemplate({
       <section className="border-t border-ink/[0.06] bg-obsidian-900/40 px-4 py-20 sm:px-6">
         <div className="mx-auto max-w-3xl">
           <Reveal>
-            <h2 className="text-center font-display text-3xl font-medium tracking-[-0.01em] sm:text-4xl">
+            <h2 className="text-center font-display text-display-m font-medium">
               Frequently asked questions
             </h2>
           </Reveal>

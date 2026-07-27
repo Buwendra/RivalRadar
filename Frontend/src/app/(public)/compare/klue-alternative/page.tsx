@@ -19,7 +19,7 @@ const ROWS: CompareRow[] = [
   },
   {
     label: "Getting started",
-    kironyx: "Self-serve free trial; first research runs minutes after onboarding",
+    kironyx: "Guided onboarding; first research runs within minutes of setup",
     competitor: "Demo call with sales, then guided onboarding",
     kironyxWins: true,
   },
@@ -103,7 +103,7 @@ const FAQS = [
   {
     question: "What does it cost?",
     answer:
-      "Public pricing: Scout at $49/month (3 competitors), Strategist at $99/month (10 competitors, Slack + API), Command at $199/month (25 competitors, executive PDF briefings). All plans are monthly with a free trial and include Brand Pulse self-monitoring.",
+      "Public pricing: Scout at $49/month (3 competitors), Strategist at $99/month (10 competitors, Slack + API), Command at $199/month (25 competitors, executive PDF briefings). All plans are monthly and include Brand Pulse self-monitoring on your own brand.",
   },
 ];
 
