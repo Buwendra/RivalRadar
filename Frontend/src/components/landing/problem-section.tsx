@@ -1,8 +1,9 @@
 import { SignalField } from "./signal-field";
+import { Dateline } from "@/components/marketing/editorial";
 
 export function ProblemSection() {
   return (
-    <section className="relative overflow-hidden border-t border-ink/[0.06] bg-obsidian-900/40 px-4 py-20 sm:px-6 sm:py-24">
+    <section className="relative overflow-hidden border-t border-ink/[0.08] bg-obsidian-900/40 px-6 py-24 sm:px-8 sm:py-28">
       {/* Noise that piles up and never resolves — the state this section
           describes. Fragments flare gold now and then and sink back unread. */}
       <SignalField mode="unresolved" />
@@ -15,32 +16,33 @@ export function ProblemSection() {
       />
 
       <div className="relative mx-auto grid max-w-5xl gap-10 md:grid-cols-[5fr_7fr] md:gap-16">
-        <h2 className="font-display text-3xl font-medium leading-[1.15] tracking-[-0.01em] sm:text-4xl">
-          You already know your competitors matter. You just don&rsquo;t have
-          time to <em className="italic text-primary">watch</em> them.
-        </h2>
+        <div className="md:sticky md:top-28 md:self-start">
+          <Dateline index="01">The blind spot</Dateline>
+          <h2 className="mt-6 font-display text-display-m font-medium">
+            Watching your competitors is only{" "}
+            <em className="italic">half</em> the picture.
+          </h2>
+        </div>
 
-        <div className="space-y-5 text-[17px] leading-relaxed text-ink/75">
+        <div className="space-y-5 text-body-lg text-ink/75 measure">
           <p>
-            Every week the companies you compete with change their pricing,
-            ship features, raise money, and hire for roles that tell you
-            exactly where they&rsquo;re headed. Most of it happens quietly. You
-            find out in a lost deal, months later, from a prospect who assumed
-            you already knew.
+            Every week your competitors change pricing, ship features, raise
+            money, and hire for roles that telegraph where they&rsquo;re headed.
+            Most of it happens quietly — you find out in a lost deal, months
+            later, from a prospect who assumed you already knew.
           </p>
           <p>
-            The tools built for this problem — Crayon, Klue — are genuinely
-            good, and their pricing starts around $20,000 a year behind a
-            sales call. Google Alerts is free and forwards you keyword matches
-            with no sense of what matters. In between sits &ldquo;I&rsquo;ll
-            check their websites when things calm down,&rdquo; which is to say:
-            never.
+            So you try to watch them. But watching them tells you what they did,
+            not whether it moved you. The market is forming an opinion of{" "}
+            <em className="italic text-ink">your</em> brand at the same time —
+            your coverage, your sentiment, your share of the conversation — and
+            almost nobody is reading that side.
           </p>
           <p>
-            Kironyx sits in that gap on purpose. And it watches your own brand
-            with the same engine it points at them — because half of
-            competitive intelligence is knowing where{" "}
-            <em className="italic text-ink">you</em> actually stand.
+            Kironyx runs one engine across both. It researches your competitors
+            and your own brand the same way, every week, and files the gap
+            between them — so what you read is your position, not just their
+            headlines.
           </p>
         </div>
       </div>

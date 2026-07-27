@@ -8,15 +8,18 @@ interface PageHeroProps {
   children?: ReactNode;
 }
 
-/** Standard hero band for marketing subpages: mono eyebrow, weight-capped
- *  display heading, one anchored radial glow, and the house signal field at
- *  low intensity so every page opens in the same world as the landing page. */
+/**
+ * Shared subpage hero — the masthead every marketing subpage opens on. A
+ * hairline-flanked mono kicker, a display-weight Fraunces title, a measured
+ * standfirst, and the house signal field at low intensity so every page reads
+ * as part of the same publication as the landing hero.
+ */
 export function PageHero({ eyebrow, title, description, children }: PageHeroProps) {
   return (
-    <section className="relative overflow-hidden px-4 py-16 sm:px-6 sm:py-24">
+    <section className="relative overflow-hidden px-6 py-20 sm:px-8 sm:py-28">
       <SignalField mode="drift" />
       <div
-        className="pointer-events-none absolute -top-32 left-1/2 h-[400px] w-[600px] -translate-x-1/2 rounded-full bg-primary/[0.08] blur-[100px]"
+        className="pointer-events-none absolute -top-32 left-1/2 h-[400px] w-[600px] -translate-x-1/2 rounded-full bg-primary/[0.07] blur-[100px]"
         aria-hidden
       />
       {/* Reading scrim for the heading block. obsidian-950 (#0E0D0C) inlined —
@@ -26,19 +29,23 @@ export function PageHero({ eyebrow, title, description, children }: PageHeroProp
         aria-hidden
       />
       <div className="relative mx-auto max-w-3xl text-center">
-        <p className="animate-fade-up font-mono text-xs uppercase tracking-[0.08em] text-primary/80">
-          {eyebrow}
-        </p>
-        <h1 className="mt-4 animate-fade-up font-display text-4xl font-medium leading-[1.1] tracking-[-0.01em] [animation-delay:60ms] sm:text-5xl">
+        <div className="flex animate-fade-up items-center justify-center gap-3 font-mono text-label uppercase text-muted-foreground">
+          <span aria-hidden className="h-px w-6 bg-foreground/30" />
+          <span>{eyebrow}</span>
+          <span aria-hidden className="h-px w-6 bg-foreground/30" />
+        </div>
+        <h1 className="mt-6 animate-fade-up font-display text-display-l font-medium [animation-delay:60ms]">
           {title}
         </h1>
         {description && (
-          <p className="mx-auto mt-6 max-w-2xl animate-fade-up text-lg text-ink/70 [animation-delay:120ms]">
+          <p className="mx-auto mt-6 max-w-2xl animate-fade-up text-standfirst text-ink/70 [animation-delay:120ms]">
             {description}
           </p>
         )}
         {children && (
-          <div className="mt-8 animate-fade-up [animation-delay:180ms]">{children}</div>
+          <div className="mt-9 animate-fade-up [animation-delay:180ms]">
+            {children}
+          </div>
         )}
       </div>
     </section>

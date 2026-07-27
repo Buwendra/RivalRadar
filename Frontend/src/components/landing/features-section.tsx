@@ -1,43 +1,43 @@
-import { Card, CardContent } from "@/components/ui/card";
 import { Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SignalField } from "./signal-field";
+import { Dateline, SectionMarker } from "@/components/marketing/editorial";
 
 const features = [
   {
     title: "Every change, scored and explained",
     description:
-      "Claude analyzes each change with structured insights — change type, significance score, strategic implications, and what the move means for your position, not just their headline.",
+      "Claude reads each change and returns structured intelligence — change type, significance, strategic implications, and what the move means for your position, not just their headline.",
   },
   {
     title: "It watches you the same way",
     description:
-      "Brand Pulse runs the identical deep research on you — coverage, sentiment, share of voice — on every plan, so every competitor insight arrives with “and here's where you stand.”",
+      "Brand Pulse runs the identical deep research on your own brand — coverage, sentiment, share of voice — on every plan, so every competitor finding arrives with “and here's where you stand.”",
   },
   {
     title: "One brief, every Monday",
     description:
-      "A curated weekly digest of the moves that matter, with strategic recommendations — plus an opt-in comparative brief on how you stack up against the field.",
+      "A curated weekly digest of the moves that matter, with recommendations — plus an opt-in comparative brief on how you stack up against the field.",
   },
   {
     title: "A 1–10 answer to “does this matter?”",
     description:
-      "Every change is scored for significance, so you can filter out the noise and act on the critical moves.",
+      "Every change carries a significance score, so you filter out the noise and act on the handful of moves that actually move you.",
   },
   {
     title: "The whole field, ranked by threat",
     description:
-      "Stay ahead of up to 25 competitors and see exactly where you stand against each — across news, product, funding, hiring, and social signals.",
+      "Track up to 25 competitors and see exactly where you stand against each — across news, product, funding, hiring, and social signals.",
   },
   {
     title: "Bad news arrives the same day",
     description:
-      "When research detects a high-significance change (7+), an email lands the day we find it — so you know immediately whether you're exposed.",
+      "When research detects a high-significance change (7+), the email lands the day we find it — so you learn whether you're exposed immediately, not next Monday.",
   },
 ];
 
-/* Decorative mini-visualizations (fictional data) shown inside each bento
-   card. Indexed to match the `features` array above. */
+/* Decorative mini-visualizations (fictional data) shown beside each capability.
+   Indexed to match the `features` array above. */
 function FeatureVisual({ index }: { index: number }) {
   switch (index) {
     case 0:
@@ -122,7 +122,7 @@ function FeatureVisual({ index }: { index: number }) {
                     : i < 7
                       ? "bg-significance-medium/60"
                       : "bg-significance-high/70",
-                  i === 7 && "ring-2 ring-foreground/80"
+                  i === 7 && "ring-2 ring-foreground/80",
                 )}
               />
             ))}
@@ -153,16 +153,16 @@ function FeatureVisual({ index }: { index: number }) {
         </div>
       );
     case 5:
-      // Alert toast mock (rendered beside the text in the wide card)
+      // Alert toast mock
       return (
-        <div className="w-full shrink-0 rounded-lg border border-significance-high/30 bg-significance-high/5 p-4 shadow-lg shadow-significance-high/5 md:max-w-sm" aria-hidden>
+        <div className="rounded-lg border border-significance-high/30 bg-significance-high/5 p-4 shadow-lg shadow-significance-high/5" aria-hidden>
           <div className="flex items-center gap-2 text-sm font-medium">
             <Bell className="h-4 w-4 text-significance-high" />
             High-significance change detected
           </div>
           <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
-            Northwind raised a $12M Series A — significance 9/10. Alert
-            emailed the same day.
+            Northwind raised a $12M Series A — significance 9/10. Alert emailed
+            the same day.
           </p>
         </div>
       );
@@ -171,63 +171,55 @@ function FeatureVisual({ index }: { index: number }) {
   }
 }
 
-/* Bento spans per feature index (3-column grid on lg) */
-const spans = [
-  "lg:col-span-2",
-  "",
-  "",
-  "",
-  "",
-  "sm:col-span-2 lg:col-span-3",
-];
-
 export function FeaturesSection() {
   return (
-    <section className="relative overflow-hidden border-t border-ink/[0.06] bg-obsidian-900/40 px-4 py-20 sm:px-6">
+    <section className="relative overflow-hidden border-t border-ink/[0.08] bg-obsidian-900/40 px-6 py-24 sm:px-8 sm:py-28">
       {/* The settled end state: order, quiet. Deliberately the calmest field on
-          the page — the cards below carry the detail. */}
+          the page — the index below carries the detail. */}
       <SignalField mode="lattice" />
 
       <div className="relative mx-auto max-w-6xl">
-        <div className="max-w-2xl">
-          <h2 className="font-display text-3xl font-medium tracking-[-0.01em] sm:text-4xl">
-            Six things it does well
-          </h2>
-          <p className="mt-4 text-muted-foreground">
-            No feature zoo. Competitive intelligence and brand monitoring in
-            one engine, at a price that makes sense for growing teams.
-          </p>
-        </div>
+        <div className="grid gap-x-12 gap-y-10 lg:grid-cols-[15rem_minmax(0,1fr)]">
+          <div className="lg:sticky lg:top-28 lg:self-start">
+            <Dateline index="03">Capabilities</Dateline>
+            <SectionMarker n="03" className="mt-6 hidden lg:block" />
+            <h2 className="mt-6 font-display text-display-m font-medium lg:mt-8">
+              Six things it does well.
+            </h2>
+            <p className="mt-4 text-body-lg text-muted-foreground measure-tight">
+              No feature zoo. One engine pointed at your competitors and at you
+              — so every capability reads both sides of the ledger.
+            </p>
+          </div>
 
-        <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {features.map((feature, index) => (
-            <Card
-              key={feature.title}
-              className={cn(
-                "group relative h-full overflow-hidden border-ink/[0.08] bg-obsidian-900 shadow-[inset_0_1px_0_rgba(225,217,193,0.06)] transition-colors duration-200 hover:border-ink/[0.16]",
-                spans[index]
-              )}
-            >
-              <CardContent
-                className={cn(
-                  "p-6",
-                  index === 5 &&
-                    "flex flex-col gap-6 md:flex-row md:items-center md:justify-between"
-                )}
+          <ol>
+            {features.map((feature, index) => (
+              <li
+                key={feature.title}
+                className="grid gap-6 border-t border-ink/[0.08] py-8 first:border-t-0 first:pt-0 md:grid-cols-2 md:items-center md:gap-10"
               >
                 <div>
-                  {index !== 5 && <FeatureVisual index={index} />}
-                  <h3 className={cn("text-lg font-semibold", index !== 5 && "mt-5")}>
-                    {feature.title}
-                  </h3>
-                  <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+                  <div className="flex items-baseline gap-3">
+                    <span
+                      className="nums-tabular font-mono text-sm text-muted-foreground"
+                      aria-hidden
+                    >
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
+                    <h3 className="font-display text-title text-foreground">
+                      {feature.title}
+                    </h3>
+                  </div>
+                  <p className="mt-3 text-sm leading-relaxed text-muted-foreground measure">
                     {feature.description}
                   </p>
                 </div>
-                {index === 5 && <FeatureVisual index={index} />}
-              </CardContent>
-            </Card>
-          ))}
+                <div className="md:pl-2">
+                  <FeatureVisual index={index} />
+                </div>
+              </li>
+            ))}
+          </ol>
         </div>
       </div>
     </section>
