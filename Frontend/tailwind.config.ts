@@ -93,6 +93,43 @@ const config: Config = {
           "serif",
         ],
       },
+      // ── Editorial type scale ─────────────────────────────────────────
+      // One named scale the whole marketing surface composes from, so type
+      // hierarchy is a system decision, not a per-page guess. Each entry
+      // ships its own line-height + tracking (large display = tight negative
+      // tracking; labels = wide positive tracking) per editorial craft.
+      fontSize: {
+        "display-xl": [
+          "clamp(2.75rem, 6vw, 5.25rem)",
+          { lineHeight: "1.0", letterSpacing: "-0.03em" },
+        ],
+        "display-l": [
+          "clamp(2.25rem, 4.5vw, 3.5rem)",
+          { lineHeight: "1.04", letterSpacing: "-0.025em" },
+        ],
+        "display-m": [
+          "clamp(1.75rem, 3vw, 2.5rem)",
+          { lineHeight: "1.1", letterSpacing: "-0.02em" },
+        ],
+        headline: [
+          "1.5rem",
+          { lineHeight: "1.2", letterSpacing: "-0.015em" },
+        ],
+        title: ["1.1875rem", { lineHeight: "1.3", letterSpacing: "-0.01em" }],
+        standfirst: [
+          "clamp(1.125rem, 1.5vw, 1.375rem)",
+          { lineHeight: "1.55", letterSpacing: "-0.01em" },
+        ],
+        "body-lg": ["1.0625rem", { lineHeight: "1.7" }],
+        label: [
+          "0.75rem",
+          { lineHeight: "1", letterSpacing: "0.14em" },
+        ],
+      },
+      transitionTimingFunction: {
+        "out-strong": "cubic-bezier(0.23, 1, 0.32, 1)",
+        "in-out-strong": "cubic-bezier(0.77, 0, 0.175, 1)",
+      },
       keyframes: {
         "accordion-down": {
           from: { height: "0" },
@@ -119,6 +156,12 @@ const config: Config = {
           from: { transform: "translateX(0)" },
           to: { transform: "translateX(-50%)" },
         },
+        // Hairline rule that draws in from the left — the editorial section
+        // divider. transform-only so it's GPU-cheap.
+        "rule-draw": {
+          from: { transform: "scaleX(0)" },
+          to: { transform: "scaleX(1)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -127,6 +170,8 @@ const config: Config = {
         "fade-up": "fade-up 0.35s cubic-bezier(0.16, 1, 0.3, 1) both",
         "fade-in": "fade-in 0.5s ease-out both",
         marquee: "marquee 50s linear infinite",
+        "rule-draw":
+          "rule-draw 0.7s cubic-bezier(0.77, 0, 0.175, 1) both",
       },
     },
   },

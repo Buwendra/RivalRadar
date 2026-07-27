@@ -74,6 +74,12 @@
 
     /* Imagery-only warm light. Read by the signal fields; not a UI token. */
     --glow: 40 94% 56%;
+
+    /* Editorial motion curves (Emil Kowalski). The built-in CSS easings are
+       too weak for intentional motion; these carry the "filed with intent"
+       feel across reveals, rules and the request-access flow. */
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
   }
 
   .theme-forest ::selection {
@@ -88,9 +94,25 @@
   html {
     /* Inter/Geist alternate glyphs + slashed zero: quiet typographic identity */
     font-feature-settings: "ss03", "cv01", "zero";
+    scroll-behavior: smooth;
   }
   body {
     @apply bg-background text-foreground;
+  }
+
+  /* Editorial typography defaults — scoped to the marketing surface so the
+     app is untouched. Display headings get optical sizing + balanced wrapping
+     (no orphans); prose gets pretty wrapping and old-style-free tabular data. */
+  .theme-forest {
+    font-optical-sizing: auto;
+  }
+  .theme-forest h1,
+  .theme-forest h2,
+  .theme-forest h3 {
+    text-wrap: balance;
+  }
+  .theme-forest p {
+    text-wrap: pretty;
   }
 }
 
@@ -150,6 +172,34 @@
       transparent
     );
   }
+
+  /* ── Editorial reading measures ──────────────────────────────────────
+     Constrain prose to a comfortable line length. `measure` for body,
+     `measure-tight` for deks/standfirsts, `measure-wide` for lead-ins. */
+  .measure {
+    max-width: 68ch;
+  }
+  .measure-tight {
+    max-width: 54ch;
+  }
+  .measure-wide {
+    max-width: 80ch;
+  }
+
+  /* Tabular figures for datelines, prices, metrics — numbers align in a
+     column and don't jitter as they change. */
+  .nums-tabular {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum", "zero";
+  }
+
+  /* Hairline rule that draws itself in from the left on scroll reveal.
+     Paired with the Rule primitive; pure transform/opacity, GPU-friendly. */
+  .rule-hairline {
+    height: 1px;
+    background-color: hsl(var(--foreground) / 0.16);
+    transform-origin: left center;
+  }
 }
 
 /* Gold rim-light pulse on the hero dashboard, fired by the SignalCollapse
@@ -205,13 +255,18 @@
    Targeted selectors (not a blanket * rule) so Radix/app animations
    elsewhere keep their existing behavior. */
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
   .animate-aurora,
   .animate-marquee,
-  .animate-ping {
+  .animate-ping,
+  .animate-rule-draw {
     animation: none !important;
   }
   .animate-fade-up,
-  .animate-fade-in {
+  .animate-fade-in,
+  .animate-rule-draw {
     animation-duration: 0.01ms !important;
     animation-delay: 0ms !important;
   }

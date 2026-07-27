@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PRIMARY_CTA_HREF, primaryCtaLabel } from "@/lib/utils/signup-flag";
 
 const plans = [
   {
@@ -16,7 +17,7 @@ const plans = [
       "30-day change history",
       "Email support",
     ],
-    cta: "Start Free Trial",
+    cta: "Start free trial",
     popular: false,
   },
   {
@@ -33,7 +34,7 @@ const plans = [
       "Battlecard templates",
       "Priority support",
     ],
-    cta: "Start Free Trial",
+    cta: "Start free trial",
     popular: true,
   },
   {
@@ -48,7 +49,7 @@ const plans = [
       "1-year change history",
       "Dedicated support",
     ],
-    cta: "Start Free Trial",
+    cta: "Start free trial",
     popular: false,
   },
 ];
@@ -63,12 +64,13 @@ export function PricingSection({ showHeading = true }: PricingSectionProps) {
       <div className="mx-auto max-w-6xl">
         {showHeading && (
           <div className="text-center">
-            <h2 className="font-display text-3xl font-medium tracking-[-0.01em] sm:text-4xl">
+            <h2 className="font-display text-display-m font-medium">
               Three plans, no sales call
             </h2>
-            <p className="mt-4 text-muted-foreground">
-              Month to month, cancel whenever. The trial doesn&rsquo;t ask for
-              a card.
+            <p className="mt-4 text-body-lg text-muted-foreground">
+              Transparent monthly pricing, cancel whenever. Brand Pulse
+              self-monitoring is on every plan — your own brand is never the
+              paywalled part.
             </p>
           </div>
         )}
@@ -114,14 +116,14 @@ export function PricingSection({ showHeading = true }: PricingSectionProps) {
                   <Button
                     asChild
                     className={cn(
-                      "w-full",
+                      "w-full transition-[transform,background-color] duration-150 ease-out-strong active:scale-[0.98]",
                       plan.popular
                         ? "bg-cta text-obsidian-950 hover:bg-cta-hover"
                         : ""
                     )}
                     variant={plan.popular ? "default" : "outline"}
                   >
-                    <Link href="/sign-up">{plan.cta}</Link>
+                    <Link href={PRIMARY_CTA_HREF}>{primaryCtaLabel(plan.cta)}</Link>
                   </Button>
                 </CardContent>
               </Card>

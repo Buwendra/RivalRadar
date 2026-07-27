@@ -1,8 +1,7 @@
 import { Fraunces } from "next/font/google";
 import { PublicNavbar } from "@/components/layout/public-navbar";
 import { PublicFooter } from "@/components/layout/public-footer";
-import { CookieNoticeBanner } from "@/components/shared/cookie-notice-banner";
-import { StorageNotice } from "@/components/shared/storage-notice";
+import { ConsentNotice } from "@/components/shared/consent-notice";
 
 // Editorial serif for marketing display headings. Declared here (not the
 // root layout) so the font payload is scoped to public routes only.
@@ -30,8 +29,7 @@ export default function PublicLayout({
       <PublicNavbar />
       <main className="flex-1">{children}</main>
       <PublicFooter />
-      <CookieNoticeBanner />
-      <StorageNotice />
+      <ConsentNotice />
     </div>
   );
 }

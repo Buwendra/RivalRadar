@@ -1,42 +1,34 @@
 import { Metadata } from "next";
-import { Mail, ShieldCheck, Lock, Scale } from "lucide-react";
 import { PageHero } from "@/components/marketing/page-hero";
-import { Reveal } from "@/components/landing/reveal";
+import { RequestAccessForm } from "@/components/marketing/request-access-form";
+import { Dateline } from "@/components/marketing/editorial";
 
 export const metadata: Metadata = {
-  title: "Contact",
+  title: "Request access",
   description:
-    "Get in touch with the Kironyx team — support, security disclosures, privacy requests, and legal questions.",
+    "Kironyx runs the same deep research on you and your competitors, then files the gap every Monday. Tell us who you're up against and we'll set up your workspace.",
 };
 
 const CHANNELS = [
   {
-    icon: Mail,
-    title: "Support & general",
+    label: "Support & general",
     email: "support@kironyx.com",
-    description:
-      "Product questions, billing, feedback, or anything that doesn't fit the boxes below. We're a small team — a human reads everything.",
+    note: "Product questions, billing, anything else. A human reads everything.",
   },
   {
-    icon: ShieldCheck,
-    title: "Security",
+    label: "Security",
     email: "security@kironyx.com",
-    description:
-      "Vulnerability reports and security questions. Our disclosure policy is published at /.well-known/security.txt per RFC 9116.",
+    note: "Vulnerability reports. Disclosure policy at /.well-known/security.txt.",
   },
   {
-    icon: Lock,
-    title: "Privacy",
+    label: "Privacy",
     email: "privacy@kironyx.com",
-    description:
-      "Data-subject requests (export, deletion, restriction), GDPR/CCPA questions, and anything covered by our Privacy Policy.",
+    note: "Data-subject requests, GDPR/CCPA questions.",
   },
   {
-    icon: Scale,
-    title: "Legal",
+    label: "Legal",
     email: "legal@kironyx.com",
-    description:
-      "Terms, DPA, and contract questions.",
+    note: "Terms, DPA, and contract questions.",
   },
 ];
 
@@ -44,30 +36,42 @@ export default function ContactPage() {
   return (
     <>
       <PageHero
-        eyebrow="Contact"
-        title="Talk to a human"
-        description="No chatbots, no ticket deflection. Pick the right inbox and we'll get back to you."
+        eyebrow="Access"
+        title="Request access"
+        description="We're onboarding new workspaces by invitation while we get ready for launch. Tell us who you're benchmarking against — we'll set you up and send your first brief."
       />
 
-      <section className="px-4 pb-24 sm:px-6">
-        <div className="mx-auto grid max-w-4xl gap-6 sm:grid-cols-2">
-          {CHANNELS.map((channel, index) => (
-            <Reveal key={channel.email} delay={(index % 2) * 60}>
-              <div className="h-full rounded-lg border border-ink/[0.08] bg-obsidian-900 p-6 shadow-[inset_0_1px_0_rgba(225,217,193,0.06)]">
-                <channel.icon className="h-6 w-6 text-primary" />
-                <h2 className="mt-4 font-semibold">{channel.title}</h2>
-                <a
-                  href={`mailto:${channel.email}`}
-                  className="mt-1 inline-block font-mono text-sm text-primary hover:underline"
-                >
-                  {channel.email}
-                </a>
-                <p className="mt-3 text-sm leading-relaxed text-ink/70">
-                  {channel.description}
-                </p>
-              </div>
-            </Reveal>
-          ))}
+      <section className="px-6 pb-28 sm:px-8">
+        <div className="mx-auto grid max-w-6xl gap-12 lg:grid-cols-[minmax(0,1fr)_18rem] lg:gap-16">
+          <RequestAccessForm />
+
+          <aside className="lg:pt-2">
+            <Dateline>Direct lines</Dateline>
+            <p className="mt-4 text-sm leading-relaxed text-muted-foreground measure-tight">
+              Not requesting access? Reach the right desk directly. No chatbots,
+              no ticket deflection.
+            </p>
+            <dl className="mt-8 space-y-6">
+              {CHANNELS.map((channel) => (
+                <div key={channel.email}>
+                  <dt className="font-mono text-label uppercase text-muted-foreground">
+                    {channel.label}
+                  </dt>
+                  <dd className="mt-1.5">
+                    <a
+                      href={`mailto:${channel.email}`}
+                      className="font-mono text-sm text-foreground underline underline-offset-2 hover:text-foreground/80"
+                    >
+                      {channel.email}
+                    </a>
+                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                      {channel.note}
+                    </p>
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </aside>
         </div>
       </section>
     </>
