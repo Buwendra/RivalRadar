@@ -24,7 +24,7 @@ export function HeroSection() {
           obsidian-950 literal is inlined because a gradient stop can't
           reference the Tailwind token. */}
       <div
-        className="pointer-events-none absolute left-1/2 top-0 h-[560px] w-[1100px] -translate-x-1/2 bg-[radial-gradient(ellipse_at_50%_38%,rgba(14,13,12,0.94)_0%,rgba(14,13,12,0.72)_42%,rgba(14,13,12,0)_72%)]"
+        className="pointer-events-none absolute left-1/2 top-0 h-[620px] w-[1200px] -translate-x-1/2 bg-[radial-gradient(ellipse_at_50%_40%,rgba(14,13,12,0.97)_0%,rgba(14,13,12,0.85)_38%,rgba(14,13,12,0.45)_58%,rgba(14,13,12,0)_78%)]"
         aria-hidden
       />
 
@@ -38,10 +38,9 @@ export function HeroSection() {
           <em className="italic">seen through one lens.</em>
         </h1>
 
-        <p className="mx-auto mt-7 max-w-2xl animate-fade-up text-standfirst text-ink/70 [animation-delay:120ms]">
-          Kironyx runs the same deep research on you and on everyone you compete
-          with, then files the gap between you — where you lead, where
-          you&apos;re exposed — in one brief every Monday.
+        <p className="mx-auto mt-7 max-w-xl animate-fade-up text-standfirst text-ink/70 [animation-delay:120ms]">
+          The same deep research on you and on your competitors — then the gap
+          between you, filed in one brief every Monday.
         </p>
 
         <div className="mt-10 flex animate-fade-up flex-col items-center gap-5 [animation-delay:180ms] sm:flex-row sm:justify-center">
@@ -60,10 +59,6 @@ export function HeroSection() {
           </Link>
         </div>
 
-        <p className="mx-auto mt-10 max-w-xl animate-fade-up text-sm text-ink/55 [animation-delay:240ms]">
-          From $49 a month. The enterprise platforms that watch only your
-          competitors start around $20,000 a year.
-        </p>
       </div>
 
       <div className="relative">

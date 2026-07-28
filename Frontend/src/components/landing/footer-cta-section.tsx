@@ -31,9 +31,9 @@ export function FooterCTASection() {
             <Link href={PRIMARY_CTA_HREF}>{primaryCtaLabel("Start your free trial")}</Link>
           </Button>
         </div>
-        <p className="mt-5 font-mono text-xs text-muted-foreground">
-          Monthly plans from $49 to $199 &middot; new workspaces onboarded
-          within a day of your request
+        <p className="mx-auto mt-5 max-w-md font-mono text-xs leading-relaxed text-muted-foreground">
+          From $49 to $199 a month — the enterprise platforms that watch only
+          your competitors start near $20,000 a year.
         </p>
       </div>
     </section>

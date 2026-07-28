@@ -176,8 +176,8 @@ export function SignalCollapse() {
 
     const build = (fc: FieldContext) => {
       const target = Math.min(
-        620,
-        Math.max(90, Math.round((fc.width * fc.height) / 1900))
+        320,
+        Math.max(64, Math.round((fc.width * fc.height) / 3000))
       );
       ps = new Array(target);
       for (let i = 0; i < target; i += 1) {
@@ -190,6 +190,23 @@ export function SignalCollapse() {
       for (let i = 0; i < slots; i += 1) {
         ps[Math.floor((i / slots) * target)].slot = i;
       }
+    };
+
+    // The "lens": the market is noise everywhere, and it only resolves into
+    // clarity where you look through Kironyx's lens. Fragments inside the
+    // central reading column (behind the headline + subhead) fade toward
+    // transparent so the copy sits in focus; the chatter stays legible only at
+    // the edges. Ties the effect to the "seen through one lens" line instead of
+    // filling the hero with competing words. Falls back to a height ratio until
+    // the mockup rect is measured (winTop === 0).
+    const readingClarity = (x: number, y: number, fc: FieldContext) => {
+      const halfW = Math.min(fc.width * 0.44, 560);
+      const readBottom = winTop > 8 ? winTop - 8 : fc.height * 0.6;
+      const nx = Math.abs(x - fc.width / 2) / halfW;
+      const ny = y / readBottom;
+      const inside = clamp01(1 - Math.max(nx, ny)); // 1 deep-center → 0 at edge
+      const soft = inside * inside * (3 - 2 * inside); // smoothstep
+      return 1 - soft * 0.92; // reading column ≈0.08, edges = 1
     };
 
     const drawStreak = (
@@ -322,7 +339,14 @@ export function SignalCollapse() {
               else if (p.x > width + 80) p.x = -80;
               if (p.y < -40) p.y = height + 40;
               else if (p.y > height + 40) p.y = -40;
-              blit(ctx, fc.ink[p.sprite], p.x, p.y, p.alpha * k * 0.5, p.rot);
+              blit(
+                ctx,
+                fc.ink[p.sprite],
+                p.x,
+                p.y,
+                p.alpha * k * 0.5 * readingClarity(p.x, p.y, fc),
+                p.rot
+              );
             }
           } else if (t < T_PULL) {
             // ---- 2. PULL: a vortex drags everything into the core; the text
@@ -529,7 +553,7 @@ export function SignalCollapse() {
                 fc.ink[p.sprite],
                 p.x,
                 p.y,
-                p.alpha * 0.24 * below * ambientRamp,
+                p.alpha * 0.24 * below * ambientRamp * readingClarity(p.x, p.y, fc),
                 p.rot
               );
             }
@@ -548,7 +572,14 @@ export function SignalCollapse() {
           // Full field, not just the upper half — the window occludes the
           // middle, and the ambient loop now lives at full height too.
           for (const p of ps) {
-            blit(fc.ctx, fc.ink[p.sprite], p.x, p.y, p.alpha * 0.34, p.rot);
+            blit(
+              fc.ctx,
+              fc.ink[p.sprite],
+              p.x,
+              p.y,
+              p.alpha * 0.34 * readingClarity(p.x, p.y, fc),
+              p.rot
+            );
           }
           fc.ctx.globalAlpha = 1;
           drawSignalLine(fc, 1, 0.9, 0);

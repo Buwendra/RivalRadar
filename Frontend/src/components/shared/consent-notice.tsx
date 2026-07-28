@@ -52,7 +52,7 @@ export function ConsentNotice() {
       role="dialog"
       aria-label="Storage notice"
       className={cn(
-        "fixed inset-x-4 bottom-4 z-50 mx-auto max-w-md rounded-lg border border-ink/12 bg-obsidian-900/95 p-5 shadow-2xl shadow-black/40 backdrop-blur-md",
+        "fixed bottom-4 left-4 right-4 z-50 max-w-sm rounded-lg border border-ink/12 bg-obsidian-900/95 p-5 shadow-2xl shadow-black/40 backdrop-blur-md sm:left-auto sm:right-4",
         "transition-[transform,opacity] duration-200 ease-out-strong",
         entered ? "translate-y-0 opacity-100" : "translate-y-3 opacity-0",
       )}
