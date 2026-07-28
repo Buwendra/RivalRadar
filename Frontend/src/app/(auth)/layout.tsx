@@ -1,5 +1,6 @@
 import { Logo } from "@/components/shared/logo";
 import Link from "next/link";
+import { StorageNotice } from "@/components/shared/storage-notice";
 
 export default function AuthLayout({
   children,
@@ -12,6 +13,7 @@ export default function AuthLayout({
         <Logo />
       </Link>
       <div className="w-full max-w-md">{children}</div>
+      <StorageNotice />
     </div>
   );
 }

@@ -44,13 +44,13 @@ export function StorageNotice() {
     <div
       role="region"
       aria-label="Browser storage notice"
-      className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-md rounded-lg border border-brand-700 bg-brand-900 p-4 shadow-lg sm:left-auto sm:right-4"
+      className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-md rounded-lg border border-border bg-card p-4 shadow-lg sm:left-auto sm:right-4"
     >
       <button
         type="button"
         aria-label="Dismiss"
         onClick={dismiss}
-        className="absolute right-2 top-2 rounded-md p-1 text-muted-foreground hover:bg-brand-800 hover:text-foreground"
+        className="absolute right-2 top-2 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
       >
         <X className="h-4 w-4" />
       </button>

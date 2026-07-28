@@ -1,77 +1,49 @@
-import { Card, CardContent } from "@/components/ui/card";
-import { AlertTriangle, TrendingDown, Clock } from "lucide-react";
-import { CountUp } from "./count-up";
-import { Reveal } from "./reveal";
-
-const stats = [
-  {
-    icon: AlertTriangle,
-    value: 68,
-    suffix: "%",
-    decimals: 0,
-    prefix: "",
-    label: "of deals face competition",
-    description: "Yet most teams only hear about competitor moves weeks later",
-  },
-  {
-    icon: TrendingDown,
-    value: 3.8,
-    suffix: "/10",
-    decimals: 1,
-    prefix: "",
-    label: "competitive preparedness",
-    description: "Sales teams rate their competitive readiness below average",
-  },
-  {
-    icon: Clock,
-    value: 20,
-    suffix: "K+/yr",
-    decimals: 0,
-    prefix: "$",
-    label: "for enterprise CI tools",
-    description: "Crayon, Klue, and similar tools are out of reach for SMBs",
-  },
-];
+import { SignalField } from "./signal-field";
+import { Dateline } from "@/components/marketing/editorial";
 
 export function ProblemSection() {
   return (
-    <section className="border-t border-brand-700 bg-brand-900/50 px-4 py-20 sm:px-6">
-      <div className="mx-auto max-w-6xl">
-        <Reveal>
-          <div className="text-center">
-            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-              The competitive intelligence gap is{" "}
-              <span className="text-significance-high">costing you deals</span>
-            </h2>
-            <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
-              Your competitors are changing their pricing, launching features, and
-              shifting strategy every week. Do you know where you stand?
-            </p>
-          </div>
-        </Reveal>
+    <section className="relative overflow-hidden border-t border-ink/[0.08] bg-obsidian-900/40 px-6 py-24 sm:px-8 sm:py-28">
+      {/* Noise that piles up and never resolves — the state this section
+          describes. Fragments flare gold now and then and sink back unread. */}
+      <SignalField mode="unresolved" />
+      {/* Reading scrim: these are long paragraphs, so contrast wins over
+          texture. obsidian-900 (#161513) inlined — gradient stops can't
+          reference the Tailwind token. */}
+      <div
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_60%_55%_at_50%_50%,rgba(22,21,19,0.93)_0%,rgba(22,21,19,0.6)_55%,rgba(22,21,19,0)_100%)]"
+        aria-hidden
+      />
 
-        <div className="mt-12 grid gap-6 md:grid-cols-3">
-          {stats.map((item, index) => (
-            <Reveal key={item.label} delay={index * 120}>
-              <Card className="group border-brand-700 bg-brand-900 transition-all duration-300 hover:-translate-y-1 hover:border-significance-high/40 hover:shadow-lg hover:shadow-significance-high/10">
-                <CardContent className="p-6 text-center">
-                  <item.icon className="mx-auto h-8 w-8 text-significance-high transition-transform duration-300 group-hover:scale-110" />
-                  <p className="mt-4 text-4xl font-bold">
-                    <CountUp
-                      value={item.value}
-                      prefix={item.prefix}
-                      suffix={item.suffix}
-                      decimals={item.decimals}
-                    />
-                  </p>
-                  <p className="mt-1 font-medium">{item.label}</p>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    {item.description}
-                  </p>
-                </CardContent>
-              </Card>
-            </Reveal>
-          ))}
+      <div className="relative mx-auto grid max-w-5xl gap-10 md:grid-cols-[5fr_7fr] md:gap-16">
+        <div className="md:sticky md:top-28 md:self-start">
+          <Dateline index="01">The blind spot</Dateline>
+          <h2 className="mt-6 font-display text-display-m font-medium">
+            Watching your competitors is only{" "}
+            <em className="italic">half</em> the picture.
+          </h2>
+        </div>
+
+        <div className="space-y-5 text-body-lg text-ink/75 measure">
+          <p>
+            Every week your competitors change pricing, ship features, raise
+            money, and hire for roles that telegraph where they&rsquo;re headed.
+            Most of it happens quietly. You find out in a lost deal, months
+            later, from a prospect who assumed you already knew.
+          </p>
+          <p>
+            So you try to watch them. But watching them tells you what they did,
+            not whether it moved you. The market is forming an opinion of{" "}
+            <em className="italic text-ink">your</em> brand at the same time
+            (your coverage, your sentiment, your share of the conversation), and
+            almost nobody is reading that side.
+          </p>
+          <p>
+            Kironyx runs one engine across both. It researches your competitors
+            and your own brand the same way, every week, and files the gap
+            between them, so what you read is your position, not just their
+            headlines.
+          </p>
         </div>
       </div>
     </section>

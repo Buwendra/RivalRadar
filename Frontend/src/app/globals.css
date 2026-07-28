@@ -34,25 +34,102 @@
 
     --radius: 0.5rem;
   }
+
+  /* Cream-on-black theme — public marketing surface only. Applied on the
+     (public) layout wrapper; the app keeps the cool :root values.
+
+     The rule that makes this palette work: the INTERFACE is parchment cream on
+     a warm near-black, and warm gold appears ONLY as light inside imagery —
+     the signal fields, the dashboard mockup's ring. Never as a UI colour.
+     Putting gold back on a button or a link breaks the whole idea.
+
+     `--primary` is therefore the cream, and `--glow` carries the gold for the
+     canvas effects to read. The class is still named `theme-forest` from an
+     earlier green palette; only the colours have moved since. */
+  .theme-forest {
+    --background: 30 8% 5%;
+    --foreground: 45 35% 82%;
+
+    --card: 30 7% 8%;
+    --card-foreground: 45 35% 82%;
+
+    --popover: 30 7% 8%;
+    --popover-foreground: 45 35% 82%;
+
+    --primary: 45 35% 82%;
+    --primary-foreground: 30 8% 5%;
+
+    --secondary: 30 6% 13%;
+    --secondary-foreground: 45 35% 82%;
+
+    --muted: 30 6% 13%;
+    --muted-foreground: 40 11% 72%;
+
+    --accent: 30 6% 17%;
+    --accent-foreground: 45 35% 82%;
+
+    --border: 35 8% 21%;
+    --input: 35 8% 21%;
+    --ring: 45 35% 82%;
+
+    /* Imagery-only warm light. Read by the signal fields; not a UI token. */
+    --glow: 40 94% 56%;
+
+    /* Editorial motion curves (Emil Kowalski). The built-in CSS easings are
+       too weak for intentional motion; these carry the "filed with intent"
+       feel across reveals, rules and the request-access flow. */
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  }
+
+  .theme-forest ::selection {
+    background-color: hsl(45 35% 82% / 0.22);
+  }
 }
 
 @layer base {
   * {
     @apply border-border;
   }
+  html {
+    /* Inter/Geist alternate glyphs + slashed zero: quiet typographic identity */
+    font-feature-settings: "ss03", "cv01", "zero";
+    scroll-behavior: smooth;
+  }
   body {
     @apply bg-background text-foreground;
+  }
+
+  /* Editorial typography defaults — scoped to the marketing surface so the
+     app is untouched. Display headings get optical sizing + balanced wrapping
+     (no orphans); prose gets pretty wrapping and old-style-free tabular data. */
+  .theme-forest {
+    font-optical-sizing: auto;
+  }
+  .theme-forest h1,
+  .theme-forest h2,
+  .theme-forest h3 {
+    text-wrap: balance;
+  }
+  .theme-forest p {
+    text-wrap: pretty;
   }
 }
 
 @layer utilities {
-  /* Animated gradient headline text — pair with .animate-gradient-shift */
+  /* Fractal-noise grain: kills gradient banding, adds material feel.
+     Apply to a fixed, pointer-events-none overlay on marketing pages. */
+  .bg-noise {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* Gradient headline text (static): cream → bright parchment → cream */
   .text-gradient-primary {
     background-image: linear-gradient(
       90deg,
-      hsl(217 91% 60%),
-      hsl(202 95% 74%),
-      hsl(217 91% 60%)
+      hsl(45 35% 82%),
+      hsl(45 48% 93%),
+      hsl(45 35% 82%)
     );
     background-size: 200% auto;
     -webkit-background-clip: text;
@@ -63,8 +140,8 @@
   /* Faint blueprint grid faded by a radial mask (hero background) */
   .bg-grid-fade {
     background-image:
-      linear-gradient(to right, rgba(53, 71, 128, 0.35) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(53, 71, 128, 0.35) 1px, transparent 1px);
+      linear-gradient(to right, rgba(225, 217, 193, 0.09) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(225, 217, 193, 0.09) 1px, transparent 1px);
     background-size: 56px 56px;
     -webkit-mask-image: radial-gradient(
       ellipse 80% 60% at 50% 0%,
@@ -95,23 +172,108 @@
       transparent
     );
   }
+
+  /* ── Editorial reading measures ──────────────────────────────────────
+     Constrain prose to a comfortable line length. `measure` for body,
+     `measure-tight` for deks/standfirsts, `measure-wide` for lead-ins. */
+  .measure {
+    max-width: 68ch;
+  }
+  .measure-tight {
+    max-width: 54ch;
+  }
+  .measure-wide {
+    max-width: 80ch;
+  }
+
+  /* Tabular figures for datelines, prices, metrics — numbers align in a
+     column and don't jitter as they change. */
+  .nums-tabular {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum", "zero";
+  }
+
+  /* Hairline rule that draws itself in from the left on scroll reveal.
+     Paired with the Rule primitive; pure transform/opacity, GPU-friendly. */
+  .rule-hairline {
+    height: 1px;
+    background-color: hsl(var(--foreground) / 0.16);
+    transform-origin: left center;
+  }
+}
+
+/* Gold rim-light pulse on the hero dashboard, fired by the SignalCollapse
+   canvas at the moment the signal field collapses into it. This is imagery
+   light, not UI — it is the one place gold is still allowed (see `--glow`).
+
+   Deliberately OUTSIDE @layer utilities and not a Tailwind keyframe: this
+   class is only ever applied from JS, so Tailwind's content scan would never
+   see it and would purge it. Plain top-level CSS is never purged. */
+.signal-ignite {
+  animation: signal-ignite 950ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes signal-ignite {
+  0% {
+    border-color: hsl(40 94% 56% / 0.9);
+    box-shadow:
+      0 0 0 1px hsl(40 94% 56% / 0.45),
+      0 0 70px -8px hsl(40 94% 56% / 0.6),
+      inset 0 1px 0 rgba(225,217,193, 0.08);
+  }
+  100% {
+    border-color: rgba(225,217,193, 0.1);
+    box-shadow: inset 0 1px 0 rgba(225,217,193, 0.08);
+  }
+}
+
+/* Gold materialize flash on a live-feed row the moment a signal delivery
+   lands — the row-scoped sibling of .signal-ignite, same easing family so
+   the rim pulse and the row birth read as one system. Kept beside it (and
+   outside @layer) for the same purge-safety reasons, even though this class
+   also appears in TSX. No fill mode: the keyframes end at the row's resting
+   style, so the class is inert once the animation finishes. */
+.feed-row-born {
+  animation: feed-row-born 950ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes feed-row-born {
+  0% {
+    border-color: hsl(40 94% 56% / 0.7);
+    background-color: hsl(40 94% 56% / 0.09);
+    box-shadow: 0 0 24px -6px hsl(40 94% 56% / 0.45);
+  }
+  100% {
+    /* Resting style of the feed row: border-ink/[0.06] on bg-obsidian-900/80 */
+    border-color: rgba(225, 217, 193, 0.06);
+    background-color: rgba(22, 21, 19, 0.8);
+    box-shadow: 0 0 0 0 transparent;
+  }
 }
 
 /* Reduced motion: stop decorative loops and make entrances instant.
    Targeted selectors (not a blanket * rule) so Radix/app animations
    elsewhere keep their existing behavior. */
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
   .animate-aurora,
-  .animate-aurora-slow,
-  .animate-gradient-shift,
-  .animate-glow-pulse,
   .animate-marquee,
-  .animate-ping {
+  .animate-ping,
+  .animate-rule-draw {
     animation: none !important;
   }
   .animate-fade-up,
-  .animate-fade-in {
+  .animate-fade-in,
+  .animate-rule-draw {
     animation-duration: 0.01ms !important;
     animation-delay: 0ms !important;
+  }
+  /* The canvas itself renders a single settled frame under reduced motion
+     (see signal-collapse.tsx); this covers the DOM cues it fires. */
+  .signal-ignite,
+  .feed-row-born {
+    animation: none !important;
   }
 }

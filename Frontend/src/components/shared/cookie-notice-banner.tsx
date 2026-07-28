@@ -45,10 +45,10 @@ export function CookieNoticeBanner() {
     <div
       role="dialog"
       aria-label="Cookie notice"
-      className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-2xl rounded-md border border-brand-700 bg-brand-900/95 p-4 shadow-lg backdrop-blur"
+      className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-2xl rounded-md border border-border bg-card/95 p-4 shadow-lg backdrop-blur"
     >
       <p className="text-sm leading-relaxed">
-        Kironyx uses browser storage (<code className="rounded bg-brand-800 px-1 text-xs">localStorage</code>)
+        Kironyx uses browser storage (<code className="rounded bg-muted px-1 text-xs">localStorage</code>)
         to keep you signed in. No tracking cookies, no third-party analytics.
         See our{" "}
         <Link

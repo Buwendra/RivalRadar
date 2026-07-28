@@ -1,62 +1,70 @@
-import { Globe, Cpu, Mail } from "lucide-react";
-import { Reveal } from "./reveal";
+import { SignalField } from "./signal-field";
+import { Dateline } from "@/components/marketing/editorial";
 
 const steps = [
   {
-    icon: Globe,
-    title: "1. Add Your Competitors — and Yourself",
+    number: "01",
+    title: "Add your competitors, and yourself",
     description:
-      "Enter your competitor websites and your own. Your brand runs through the same research engine, so every insight arrives with a benchmark.",
+      "Enter your competitor sites and your own. Your brand runs through the identical research engine, so every finding arrives with a benchmark instead of a guess.",
   },
   {
-    icon: Cpu,
-    title: "2. AI Researches Everyone Weekly",
+    number: "02",
+    title: "The research runs every week",
     description:
-      "Claude-powered deep research scans the live web for each competitor — and for your own brand — every week or on demand, scoring each finding 1-10 for strategic significance.",
+      "Claude-powered deep research reads the live web for each company (news, product, funding, hiring, social) and scores every finding 1–10 for how much it actually matters.",
   },
   {
-    icon: Mail,
-    title: "3. See What Moved — and the Gap",
+    number: "03",
+    title: "You read one brief on Monday",
     description:
-      "A weekly brief of what changed and where you stand, plus same-day email alerts when research surfaces a high-significance move.",
+      "A single brief: what changed, and where you stand against it. When something big breaks mid-week, the alert lands the day we find it.",
   },
 ];
 
 export function HowItWorksSection() {
   return (
-    <section className="px-4 py-20 sm:px-6">
-      <div className="mx-auto max-w-6xl">
-        <Reveal>
-          <div className="text-center">
-            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-              How it works
-            </h2>
-            <p className="mt-4 text-muted-foreground">
-              From setup to actionable intelligence in under 2 minutes.
-            </p>
-          </div>
-        </Reveal>
+    <section className="relative overflow-hidden px-6 py-24 sm:px-8 sm:py-28">
+      {/* Fragments fall down the step gutter and tighten into a single lane as
+          they pass each step: scattered text, then scored gold, then ordered
+          ticks. The gates are measured off the [data-signal-gate] items. */}
+      <SignalField mode="conduit" />
 
-        <div className="mt-12 grid gap-8 md:grid-cols-3">
-          {steps.map((step, index) => (
-            <Reveal
-              key={step.title}
-              delay={index * 150}
-              className="group relative text-center"
-            >
-              {index < steps.length - 1 && (
-                <div className="absolute right-0 top-12 hidden h-px w-full translate-x-1/2 bg-gradient-to-r from-brand-700 to-transparent md:block" />
-              )}
-              <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-2xl border border-brand-700 bg-brand-900 transition-all duration-300 group-hover:-translate-y-1 group-hover:border-primary/50 group-hover:shadow-[0_0_30px_-10px] group-hover:shadow-primary/50">
-                <step.icon className="h-10 w-10 text-primary transition-transform duration-300 group-hover:scale-110" />
-              </div>
-              <h3 className="mt-6 text-lg font-semibold">{step.title}</h3>
-              <p className="mt-2 text-sm text-muted-foreground">
-                {step.description}
-              </p>
-            </Reveal>
-          ))}
+      <div className="relative mx-auto grid max-w-5xl gap-10 md:grid-cols-[5fr_7fr] md:gap-16">
+        <div className="md:sticky md:top-28 md:self-start">
+          <Dateline index="02">The workflow</Dateline>
+          <h2 className="mt-6 font-display text-display-m font-medium">
+            One engine, pointed both ways.
+          </h2>
+          <p className="mt-4 text-body-lg text-muted-foreground measure-tight">
+            Setup takes minutes. After that, the reading is the whole job.
+          </p>
         </div>
+
+        <ol className="space-y-10">
+          {steps.map((step) => (
+            <li
+              key={step.number}
+              data-signal-gate
+              className="grid grid-cols-[auto_1fr] gap-5 border-t border-ink/[0.08] pt-6 first:border-t-0 first:pt-0"
+            >
+              <span
+                className="nums-tabular pt-0.5 font-mono text-sm text-muted-foreground"
+                aria-hidden
+              >
+                {step.number}
+              </span>
+              <div>
+                <h3 className="font-display text-title text-foreground">
+                  {step.title}
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground measure">
+                  {step.description}
+                </p>
+              </div>
+            </li>
+          ))}
+        </ol>
       </div>
     </section>
   );

@@ -30,9 +30,9 @@ export function CategoryMarquee() {
             {CATEGORIES.map((category) => (
               <div
                 key={category.label}
-                className="flex shrink-0 items-center gap-2 rounded-full border border-brand-700/60 bg-brand-900/60 px-4 py-2 text-sm text-muted-foreground"
+                className="flex shrink-0 items-center gap-2 rounded-full border border-ink/[0.08] bg-obsidian-900/60 px-4 py-2 text-sm text-muted-foreground"
               >
-                <category.icon className="h-4 w-4 text-primary" />
+                <category.icon className="h-4 w-4 text-ink/45" />
                 {category.label}
               </div>
             ))}

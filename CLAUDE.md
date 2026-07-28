@@ -133,6 +133,15 @@ Two workflows under `.github/workflows/`, forming the required-status-check base
 
 Match the CI checks locally before pushing (`npm run lint && npx tsc --noEmit && npx vitest run`) — there's no auto-formatter, so a lint failure blocks merge.
 
+### Project Claude Code tooling (`.claude/`)
+
+Three project skills wrap procedures whose steps fail silently when skipped — prefer them over ad-hoc versions of the same work:
+- **`/verify`** — runs the CI trio for whichever side changed, plus `cdk synth` for infra changes (CI deliberately excludes synth, so stack definitions have no automated gate).
+- **`/add-capability`** — walks the capability-flag change across all three hand-written copies + the generated frontend mirror; value-only tier changes type-check clean while the frontend gates on stale entitlements.
+- **`/deploy-preflight`** — pre-`cdk deploy` sequence (env sourcing with `set -a`, stage context, fresh synth, secret existence, diff review). Knows about drift in the deployment runbook and corrects for it.
+
+One subagent: **`kironyx-review`** — reviews a diff against this repo's historical bug classes (self-brand filter discipline, atomic write helpers, `callAnthropic` wrapper usage, DDB key conditions, CORS twins, capability-mirror drift). Run it after backend changes alongside the general `/code-review`.
+
 ## Key Patterns & Conventions
 
 ### Backend Handler Pattern
@@ -189,6 +198,20 @@ Auth tokens stored in localStorage with `kx_` prefix. `apiClient` auto-injects B
 ### Frontend Global Query Config
 
 `staleTime: 30_000`, `retry: 1`, `refetchOnWindowFocus: false` (set in `lib/providers/app-providers.tsx`).
+
+### Public marketing site (`Frontend/src/app/(public)/`)
+
+The marketing surface (landing page + `/about`, `/product`, `/pricing`, `/contact`, `/security`, `/sample-report`, `/compare/{crayon,klue}-alternative`, `/legal/*`) has its own visual identity, distinct from the dashboard app:
+
+- **Cream on near-black, gold only inside imagery** — the `(public)` layout wrapper carries the `theme-forest` class, which overrides the shadcn semantic CSS variables in `globals.css`. **The one rule that makes this palette work: the interface is parchment cream (`ink` `#E1D9C1`, also `--primary`/`--ring`) on a warm near-black, and warm gold appears ONLY as light inside imagery — the signal fields, the hero mockup's Brand Health ring, the `.signal-ignite` rim pulse. Never on a button, link, label or border.** Gold therefore lives in its own `--glow` token (`40 94% 56%`), which `readPalette()` in `signal-runtime.ts` reads *instead of* `--primary`; putting gold back into a UI token collapses the distinction. **The class name is a leftover** — the canvas was forest green until July 2026, then dark brown, and the name was kept to avoid a rename across the layout, components and docs. The dashboard/auth app keeps the cool blue `:root` values. Paired raw Tailwind colors: the `obsidian` ladder (950–600, warm near-black), `ink`, and the now-cream `cta` ramp — **marketing surface only**, don't use them in dashboard components; conversely don't use `brand-*` blues on marketing pages. Literals that can't reference tokens and must be swept by hand: `.text-gradient-primary` and `.bg-grid-fade` in `globals.css`, `ink`'s RGB in `shadow-[inset_0_1px_0_rgba(225,217,193,…)]` hairlines across marketing components, and the obsidian stops in the reading scrims (hero, problem section, `PageHero`). **Those hairlines are Tailwind arbitrary values — never put spaces inside them** (`rgba(225,217,193,0.08)`, not `rgba(225, 217, 193, 0.08)`), or the class silently fails to generate.
+- **"You" is cream, competitors are blue** — self-brand indicators on marketing pages (share-of-voice bars, "You" labels) use `bg-primary`/`text-primary`; competitor bars use `blue-500/*`. Emerald was the original self color — don't reintroduce it on marketing pages. Note this is marketing-only: the dashboard's own Share-of-Voice chart still uses emerald for the self series. The shared `significance-*` scale (green/yellow/red) is a status ramp used by both surfaces — leave it alone.
+- **Logo**: the compass mark (`/Kironyx_logo.svg`, mirrored in `/logo.svg` + `favicon.ico`) was recolored July 2026 from blue to the warm gold ramp (pixel remap of the original Canva PNG: blues→gold, cyan highlights→bright gold, whites→cream). `components/shared/logo.tsx` hardcodes `text-[#F8B225]` (the `--glow` gold) on the wordmark's "X" — a literal, not a semantic token, so the logo renders identically in the app and on marketing. `/public/Kironyx .svg` (note the space) is an unreferenced stray still carrying the old blue mark.
+- **Signal-field motion system** — every animated background on the public surface runs on `components/landing/signal-runtime.ts`, which owns the sprite-atlas cache (one per color, shared page-wide), DPR sizing, in-place rescale on resize, rAF paused off-screen and in background tabs, and a single still frame under `prefers-reduced-motion`. Two consumers: `signal-collapse.tsx` (the hero set-piece, with its own timeline, converging on `[data-signal-target]` and firing the `.signal-ignite` CSS cue — and, via the `kx-signal-delivery` CustomEvent contract in `feed-data.ts`, telling the `LiveFeed` mockup to materialize the finding paired to each collapse/ignition, so the animation visibly *creates* feed entries) and `signal-field.tsx` (`<SignalField mode>` — `unresolved` / `conduit` / `lattice` / `converge` / `drift`, placed on the problem, how-it-works, features, footer-CTA sections and `PageHero`). The `conduit` mode measures `[data-signal-gate]` elements to align its transitions to the numbered steps. Colors come from the live CSS custom properties at runtime, so a token change follows through without touching the effects. Pricing and FAQ are deliberately left with no field.
+- **Display font** — Fraunces (serif) is loaded in `(public)/layout.tsx`, NOT the root layout, so the font payload is scoped to public routes. Exposed as `font-display` / `--font-display`; marketing headings use it, the app never does.
+- **Component split** — `components/landing/` holds the landing-page sections plus reusable animation primitives (`Reveal` scroll-reveal, `CountUp`); `components/marketing/` holds shared subpage building blocks (`PageHero`, `CompareTemplate` — the layout both `/compare/*` pages feed with data).
+- **Film grain** — the public layout renders a fixed `.bg-noise` overlay (inline-SVG fractal noise) to kill gradient banding on the dark canvas; it's `pointer-events-none` and `aria-hidden`.
+- **Reduced motion** — decorative animation utilities (`animate-aurora`, `animate-marquee`, …) are force-disabled under `prefers-reduced-motion` via a block at the bottom of `globals.css`. If you add a new looping/decorative animation, add it to that list.
+- **`StorageNotice` is per-layout, not global** — it renders inside each route-group layout (`(public)`, `(auth)`, `(dashboard)`, `onboarding`), not the root layout. A new route group needs its own instance.
 
 ### Auth Flow
 

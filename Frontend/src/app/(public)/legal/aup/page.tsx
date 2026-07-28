@@ -1,5 +1,5 @@
 export const metadata = {
-  title: "Acceptable Use Policy — Kironyx",
+  title: "Acceptable Use Policy | Kironyx",
 };
 
 export default function AupPage() {
@@ -13,7 +13,7 @@ export default function AupPage() {
         Kironyx service. It is incorporated by reference into the{" "}
         <a href="/legal/terms">Terms of Service</a>. Violation results in
         account termination and may be reported to law enforcement. The list
-        below is non-exhaustive — Kironyx retains discretion to determine
+        below is non-exhaustive; Kironyx retains discretion to determine
         what constitutes misuse.
       </p>
 
@@ -100,26 +100,26 @@ export default function AupPage() {
       <h2>How violations are handled</h2>
       <ul>
         <li>
-          <strong>Detection</strong> — automatic input screening rejects
+          <strong>Detection</strong>:automatic input screening rejects
           person-named or sanctioned targets at submission time. Behavioral
           patterns are reviewed for severity.
         </li>
         <li>
-          <strong>Suspension</strong> — accounts found in violation may be
+          <strong>Suspension</strong>:accounts found in violation may be
           suspended immediately, with research access disabled.
         </li>
         <li>
-          <strong>Investigation</strong> — we may review server logs related
+          <strong>Investigation</strong>:we may review server logs related
           to the violation. We do not read user research content
           speculatively.
         </li>
         <li>
-          <strong>Termination &amp; data deletion</strong> — confirmed
+          <strong>Termination &amp; data deletion</strong>:confirmed
           violations result in account termination per Section 9 of the
           Terms of Service. Data is erased per the Privacy Policy.
         </li>
         <li>
-          <strong>Law enforcement referral</strong> — for violations involving
+          <strong>Law enforcement referral</strong>:for violations involving
           sanctions evasion, stalking, or other criminal activity, we will
           cooperate with law enforcement requests subject to applicable law.
         </li>

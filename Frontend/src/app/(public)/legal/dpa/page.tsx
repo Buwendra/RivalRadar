@@ -1,7 +1,7 @@
 import { DraftBanner } from "@/components/shared/draft-banner";
 
 export const metadata = {
-  title: "Data Processing Agreement — Kironyx",
+  title: "Data Processing Agreement | Kironyx",
 };
 
 export default function DpaPage() {

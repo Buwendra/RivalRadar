@@ -3,8 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { SIGNUP_CTA_HREF, signupCtaLabel } from "@/lib/utils/signup-flag";
-import { Reveal } from "./reveal";
+import { PRIMARY_CTA_HREF, primaryCtaLabel } from "@/lib/utils/signup-flag";
 
 const plans = [
   {
@@ -12,13 +11,13 @@ const plans = [
     price: 49,
     description: "See where you stand against your first competitors.",
     features: [
-      "Stay ahead of 3 competitors — benchmarked against your own brand",
+      "Stay ahead of 3 competitors, benchmarked against your own brand",
       "Brand Pulse self-monitoring included",
       "Weekly strategic digest",
       "30-day change history",
       "Email support",
     ],
-    cta: "Start Free Trial",
+    cta: "Start free trial",
     popular: false,
   },
   {
@@ -26,16 +25,16 @@ const plans = [
     price: 99,
     description: "For teams that compete to win every deal.",
     features: [
-      "Stay ahead of 10 competitors — and see the gap on each",
+      "Stay ahead of 10 competitors, and see the gap on each",
       "Brand Pulse self-monitoring included",
       "Weekly strategic digest + audio briefing",
-      "Side-by-side comparison matrix — with you in it",
+      "Side-by-side comparison matrix, with you in it",
       "Slack alerts + API access",
       "90-day change history",
       "Battlecard templates",
       "Priority support",
     ],
-    cta: "Start Free Trial",
+    cta: "Start free trial",
     popular: true,
   },
   {
@@ -43,14 +42,14 @@ const plans = [
     price: 199,
     description: "For organizations that dominate their market.",
     features: [
-      "Stay ahead of 25 competitors — the full field, benchmarked",
+      "Stay ahead of 25 competitors: the full field, benchmarked",
       "Brand Pulse self-monitoring included",
       "Monthly executive PDF briefings",
       "Custom analysis focus areas",
       "1-year change history",
       "Dedicated support",
     ],
-    cta: "Start Free Trial",
+    cta: "Start free trial",
     popular: false,
   },
 ];
@@ -64,38 +63,37 @@ export function PricingSection({ showHeading = true }: PricingSectionProps) {
     <section className="px-4 py-20 sm:px-6">
       <div className="mx-auto max-w-6xl">
         {showHeading && (
-          <Reveal>
-            <div className="text-center">
-              <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-                Simple, transparent pricing
-              </h2>
-              <p className="mt-4 text-muted-foreground">
-                Competitive intelligence + brand monitoring in one, without the
-                enterprise price tag. Cancel anytime.
-              </p>
-            </div>
-          </Reveal>
+          <div className="text-center">
+            <h2 className="font-display text-display-m font-medium">
+              Three plans, no sales call
+            </h2>
+            <p className="mt-4 text-body-lg text-muted-foreground">
+              Transparent monthly pricing, cancel whenever. Brand Pulse
+              self-monitoring is on every plan. Your own brand is never the
+              paywalled part.
+            </p>
+          </div>
         )}
 
         <div className="mt-12 grid gap-6 md:grid-cols-3">
-          {plans.map((plan, index) => (
-            <Reveal key={plan.name} delay={index * 120} className="relative">
+          {plans.map((plan) => (
+            <div key={plan.name} className="relative">
               {plan.popular && (
                 <div
-                  className="pointer-events-none absolute -inset-px animate-glow-pulse rounded-lg bg-primary/20 blur-md"
+                  className="pointer-events-none absolute -inset-px rounded-lg bg-primary/15 blur-md"
                   aria-hidden
                 />
               )}
               <Card
                 className={cn(
-                  "relative h-full border-brand-700 bg-brand-900 transition-all duration-300 hover:-translate-y-1 hover:border-brand-600",
+                  "relative h-full border-ink/[0.08] bg-obsidian-900 shadow-[inset_0_1px_0_rgba(225,217,193,0.06)] transition-colors duration-200 hover:border-ink/[0.16]",
                   plan.popular &&
-                    "border-primary shadow-lg shadow-primary/10 hover:border-primary hover:shadow-primary/20"
+                    "border-primary/60 hover:border-primary/60"
                 )}
               >
                 {plan.popular && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-4 py-1 text-xs font-medium text-primary-foreground shadow-md shadow-primary/40">
-                    Most Popular
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-4 py-1 text-xs font-medium text-primary-foreground">
+                    Most teams pick this
                   </div>
                 )}
                 <CardHeader className="text-center">
@@ -118,18 +116,18 @@ export function PricingSection({ showHeading = true }: PricingSectionProps) {
                   <Button
                     asChild
                     className={cn(
-                      "w-full",
+                      "w-full transition-[transform,background-color] duration-150 ease-out-strong active:scale-[0.98]",
                       plan.popular
-                        ? "bg-cta text-brand-950 hover:bg-cta-hover"
+                        ? "bg-cta text-obsidian-950 hover:bg-cta-hover"
                         : ""
                     )}
                     variant={plan.popular ? "default" : "outline"}
                   >
-                    <Link href={SIGNUP_CTA_HREF}>{signupCtaLabel(plan.cta)}</Link>
+                    <Link href={PRIMARY_CTA_HREF}>{primaryCtaLabel(plan.cta)}</Link>
                   </Button>
                 </CardContent>
               </Card>
-            </Reveal>
+            </div>
           ))}
         </div>
       </div>

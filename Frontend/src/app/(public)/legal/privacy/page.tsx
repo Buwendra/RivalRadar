@@ -1,7 +1,7 @@
 import { DraftBanner } from "@/components/shared/draft-banner";
 
 export const metadata = {
-  title: "Privacy Policy — Kironyx",
+  title: "Privacy Policy | Kironyx",
 };
 
 export default function PrivacyPage() {
@@ -23,25 +23,25 @@ export default function PrivacyPage() {
       <h2>2. What we collect</h2>
       <ul>
         <li>
-          <strong>Account data</strong> — your email address, name, company
+          <strong>Account data</strong>:your email address, name, company
           name, and industry, captured at sign-up and onboarding.
         </li>
         <li>
-          <strong>Authentication data</strong> — credentials are managed by
+          <strong>Authentication data</strong>:credentials are managed by
           Amazon Cognito; we never store passwords directly.
         </li>
         <li>
-          <strong>Subscription &amp; billing data</strong> — handled by Paddle
+          <strong>Subscription &amp; billing data</strong>:handled by Paddle
           as merchant of record. We see only the customer ID, plan, and status;
           we never see your card details.
         </li>
         <li>
-          <strong>Usage data</strong> — competitors you choose to track, the
+          <strong>Usage data</strong>:competitors you choose to track, the
           research and analyses we perform on your behalf, and your interactions
           with the dashboard.
         </li>
         <li>
-          <strong>Operational logs</strong> — request metadata, IP address, and
+          <strong>Operational logs</strong>:request metadata, IP address, and
           error context retained for security and debugging purposes.
         </li>
       </ul>
@@ -49,19 +49,19 @@ export default function PrivacyPage() {
       <h2>3. Why we collect it (lawful basis under GDPR Art. 6)</h2>
       <ul>
         <li>
-          <strong>Contractual necessity</strong> — to provide the service you
+          <strong>Contractual necessity</strong>:to provide the service you
           subscribed to.
         </li>
         <li>
-          <strong>Legitimate interest</strong> — to operate, secure, and
+          <strong>Legitimate interest</strong>:to operate, secure, and
           improve the service.
         </li>
         <li>
-          <strong>Legal obligation</strong> — tax, sanctions screening, and
+          <strong>Legal obligation</strong>:tax, sanctions screening, and
           accounting records.
         </li>
         <li>
-          <strong>Consent</strong> — for any optional marketing communications,
+          <strong>Consent</strong>:for any optional marketing communications,
           with the right to withdraw at any time.
         </li>
       </ul>
@@ -96,28 +96,28 @@ export default function PrivacyPage() {
       <h2>7. Your rights</h2>
       <ul>
         <li>
-          <strong>Right to access</strong> (GDPR Art. 15 / CCPA §1798.110) — request
+          <strong>Right to access</strong> (GDPR Art. 15 / CCPA §1798.110): request
           a machine-readable export of your data via the dashboard or by
           emailing privacy@kironyx.com.
         </li>
         <li>
-          <strong>Right to erasure</strong> (GDPR Art. 17 / CCPA §1798.105) —
+          <strong>Right to erasure</strong> (GDPR Art. 17 / CCPA §1798.105):
           delete your account from the settings page or by emailing us.
         </li>
         <li>
-          <strong>Right to rectification</strong> (GDPR Art. 16) — edit your
+          <strong>Right to rectification</strong> (GDPR Art. 16): edit your
           profile fields directly in the dashboard.
         </li>
         <li>
-          <strong>Right to portability</strong> (GDPR Art. 20) — your data
+          <strong>Right to portability</strong> (GDPR Art. 20): your data
           export is provided as JSON suitable for porting.
         </li>
         <li>
-          <strong>Right to object / restriction</strong> — contact us at
+          <strong>Right to object / restriction</strong>:contact us at
           privacy@kironyx.com.
         </li>
         <li>
-          <strong>Right to lodge a complaint</strong> — with the supervisory
+          <strong>Right to lodge a complaint</strong>:with the supervisory
           authority in your country of residence.
         </li>
       </ul>

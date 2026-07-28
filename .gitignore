@@ -3,5 +3,8 @@ evidence-*/
 ACCESS_REVIEW_LOG.md
 VENDOR_RISK_REVIEW_LOG.md
 
-# Playwright MCP session artifacts (console logs + page snapshots)
+# Playwright MCP browser artifacts (console logs, page snapshots)
 .playwright-mcp/
+
+# Machine-local Claude permissions. Shared config lives in .claude/settings.json.
+.claude/settings.local.json
