@@ -22,13 +22,13 @@ const PILLARS = [
     icon: Server,
     title: "Serverless, single-region AWS",
     description:
-      "Fully serverless on AWS us-east-1 — Lambda, API Gateway, DynamoDB, Cognito — with no long-running servers to patch. Each workspace's data is logically isolated by tenant key at the data layer, so cross-tenant reads are impossible by construction.",
+      "Fully serverless on AWS us-east-1 (Lambda, API Gateway, DynamoDB, Cognito) with no long-running servers to patch. Each workspace's data is logically isolated by tenant key at the data layer, so cross-tenant reads are impossible by construction.",
   },
   {
     icon: LockKeyhole,
     title: "Encryption in transit and at rest",
     description:
-      "TLS 1.2+ enforced end to end. DynamoDB and S3 encrypted at rest with AWS KMS. Secrets live in AWS Secrets Manager with quarterly rotation. Passwords are managed entirely by Amazon Cognito — we never see plaintext. API keys are stored only as SHA-256 hashes.",
+      "TLS 1.2+ enforced end to end. DynamoDB and S3 encrypted at rest with AWS KMS. Secrets live in AWS Secrets Manager with quarterly rotation. Passwords are managed entirely by Amazon Cognito, so we never see plaintext. API keys are stored only as SHA-256 hashes.",
   },
   {
     icon: KeyRound,
@@ -46,7 +46,7 @@ const PILLARS = [
     icon: Network,
     title: "Network protection",
     description:
-      "Deliberately tight API Gateway throttling — the strictest limits on the auth endpoints — plus per-API-key quotas and durable rate-limiting on sign-in and email verification. Edge DDoS absorption via AWS Shield Standard; managed WAF rules are staged for public launch.",
+      "Deliberately tight API Gateway throttling, with the strictest limits on the auth endpoints, plus per-API-key quotas and durable rate-limiting on sign-in and email verification. Edge DDoS absorption via AWS Shield Standard; managed WAF rules are staged for public launch.",
   },
   {
     icon: Siren,
@@ -73,7 +73,7 @@ export default function SecurityPage() {
             <span className="text-gradient-primary">the whole product</span>
           </>
         }
-        description="Kironyx knows who you watch and what you're told about them. Here's how that data is protected — in plain language, with the receipts linked."
+        description="Kironyx knows who you watch and what you're told about them. Here's how that data is protected, in plain language, with the receipts linked."
       />
 
       {/* What we store / don't store */}
@@ -97,10 +97,10 @@ export default function SecurityPage() {
                 What we never store
               </h2>
               <ul className="mt-4 space-y-2 text-sm leading-relaxed text-ink/75">
-                <li>Payment-card data — Paddle is the merchant of record</li>
+                <li>Payment-card data (Paddle is the merchant of record)</li>
                 <li>Health data, government IDs, or biometrics</li>
                 <li>
-                  Dossiers on people — the research classifier blocks attempts
+                  Dossiers on people: the research classifier blocks attempts
                   to research individuals; we monitor companies
                 </li>
               </ul>
@@ -144,8 +144,8 @@ export default function SecurityPage() {
               Shipped today: GDPR data export, deletion, and
               restriction-of-processing; CCPA rights to know and delete; a
               72-hour breach-notification commitment; and a public
-              sub-processor list. A SOC 2 Type 1 readiness program is underway
-              — we&apos;ll say audited when an auditor has said it, not before.
+              sub-processor list. A SOC 2 Type 1 readiness program is underway:
+              we&apos;ll say audited when an auditor has said it, not before.
             </p>
           </Reveal>
 
@@ -199,8 +199,8 @@ export default function SecurityPage() {
             <div className="mt-12 rounded-lg border border-ink/[0.08] bg-obsidian-900 p-6 text-center shadow-[inset_0_1px_0_rgba(225,217,193,0.06)]">
               <p className="text-sm leading-relaxed text-ink/70">
                 Found a vulnerability? Our disclosure policy lives at{" "}
-                <span className="font-mono text-ink/85">/.well-known/security.txt</span>{" "}
-                — or write directly to{" "}
+                <span className="font-mono text-ink/85">/.well-known/security.txt</span>
+                . Or write directly to{" "}
                 <a
                   href="mailto:security@kironyx.com"
                   className="font-mono text-primary hover:underline"

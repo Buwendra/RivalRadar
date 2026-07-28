@@ -4,7 +4,7 @@ import { Dateline } from "@/components/marketing/editorial";
 const steps = [
   {
     number: "01",
-    title: "Add your competitors — and yourself",
+    title: "Add your competitors, and yourself",
     description:
       "Enter your competitor sites and your own. Your brand runs through the identical research engine, so every finding arrives with a benchmark instead of a guess.",
   },
@@ -12,7 +12,7 @@ const steps = [
     number: "02",
     title: "The research runs every week",
     description:
-      "Claude-powered deep research reads the live web for each company — news, product, funding, hiring, social — and scores every finding 1–10 for how much it actually matters.",
+      "Claude-powered deep research reads the live web for each company (news, product, funding, hiring, social) and scores every finding 1–10 for how much it actually matters.",
   },
   {
     number: "03",

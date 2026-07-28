@@ -79,7 +79,7 @@ export default function CancellationSurveyPage() {
         <CardHeader>
           <CardTitle>Sorry to see you go</CardTitle>
           <CardDescription>
-            30 seconds to tell us why you canceled. No follow-up sales pitch — we just want to do better.
+            30 seconds to tell us why you canceled. No follow-up sales pitch. We just want to do better.
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>

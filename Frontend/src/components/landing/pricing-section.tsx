@@ -11,7 +11,7 @@ const plans = [
     price: 49,
     description: "See where you stand against your first competitors.",
     features: [
-      "Stay ahead of 3 competitors — benchmarked against your own brand",
+      "Stay ahead of 3 competitors, benchmarked against your own brand",
       "Brand Pulse self-monitoring included",
       "Weekly strategic digest",
       "30-day change history",
@@ -25,10 +25,10 @@ const plans = [
     price: 99,
     description: "For teams that compete to win every deal.",
     features: [
-      "Stay ahead of 10 competitors — and see the gap on each",
+      "Stay ahead of 10 competitors, and see the gap on each",
       "Brand Pulse self-monitoring included",
       "Weekly strategic digest + audio briefing",
-      "Side-by-side comparison matrix — with you in it",
+      "Side-by-side comparison matrix, with you in it",
       "Slack alerts + API access",
       "90-day change history",
       "Battlecard templates",
@@ -42,7 +42,7 @@ const plans = [
     price: 199,
     description: "For organizations that dominate their market.",
     features: [
-      "Stay ahead of 25 competitors — the full field, benchmarked",
+      "Stay ahead of 25 competitors: the full field, benchmarked",
       "Brand Pulse self-monitoring included",
       "Monthly executive PDF briefings",
       "Custom analysis focus areas",
@@ -69,7 +69,7 @@ export function PricingSection({ showHeading = true }: PricingSectionProps) {
             </h2>
             <p className="mt-4 text-body-lg text-muted-foreground">
               Transparent monthly pricing, cancel whenever. Brand Pulse
-              self-monitoring is on every plan — your own brand is never the
+              self-monitoring is on every plan. Your own brand is never the
               paywalled part.
             </p>
           </div>

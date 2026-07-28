@@ -39,7 +39,7 @@ export function HeroSection() {
         </h1>
 
         <p className="mx-auto mt-7 max-w-xl animate-fade-up text-standfirst text-ink/70 [animation-delay:120ms]">
-          The same deep research on you and on your competitors — then the gap
+          The same deep research on you and on your competitors. Then the gap
           between you, filed in one brief every Monday.
         </p>
 

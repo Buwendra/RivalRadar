@@ -8,9 +8,9 @@ import { cn } from "@/lib/utils";
 import { PRIMARY_CTA_HREF, primaryCtaLabel } from "@/lib/utils/signup-flag";
 
 export const metadata: Metadata = {
-  title: "Sample Report — What Lands in Your Inbox",
+  title: "Sample Report: What Lands in Your Inbox",
   description:
-    "An illustrative Kironyx weekly strategic brief: scored competitor moves, recommendations, and where your brand stands — with fictional companies.",
+    "An illustrative Kironyx weekly strategic brief: scored competitor moves, recommendations, and where your brand stands, with fictional companies.",
 };
 
 const TOP_MOVES = [
@@ -36,7 +36,7 @@ const TOP_MOVES = [
     significance: 6,
     headline: "Posted 4 senior enterprise sales roles across EMEA in one week",
     impact:
-      "A coordinated enterprise sales push is forming. Their motion has been product-led until now — this is a strategy shift worth tracking over the next cycle.",
+      "A coordinated enterprise sales push is forming. Their motion has been product-led until now. This is a strategy shift worth tracking over the next cycle.",
   },
 ];
 
@@ -51,7 +51,7 @@ const RECOMMENDATIONS = [
   },
   {
     priority: "Medium",
-    text: "Your share of voice lead is narrowing (34% → trending down 2pts). Two customer stories are unpublished — shipping them this week is the cheapest counter.",
+    text: "Your share of voice lead is narrowing (34% → trending down 2pts). Two customer stories are unpublished, and shipping them this week is the cheapest counter.",
   },
 ];
 
@@ -106,7 +106,7 @@ export default function SampleReportPage() {
                   <span className="nums-tabular">Week of 21 Jul</span>
                 </div>
                 <h2 className="mt-3 font-display text-headline font-medium text-foreground">
-                  What moved this week — and where you stand.
+                  What moved this week, and where you stand.
                 </h2>
                 <p className="mt-1.5 text-sm text-ink/55">
                   Your workspace · 4 tracked companies + your brand · 12 changes

@@ -10,22 +10,22 @@ const faqs = [
   {
     question: "Do you monitor my own brand too?",
     answer:
-      "Yes — this is the whole point, and it's on every plan. The same deep-research engine that tracks your competitors runs on your own brand, giving you a coverage feed, a sentiment trend, a Brand Health Score, and your share of voice ranked honestly alongside the competitors you track. Every competitor view arrives with a benchmark.",
+      "Yes. This is the whole point, and it's on every plan. The same deep-research engine that tracks your competitors runs on your own brand, giving you a coverage feed, a sentiment trend, a Brand Health Score, and your share of voice ranked honestly alongside the competitors you track. Every competitor view arrives with a benchmark.",
   },
   {
     question: "How does Kironyx detect changes?",
     answer:
-      "It runs Claude-powered deep web research on each company — yours and your competitors' — across news, product, funding, hiring, and social signals. Each run is compared against the previous one to surface meaningful changes, from pricing shifts to feature launches, with the supporting sources cited alongside every finding.",
+      "It runs Claude-powered deep web research on each company (yours and your competitors') across news, product, funding, hiring, and social signals. Each run is compared against the previous one to surface meaningful changes, from pricing shifts to feature launches, with the supporting sources cited alongside every finding.",
   },
   {
     question: "How accurate is the AI analysis?",
     answer:
-      "The analysis is powered by Claude from Anthropic. Each detected change is scored with a structured framework — change type, a significance score (1–10), strategic implications, and recommended actions. Every finding links back to the web sources it was drawn from, so you can always verify the evidence. It's AI-assisted; check the sources before you act.",
+      "The analysis is powered by Claude from Anthropic. Each detected change is scored with a structured framework: change type, a significance score (1–10), strategic implications, and recommended actions. Every finding links back to the web sources it was drawn from, so you can always verify the evidence. It's AI-assisted; check the sources before you act.",
   },
   {
     question: "How is this different from Google Alerts?",
     answer:
-      "Google Alerts forwards keyword matches. Kironyx actively researches each company across the web, scores the strategic significance of what it finds, and delivers a cited briefing that puts you and the field side by side — surfacing pricing shifts, funding, and hiring signals you'd otherwise miss, not just raw notifications.",
+      "Google Alerts forwards keyword matches. Kironyx actively researches each company across the web, scores the strategic significance of what it finds, and delivers a cited briefing that puts you and the field side by side, surfacing pricing shifts, funding, and hiring signals you'd otherwise miss, not just raw notifications.",
   },
   {
     question: "Can I cancel anytime?",
@@ -35,7 +35,7 @@ const faqs = [
   {
     question: "How quickly will I see my first brief?",
     answer:
-      "Once your workspace is set up, Kironyx immediately kicks off deep research on each competitor you added and on your own brand. Your first cited findings land within minutes, and research re-runs on a recurring schedule — or on demand — to keep the picture current.",
+      "Once your workspace is set up, Kironyx immediately kicks off deep research on each competitor you added and on your own brand. Your first cited findings land within minutes, and research re-runs on a recurring schedule, or on demand, to keep the picture current.",
   },
 ];
 

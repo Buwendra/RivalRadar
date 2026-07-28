@@ -1,5 +1,5 @@
 export const metadata = {
-  title: "Sub-processors — Kironyx",
+  title: "Sub-processors | Kironyx",
 };
 
 export default function SubProcessorsPage() {
@@ -118,7 +118,7 @@ export default function SubProcessorsPage() {
         </li>
         <li>
           <strong>GitHub</strong> sees our application source code. They do
-          not see customer data — only commits to our internal repository.
+          not see customer data, only commits to our internal repository.
         </li>
       </ul>
 

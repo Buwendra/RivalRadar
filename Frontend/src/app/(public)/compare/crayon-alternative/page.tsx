@@ -64,7 +64,7 @@ const WHERE_WE_WIN = [
   {
     title: "It watches you, not just them",
     description:
-      "Competitor tracking without your own position is half a picture. Brand Pulse runs the identical research on your brand — share of voice, sentiment, brand health — so every insight lands with context.",
+      "Competitor tracking without your own position is half a picture. Brand Pulse runs the identical research on your brand (share of voice, sentiment, brand health) so every insight lands with context.",
   },
   {
     title: "Zero analyst required",
@@ -88,17 +88,17 @@ const FAQS = [
   {
     question: "Is Kironyx a full replacement for Crayon?",
     answer:
-      "For an SMB, usually yes — you get AI-researched competitor tracking, significance-scored changes, weekly strategic briefs, battlecards, and brand monitoring. For a large enterprise running a staffed CI program with CRM-integrated enablement workflows, Crayon covers workflows Kironyx doesn't try to. We're honest about that above.",
+      "For an SMB, usually yes: you get AI-researched competitor tracking, significance-scored changes, weekly strategic briefs, battlecards, and brand monitoring. For a large enterprise running a staffed CI program with CRM-integrated enablement workflows, Crayon covers workflows Kironyx doesn't try to. We're honest about that above.",
   },
   {
     question: "How is the research different?",
     answer:
-      "Kironyx runs Claude-powered deep web research on each tracked company — searching news, product, funding, hiring, and social signals — then compares runs to detect genuine changes and scores each one 1–10 for strategic significance. Every finding cites the web sources it came from.",
+      "Kironyx runs Claude-powered deep web research on each tracked company, searching news, product, funding, hiring, and social signals, then compares runs to detect genuine changes and scores each one 1–10 for strategic significance. Every finding cites the web sources it came from.",
   },
   {
     question: "Can I migrate from Crayon?",
     answer:
-      "There's nothing to migrate: add your competitors' websites during onboarding — and your own brand alongside them — and Kironyx starts researching immediately. Your first cited findings typically land within minutes.",
+      "There's nothing to migrate: add your competitors' websites during onboarding (and your own brand alongside them) and Kironyx starts researching immediately. Your first cited findings typically land within minutes.",
   },
   {
     question: "What does it cost?",
@@ -118,7 +118,7 @@ export default function CrayonAlternativePage() {
           <span className="text-gradient-primary">without the enterprise contract</span>
         </>
       }
-      intro="Crayon is built — and priced — for enterprise CI teams. Kironyx delivers AI-researched competitor tracking plus brand monitoring for SMBs at $49–$199/month, self-serve, cancel anytime."
+      intro="Crayon is built, and priced, for enterprise CI teams. Kironyx delivers AI-researched competitor tracking plus brand monitoring for SMBs at $49–$199/month, self-serve, cancel anytime."
       rows={ROWS}
       whereWeWin={WHERE_WE_WIN}
       whenTheyWin={WHEN_THEY_WIN}

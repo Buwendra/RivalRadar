@@ -6,7 +6,7 @@ import { FooterCTASection } from "@/components/landing/footer-cta-section";
 export const metadata: Metadata = {
   title: "Pricing",
   description:
-    "Transparent monthly pricing for the both-directions intelligence brief — your competitors and your own brand in one engine. Brand Pulse self-monitoring on every plan. From $49/month.",
+    "Transparent monthly pricing for the both-directions intelligence brief: your competitors and your own brand in one engine. Brand Pulse self-monitoring on every plan. From $49/month.",
 };
 
 export default function PricingPage() {
@@ -25,7 +25,7 @@ export default function PricingPage() {
         </h1>
         <p className="mx-auto mt-6 max-w-xl text-standfirst text-muted-foreground">
           Your competitors and your own brand, in one engine, without the
-          enterprise price tag. Brand Pulse self-monitoring is on every plan —
+          enterprise price tag. Brand Pulse self-monitoring is on every plan;
           your own side is never the paywalled part.
         </p>
       </section>

@@ -38,7 +38,7 @@ export default function ContactPage() {
       <PageHero
         eyebrow="Access"
         title="Request access"
-        description="We're onboarding new workspaces by invitation while we get ready for launch. Tell us who you're benchmarking against — we'll set you up and send your first brief."
+        description="We're onboarding new workspaces by invitation while we get ready for launch. Tell us who you're benchmarking against and we'll set you up and send your first brief."
       />
 
       <section className="px-6 pb-28 sm:px-8">

@@ -7,17 +7,17 @@ const features = [
   {
     title: "Every change, scored and explained",
     description:
-      "Claude reads each change and returns structured intelligence — change type, significance, strategic implications, and what the move means for your position, not just their headline.",
+      "Claude reads each change and returns structured intelligence: change type, significance, strategic implications, and what the move means for your position, not just their headline.",
   },
   {
     title: "It watches you the same way",
     description:
-      "Brand Pulse runs the identical deep research on your own brand — coverage, sentiment, share of voice — on every plan, so every competitor finding arrives with “and here's where you stand.”",
+      "Brand Pulse runs the identical deep research on your own brand (coverage, sentiment, share of voice) on every plan, so every competitor finding arrives with “and here's where you stand.”",
   },
   {
     title: "One brief, every Monday",
     description:
-      "A curated weekly digest of the moves that matter, with recommendations — plus an opt-in comparative brief on how you stack up against the field.",
+      "A curated weekly digest of the moves that matter, with recommendations, plus an opt-in comparative brief on how you stack up against the field.",
   },
   {
     title: "A 1–10 answer to “does this matter?”",
@@ -27,12 +27,12 @@ const features = [
   {
     title: "The whole field, ranked by threat",
     description:
-      "Track up to 25 competitors and see exactly where you stand against each — across news, product, funding, hiring, and social signals.",
+      "Track up to 25 competitors and see exactly where you stand against each, across news, product, funding, hiring, and social signals.",
   },
   {
     title: "Bad news arrives the same day",
     description:
-      "When research detects a high-significance change (7+), the email lands the day we find it — so you learn whether you're exposed immediately, not next Monday.",
+      "When research detects a high-significance change (7+), the email lands the day we find it, so you learn whether you're exposed immediately, not next Monday.",
   },
 ];
 
@@ -161,7 +161,7 @@ function FeatureVisual({ index }: { index: number }) {
             High-significance change detected
           </div>
           <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
-            Northwind raised a $12M Series A — significance 9/10. Alert emailed
+            Northwind raised a $12M Series A, significance 9/10. Alert emailed
             the same day.
           </p>
         </div>
@@ -187,8 +187,8 @@ export function FeaturesSection() {
               Six things it does well.
             </h2>
             <p className="mt-4 text-body-lg text-muted-foreground measure-tight">
-              No feature zoo. One engine pointed at your competitors and at you
-              — so every capability reads both sides of the ledger.
+              No feature zoo. One engine pointed at your competitors and at you,
+              so every capability reads both sides of the ledger.
             </p>
           </div>
 

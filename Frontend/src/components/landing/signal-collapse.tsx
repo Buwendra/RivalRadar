@@ -287,6 +287,9 @@ export function SignalCollapse() {
       el.classList.remove("signal-ignite");
       void el.offsetWidth; // restart the animation if it's mid-flight
       el.classList.add("signal-ignite");
+      // The signal has landed in the dashboard — cue the mockup to fill its
+      // numbers/ring/bars in sync with the collapse (HeroMockup listens).
+      window.dispatchEvent(new CustomEvent("kx-signal-resolved"));
       window.setTimeout(() => el.classList.remove("signal-ignite"), 1000);
     };
 

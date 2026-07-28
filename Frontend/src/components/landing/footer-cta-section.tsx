@@ -15,11 +15,11 @@ export function FooterCTASection() {
         <SignalField mode="converge" className="-z-10" />
 
         <h2 className="font-display text-display-m font-medium">
-          Stop guessing — about them, or about yourself.
+          Stop guessing about them, or about yourself.
         </h2>
         <p className="mx-auto mt-5 max-w-xl text-body-lg text-muted-foreground">
           You already track your competitors in your head. Kironyx does it
-          properly — and holds your own brand to the same standard, so every
+          properly, and holds your own brand to the same standard, so every
           read arrives with where you actually stand.
         </p>
         <div className="mt-9 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
@@ -32,7 +32,7 @@ export function FooterCTASection() {
           </Button>
         </div>
         <p className="mx-auto mt-5 max-w-md font-mono text-xs leading-relaxed text-muted-foreground">
-          From $49 to $199 a month — the enterprise platforms that watch only
+          From $49 to $199 a month. The enterprise platforms that watch only
           your competitors start near $20,000 a year.
         </p>
       </div>

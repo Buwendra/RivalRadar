@@ -9,11 +9,11 @@ import { FooterCTASection } from "@/components/landing/footer-cta-section";
 
 export const metadata: Metadata = {
   description:
-    "Kironyx runs the same AI deep research on your competitors and your own brand, then files the gap between them — where you lead, where you're exposed — in one brief every Monday.",
+    "Kironyx runs the same AI deep research on your competitors and your own brand, then files the gap between them (where you lead, where you're exposed) in one brief every Monday.",
   alternates: { canonical: "/" },
   openGraph: {
     url: "/",
-    title: "Kironyx — your brand and your rivals, seen through one lens",
+    title: "Kironyx: your brand and your rivals, seen through one lens",
   },
 };
 

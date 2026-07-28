@@ -5,7 +5,7 @@ import { ImageResponse } from "next/og";
 // external font is loaded, so this renders in next/og's default face — clean
 // and branded without a build-time font fetch.
 export const alt =
-  "Kironyx — your brand and your rivals, seen through one lens";
+  "Kironyx: your brand and your rivals, seen through one lens";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -69,7 +69,7 @@ export default function OpengraphImage() {
             maxWidth: 940,
           }}
         >
-          The same deep research on you and on the field — and the gap between
+          The same deep research on you and on the field, and the gap between
           them, filed in one brief every Monday.
         </div>
       </div>

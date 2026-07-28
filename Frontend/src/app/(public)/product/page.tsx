@@ -28,7 +28,7 @@ import { Reveal } from "@/components/landing/reveal";
 import { FooterCTASection } from "@/components/landing/footer-cta-section";
 
 export const metadata: Metadata = {
-  title: "Product — How Kironyx Works",
+  title: "Product: How Kironyx Works",
   description:
     "AI deep research runs on your competitors and your own brand, detects what changed, scores what matters, and delivers a weekly brief with same-day alerts.",
 };
@@ -39,14 +39,14 @@ const PIPELINE = [
     step: "01",
     title: "Deep research, both directions",
     description:
-      "Claude-powered research searches the live web for each competitor — and for your own brand via Brand Pulse. Every finding carries its sources, so you can verify the evidence behind every claim.",
+      "Claude-powered research searches the live web for each competitor, and for your own brand via Brand Pulse. Every finding carries its sources, so you can verify the evidence behind every claim.",
   },
   {
     icon: GitCompareArrows,
     step: "02",
     title: "Delta detection",
     description:
-      "Each new research run is compared against the previous one. Only genuine changes surface — a pricing shift, a funding round, a hiring spike — not a re-hash of what you already knew.",
+      "Each new research run is compared against the previous one. Only genuine changes surface: a pricing shift, a funding round, a hiring spike, not a re-hash of what you already knew.",
   },
   {
     icon: Gauge,
@@ -73,7 +73,7 @@ const CATEGORIES = [
   {
     icon: Factory,
     label: "Industry lens",
-    detail: "A sixth category tuned to your industry — e.g. regulatory moves for fintech",
+    detail: "A sixth category tuned to your industry, e.g. regulatory moves for fintech",
   },
 ];
 
@@ -82,13 +82,13 @@ const SIGNALS = [
     icon: TrendingUp,
     title: "Momentum",
     description:
-      "Rule-based direction of each company's activity — rising, stable, slowing, or declining — computed from the last two weeks of detected changes. Your own brand gets one too.",
+      "Rule-based direction of each company's activity (rising, stable, slowing, or declining), computed from the last two weeks of detected changes. Your own brand gets one too.",
   },
   {
     icon: ShieldAlert,
     title: "Threat level",
     description:
-      "AI-assigned against a fixed rubric, from monitor to critical, with a written rationale. Deliberately never scored for your own brand — Kironyx doesn't treat you as your own enemy.",
+      "AI-assigned against a fixed rubric, from monitor to critical, with a written rationale. Deliberately never scored for your own brand. Kironyx doesn't treat you as your own enemy.",
   },
   {
     icon: Tags,
@@ -117,7 +117,7 @@ export default function ProductPage() {
             <span className="text-gradient-primary">pointed both ways</span>
           </>
         }
-        description="Kironyx runs the same AI deep research on your competitors and on your own brand, then benchmarks the two — so every insight arrives with 'and here's where you stand.'"
+        description="Kironyx runs the same AI deep research on your competitors and on your own brand, then benchmarks the two, so every insight arrives with 'and here's where you stand.'"
       >
         <Button
           asChild
@@ -200,8 +200,8 @@ export default function ProductPage() {
               </h2>
               <p className="mt-4 text-[17px] leading-[1.65] text-ink/70">
                 Most tools only watch the other side. Kironyx runs the identical
-                deep research on your own brand — coverage, sentiment, share of
-                voice — and benchmarks it against your competitive set. Brand
+                deep research on your own brand (coverage, sentiment, share of
+                voice) and benchmarks it against your competitive set. Brand
                 Health condenses it into one score; Share of Voice ranks you
                 honestly among your rivals; the comparison matrix pins you as
                 the reference line.

@@ -28,20 +28,20 @@ export function ProblemSection() {
           <p>
             Every week your competitors change pricing, ship features, raise
             money, and hire for roles that telegraph where they&rsquo;re headed.
-            Most of it happens quietly — you find out in a lost deal, months
+            Most of it happens quietly. You find out in a lost deal, months
             later, from a prospect who assumed you already knew.
           </p>
           <p>
             So you try to watch them. But watching them tells you what they did,
             not whether it moved you. The market is forming an opinion of{" "}
-            <em className="italic text-ink">your</em> brand at the same time —
-            your coverage, your sentiment, your share of the conversation — and
+            <em className="italic text-ink">your</em> brand at the same time
+            (your coverage, your sentiment, your share of the conversation), and
             almost nobody is reading that side.
           </p>
           <p>
             Kironyx runs one engine across both. It researches your competitors
             and your own brand the same way, every week, and files the gap
-            between them — so what you read is your position, not just their
+            between them, so what you read is your position, not just their
             headlines.
           </p>
         </div>

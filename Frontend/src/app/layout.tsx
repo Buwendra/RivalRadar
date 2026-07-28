@@ -20,13 +20,13 @@ const SITE_URL =
   "https://main.d1zrq9gf129s9u.amplifyapp.com";
 
 const SITE_DESCRIPTION =
-  "One engine, pointed both ways. Kironyx runs the same AI deep research on your competitors and on your own brand, then files the gap between them in a weekly brief — competitive intelligence and brand monitoring in one, at a fraction of enterprise pricing.";
+  "One engine, pointed both ways. Kironyx runs the same AI deep research on your competitors and on your own brand, then files the gap between them in a weekly brief. Competitive intelligence and brand monitoring in one, at a fraction of enterprise pricing.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
     default:
-      "Kironyx — AI competitive intelligence + brand monitoring, in one",
+      "Kironyx: AI competitive intelligence + brand monitoring, in one",
     template: "%s | Kironyx",
   },
   description: SITE_DESCRIPTION,
@@ -34,12 +34,12 @@ export const metadata: Metadata = {
     type: "website",
     siteName: "Kironyx",
     url: SITE_URL,
-    title: "Kironyx — your brand and your rivals, seen through one lens",
+    title: "Kironyx: your brand and your rivals, seen through one lens",
     description: SITE_DESCRIPTION,
   },
   twitter: {
     card: "summary_large_image",
-    title: "Kironyx — your brand and your rivals, seen through one lens",
+    title: "Kironyx: your brand and your rivals, seen through one lens",
     description: SITE_DESCRIPTION,
   },
 };

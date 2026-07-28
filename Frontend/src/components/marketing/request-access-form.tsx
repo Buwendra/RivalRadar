@@ -43,7 +43,7 @@ export function RequestAccessForm() {
   });
 
   const onSubmit = (data: FormData) => {
-    const subject = `Access request — ${data.company}`;
+    const subject = `Access request: ${data.company}`;
     const body = [
       `Name: ${data.name}`,
       `Work email: ${data.email}`,

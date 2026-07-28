@@ -1,11 +1,20 @@
-import { CountUp } from "./count-up";
+"use client";
+
+import { useEffect, useState } from "react";
 import { LiveFeed } from "./live-feed";
 
 /**
  * Stylized product preview for the hero: a floating dashboard window with
  * the live feed, a Brand Health ring, and Share of Voice bars. All data is
  * fictional; the surfaces mirror real product features.
+ *
+ * The Brand Health number, its ring, and the Share-of-Voice bars start empty
+ * and fill in one motion, cued by "kx-signal-resolved" — the moment the hero's
+ * signal collapse lands in this window. So the data visibly *arrives* as
+ * everything converges, instead of being pre-filled on load.
  */
+const BRAND_HEALTH = 74;
+
 const SHARE_OF_VOICE = [
   { name: "You", pct: 34, barClass: "bg-primary", self: true },
   { name: "Acme Analytics", pct: 28, barClass: "bg-blue-500", self: false },
@@ -13,7 +22,51 @@ const SHARE_OF_VOICE = [
   { name: "BoldMetrics", pct: 16, barClass: "bg-blue-500/40", self: false },
 ];
 
+const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
+
 export function HeroMockup() {
+  // 0 → 1 fill progress. SSR + no-JS render 0 (an empty dashboard waiting for
+  // the signal); reduced motion snaps to filled; otherwise it animates on the
+  // resolve cue, re-syncing if the collapse replays.
+  const [p, setP] = useState(0);
+
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setP(1);
+      return;
+    }
+    let raf = 0;
+    let eventSeen = false;
+    const animate = () => {
+      cancelAnimationFrame(raf);
+      const start = performance.now();
+      const duration = 1100;
+      const tick = (now: number) => {
+        const t = Math.min((now - start) / duration, 1);
+        setP(easeOut(t));
+        if (t < 1) raf = requestAnimationFrame(tick);
+      };
+      raf = requestAnimationFrame(tick);
+    };
+    const onResolved = () => {
+      eventSeen = true;
+      animate();
+    };
+    window.addEventListener("kx-signal-resolved", onResolved);
+    // Safety net: fill anyway if the collapse never cues us (target off-screen).
+    const fallback = window.setTimeout(() => {
+      if (!eventSeen) animate();
+    }, 5200);
+    return () => {
+      window.removeEventListener("kx-signal-resolved", onResolved);
+      window.clearTimeout(fallback);
+      cancelAnimationFrame(raf);
+    };
+  }, []);
+
+  const healthPct = BRAND_HEALTH * p;
+  const health = Math.round(healthPct);
+
   return (
     <div className="relative mx-auto mt-16 max-w-5xl animate-fade-up [animation-delay:300ms]">
       {/* Ambient glow behind the window */}
@@ -51,15 +104,16 @@ export function HeroMockup() {
                 <div
                   className="flex h-24 w-24 shrink-0 items-center justify-center rounded-full"
                   style={{
-                    background:
-                      "conic-gradient(#F59E0B 0% 74%, #201E1B 74% 100%)",
+                    background: `conic-gradient(#F59E0B 0% ${healthPct.toFixed(
+                      1,
+                    )}%, #201E1B ${healthPct.toFixed(1)}% 100%)`,
                   }}
                 >
-                  <div className="flex h-[76px] w-[76px] items-center justify-center rounded-full bg-obsidian-950 text-2xl font-bold">
-                    <CountUp value={74} />
+                  <div className="flex h-[76px] w-[76px] items-center justify-center rounded-full bg-obsidian-950 text-2xl font-bold tabular-nums">
+                    {health}
                   </div>
                 </div>
-                <div className="text-sm">
+                <div className="text-sm" style={{ opacity: p }}>
                   <p className="font-medium text-significance-low">
                     ▲ 6 pts this week
                   </p>
@@ -91,11 +145,11 @@ export function HeroMockup() {
                     <div className="h-2 flex-1 overflow-hidden rounded-full bg-obsidian-800">
                       <div
                         className={`h-full rounded-full ${row.barClass}`}
-                        style={{ width: `${row.pct}%` }}
+                        style={{ width: `${(row.pct * p).toFixed(1)}%` }}
                       />
                     </div>
                     <span className="w-8 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
-                      {row.pct}%
+                      {Math.round(row.pct * p)}%
                     </span>
                   </div>
                 ))}

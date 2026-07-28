@@ -49,7 +49,7 @@ export function PublicFooter() {
             <Logo />
             <p className="mt-4 text-body-lg text-muted-foreground measure-tight">
               You and your competitors, run through the same intelligence
-              engine — and the gap between them, filed every Monday.
+              engine, and the gap between them, filed every Monday.
             </p>
           </div>
           <p className="font-mono text-label uppercase text-muted-foreground md:text-right">

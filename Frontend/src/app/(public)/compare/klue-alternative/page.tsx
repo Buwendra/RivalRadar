@@ -43,7 +43,7 @@ const ROWS: CompareRow[] = [
   },
   {
     label: "Win/loss analysis",
-    kironyx: "Not a focus — Kironyx is research and monitoring first",
+    kironyx: "Not a focus; Kironyx is research and monitoring first",
     competitor: "Dedicated win/loss interview and analysis programs",
     kironyxWins: false,
   },
@@ -59,12 +59,12 @@ const WHERE_WE_WIN = [
   {
     title: "Intelligence without the enablement overhead",
     description:
-      "Klue shines when a large sales team needs curated battlecards pushed into their CRM. If what you actually need is to know what competitors did and what it means, Kironyx delivers exactly that — automatically, every week.",
+      "Klue shines when a large sales team needs curated battlecards pushed into their CRM. If what you actually need is to know what competitors did and what it means, Kironyx delivers exactly that, automatically, every week.",
   },
   {
     title: "The mirror is included",
     description:
-      "Kironyx is the only tool in this price class that runs the identical AI research on your own brand and benchmarks you against your set — share of voice, sentiment, and a composite Brand Health score on every plan.",
+      "Kironyx is the only tool in this price class that runs the identical AI research on your own brand and benchmarks you against your set: share of voice, sentiment, and a composite Brand Health score on every plan.",
   },
   {
     title: "Priced for teams without a CI budget line",
@@ -80,7 +80,7 @@ const WHEN_THEY_WIN = {
     "Your primary goal is arming a large sales team with curated, CRM-distributed battlecards",
     "You run structured win/loss programs and want them integrated with your CI",
     "You have a dedicated CI or PMM team to curate and publish intelligence",
-    "Enterprise requirements — SSO, procurement, security review — drive the purchase",
+    "Enterprise requirements (SSO, procurement, security review) drive the purchase",
   ],
 };
 
@@ -88,17 +88,17 @@ const FAQS = [
   {
     question: "Is Kironyx a full replacement for Klue?",
     answer:
-      "It depends what you use Klue for. For monitoring competitors, detecting strategic changes, and getting a scored weekly brief, yes — at a fraction of the price. For enterprise sales-enablement workflows (CRM-distributed battlecards, win/loss programs, adoption analytics), Klue is deeper, and we say so plainly above.",
+      "It depends what you use Klue for. For monitoring competitors, detecting strategic changes, and getting a scored weekly brief, yes, at a fraction of the price. For enterprise sales-enablement workflows (CRM-distributed battlecards, win/loss programs, adoption analytics), Klue is deeper, and we say so plainly above.",
   },
   {
     question: "Does Kironyx do battlecards?",
     answer:
-      "Yes — AI-generated battlecards per competitor with win-against tactics, exportable and shareable as PDFs. What Kironyx doesn't do is Klue-style enterprise distribution: pushing cards into Salesforce and measuring rep adoption.",
+      "Yes: AI-generated battlecards per competitor with win-against tactics, exportable and shareable as PDFs. What Kironyx doesn't do is Klue-style enterprise distribution: pushing cards into Salesforce and measuring rep adoption.",
   },
   {
     question: "How fast do I see value?",
     answer:
-      "Onboarding takes about two minutes. Deep research kicks off immediately for every competitor you add — and for your own brand — with first cited findings typically within minutes and your first Monday brief the following week.",
+      "Onboarding takes about two minutes. Deep research kicks off immediately for every competitor you add (and for your own brand) with first cited findings typically within minutes and your first Monday brief the following week.",
   },
   {
     question: "What does it cost?",
@@ -118,7 +118,7 @@ export default function KlueAlternativePage() {
           <span className="text-gradient-primary">minus the sales-enablement tax</span>
         </>
       }
-      intro="Klue is built for enterprise sales enablement, priced accordingly, and gated behind a demo call. Kironyx gives SMBs the intelligence layer — AI research, scored changes, weekly briefs, and brand monitoring — at $49–$199/month, self-serve."
+      intro="Klue is built for enterprise sales enablement, priced accordingly, and gated behind a demo call. Kironyx gives SMBs the intelligence layer (AI research, scored changes, weekly briefs, and brand monitoring) at $49–$199/month, self-serve."
       rows={ROWS}
       whereWeWin={WHERE_WE_WIN}
       whenTheyWin={WHEN_THEY_WIN}
