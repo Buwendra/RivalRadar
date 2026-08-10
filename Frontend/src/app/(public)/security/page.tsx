@@ -34,7 +34,7 @@ const PILLARS = [
     icon: KeyRound,
     title: "Access control",
     description:
-      "Customer auth via Cognito with email verification and optional MFA. Workspace roles gate destructive actions to owners. On our side: hardware-MFA root account, per-function IAM roles with no wildcard policies, and quarterly access reviews.",
+      "Customer auth via Cognito with email verification and optional MFA. Workspace roles gate destructive actions to owners. On our side: hardware-MFA root account, explicitly scoped IAM roles with elevated permissions isolated to dedicated functions, and quarterly access reviews.",
   },
   {
     icon: ScrollText,

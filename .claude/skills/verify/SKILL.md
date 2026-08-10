@@ -44,7 +44,7 @@ If anything under `Backend/lib/**` or `Backend/bin/**` changed:
 cd Backend && set -a && source .env && set +a && npx cdk synth --quiet
 ```
 
-**This is the point of this skill.** `verify.yml` excludes `cdk synth` deliberately (slow, costly), so a broken stack definition passes CI and fails at deploy. `tsc --noEmit` will not catch: esbuild bundling failures, bad `entry:` paths in `addRoute` (built by `path.join` from string literals, so typos aren't type errors), cross-stack dependency cycles, or the Api stack's CloudFormation resource ceiling.
+**This is the point of this skill.** `verify.yml` excludes `cdk synth` deliberately (slow, costly), so a broken stack definition passes CI and fails at deploy. `tsc --noEmit` will not catch: esbuild bundling failures or cross-stack dependency cycles. (Router `entry` path typos and the Api stack's 500-resource ceiling ARE now caught in CI by the template test `lib/stacks/api.stack.test.ts`, which synths with bundling disabled — full synth is still the only check that runs esbuild.)
 
 Notes:
 - Use `npx cdk`, never a global `cdk` — a globally installed CLI older than `aws-cdk-lib` fails with a cloud-assembly schema mismatch.

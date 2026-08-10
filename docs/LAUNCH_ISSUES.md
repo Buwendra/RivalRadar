@@ -19,7 +19,7 @@ The plans below are designed to be executed in sequence; each one cites the exis
 
 - All 5 legal pages exist with real prose; `<DraftBanner>` flags Privacy / Terms / DPA as awaiting lawyer review.
 - Re-consent banner ([Frontend/src/components/shared/reconsent-banner.tsx](../Frontend/src/components/shared/reconsent-banner.tsx)) is the reuse pattern for the cookie banner.
-- API stack is at 496/500 CFN resources.
+- API stack: domain-function consolidation done (Issue 6 ✅) — ~211/500 CFN resources, a new route costs 1.
 - WAF WebACL was removed earlier; status page is the only CloudFront construct in the codebase today ([Backend/lib/stacks/status-page.stack.ts](../Backend/lib/stacks/status-page.stack.ts)).
 - `callAnthropic` already logs `aiCallId`, `promptHash`, cost; missing `aiResponseText` for forensic audit.
 - CI today is a single `npm-audit.yml` workflow; no `tsc`/`vitest`/`lint`/`cdk synth` in CI; no branch protection on `main`.
@@ -67,7 +67,7 @@ Add key builders to `Backend/src/shared/db/keys.ts` following the existing patte
 - `GET /legal/sub-processors/confirm/{token}` — stamps `confirmedAt`, shows a public confirmation page.
 - `GET /legal/sub-processors/unsubscribe/{token}` — deletes the row, shows "You've been unsubscribed".
 
-**Resource budget note**: 3 new routes × 6 CFN resources ≈ 18 resources. Stack is at 496/500 — this alone would tip it over. **This work depends on Issue 6 (nested-stack refactor) completing first.**
+**Resource budget note**: post-consolidation (Issue 6 ✅) a new route costs exactly 1 CFN resource — 3 new routes ≈ 3 resources against ~290 of headroom. Add each as a manifest row + router entry (`Backend/src/functions/route-manifest.ts`); no longer blocked.
 
 **4. Frontend form** — `Frontend/src/components/legal/sub-processor-subscribe-form.tsx`
 
@@ -252,7 +252,7 @@ export const handler = apiHandler<PublicEvent>(async (event) => {
 });
 ```
 
-Wire in `api.stack.ts` as a public route. **Resource budget**: 6 CFN resources. Bundles with Issue 6's nested-stack refactor.
+Wire as a public route: one row in `Backend/src/functions/route-manifest.ts` + one entry in the owning router. **Resource budget**: 1 CFN resource (Issue 6 ✅ — no longer blocked).
 
 **2. CSP header update** — `Frontend/next.config.mjs`:
 
@@ -356,7 +356,20 @@ gh api -X PUT repos/Buwendra/RivalRadar/branches/main/protection \
 
 ---
 
-## Issue 6 — API stack 500-resource ceiling (nested-stack split via cdk-import) 🔴
+## Issue 6 — API stack 500-resource ceiling ✅ RESOLVED (domain-function consolidation)
+
+### Resolution (August 2026)
+
+Superseded: the cdk-import / nested-stack migration plan below was written for restructuring a LIVE stack sitting at 496/500 resources. The rebrand cutover made that premise obsolete — the `Kironyx-dev-Api` stack had never successfully deployed (the old `RivalScan-dev-Api` kept serving), so the fix landed as a greenfield **domain-function consolidation** instead, with no import dance and no route-ownership conflicts:
+
+- ~84 one-route-per-Lambda functions became **20 domain-grouped functions**, each a thin router dispatching on the exact `event.routeKey` (`Backend/src/functions/routers/`).
+- `Backend/src/functions/route-manifest.ts` is the single source of truth (84 routes, including the restored `POST /brand/setup` — the route this ceiling had forced out). Functions are grouped by privilege + packaging: elevated IAM (Cognito admin-delete, SFN execution, research-log reads) stays on dedicated functions; both PDF routes share the 1024 MB `Pdf` function with the `.afm` font hook.
+- The stack now synthesizes **~211 resources against the hard 500 limit**, and a new route costs exactly 1 resource (one shared `HttpLambdaIntegration` + one api-scoped permission per function). `lib/stacks/api.stack.test.ts` asserts the route table, auth modes, grant isolation, and a <350 resource ceiling in CI; `cdk.json` no longer overrides the synth-time resource limit.
+
+**Issues 1 and 4 are unblocked** — their routes now cost 1 resource each against ~290 of headroom.
+
+<details>
+<summary>Original (superseded) cdk-import migration plan — kept for reference</summary>
 
 ### What it is
 The hardest item, and the one that unblocks several others. The API stack is at 496/500 resources. CloudFormation's hard limit is 500. The naive nested-stack split attempted earlier failed because CFN can't migrate physical resources between stacks (every route's `routeKey` is unique on the HTTP API; when CDK tried to CREATE the route in the new stack while the old stack still owned it, AWS returned `ConflictException: AlreadyExists`).
@@ -426,6 +439,8 @@ Once the nested-stack structure is in place and the resource budget reset (~100 
 - A failed import mid-batch leaves the nested stack in `IMPORT_IN_PROGRESS` state. Recovery: `aws cloudformation continue-update-rollback` or manually delete the half-imported stack and retry.
 
 This is the single most consequential item on this list.
+
+</details>
 
 ---
 
@@ -664,11 +679,11 @@ Future readers can't easily map a code reference to a roadmap phase.
 
 | # | Item | Effort | Unblocks |
 |---|---|---|---|
-| 1 | **Issue 6** — nested-stack refactor (cdk import flow) | ~2 sessions | Issues 1, 4 + any future API route |
+| 1 | **Issue 6** — API resource ceiling | ✅ done (domain-function consolidation) | Issues 1, 4 + any future API route |
 | 2 | **Issue 5** — CI workflow + branch protection | ~30 min | (independent — do anytime) |
 | 3 | **Issue 2** — cookie banner | ~15 min | (independent) |
-| 4 | **Issue 4** — CSP report-uri | ~30 min | (depends on Issue 6) |
-| 5 | **Issue 1** — sub-processor subscription endpoint | ~1 session | (depends on Issue 6) |
+| 4 | **Issue 4** — CSP report-uri | ~30 min | (unblocked — Issue 6 ✅) |
+| 5 | **Issue 1** — sub-processor subscription endpoint | ~1 session | (unblocked — Issue 6 ✅) |
 | 6 | **Issue 3** — WAF + CloudFront fronting | ~1.5 sessions | Real security posture for launch |
 | 7 | **Issue 7** — real-time cost-cap update | ~30 min | (independent) |
 | 8 | **Issue 9** — full AI audit log | ~30 min | (independent) |

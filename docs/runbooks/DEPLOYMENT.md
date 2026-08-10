@@ -355,7 +355,9 @@ npx cdk deploy Kironyx-dev-Api
 # Preview changes before deploying
 npx cdk diff
 
-# View recent Lambda logs (requires stack name + function logical ID)
+# View recent Lambda logs (requires stack name + function logical ID).
+# API functions are domain-grouped — the route → function map lives in
+# Backend/src/functions/route-manifest.ts (e.g. /users/me → Kironyx-dev-Api-Users).
 aws logs tail /aws/lambda/Kironyx-dev-Api-AuthSignup --follow
 
 # Type-check without deploying

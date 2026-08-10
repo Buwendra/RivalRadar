@@ -65,7 +65,7 @@ Some changes carry extra blast radius. For these, require additional steps:
 
 CDK ships immutable Lambda function versions; rollback is possible without re-deploying CDK if the regression is in code.
 
-1. **Backend code regression** — find the prior Lambda version: `aws lambda list-versions-by-function --function-name Kironyx-dev-<HandlerName>`. Update the alias: `aws lambda update-alias --function-name Kironyx-dev-<HandlerName> --name live --function-version <prior-version>`.
+1. **Backend code regression** — revert the offending commit on `main` and redeploy the Api stack (`npx cdk deploy Kironyx-<stage>-Api`). Function names are `Kironyx-<stage>-Api-<FnId>` (the FnId → route map is `Backend/src/functions/route-manifest.ts`); note the stacks publish no Lambda aliases, so alias-flip rollback is not available, and API functions are **domain-grouped** — any rollback of one function reverts every route it serves.
 2. **Backend infrastructure regression** — revert the offending commit on `main`, redeploy via `cdk deploy --all`.
 3. **Frontend regression** — Amplify deploy history: `aws amplify list-jobs --app-id d1zrq9gf129s9u --branch-name main`. Re-deploy a previous build: `aws amplify start-job --app-id d1zrq9gf129s9u --branch-name main --job-type REDEPLOY --job-id <prior-job-id>`.
 4. **Configuration regression** — restore prior values in AWS Secrets Manager (`aws secretsmanager update-secret`). Invalidate the in-Lambda 5-minute secrets cache by triggering a cold start (touch any environment variable on the Lambda).
