@@ -156,7 +156,16 @@ export class ApiStack extends cdk.Stack {
     addRoute('WorkspaceMemberRemove', apigatewayv2.HttpMethod.DELETE, '/workspaces/current/members/{userId}', 'api/workspaces/members.ts');
     // Phase 14 — role change (member ↔ admin), owner-only
     addRoute('WorkspaceMemberRoleChange', apigatewayv2.HttpMethod.PATCH, '/workspaces/current/members/{userId}', 'api/workspaces/members.ts');
-    addRoute('WorkspaceInvite', apigatewayv2.HttpMethod.POST, '/workspaces/current/invitations', 'api/workspaces/invite.ts');
+    // Sends the invitation email inline (best-effort try/catch) — needs SES
+    // send permission like the pipeline email Lambdas, or the send fails with
+    // AccessDenied that the catch block silently swallows.
+    const workspaceInviteFn = addRoute('WorkspaceInvite', apigatewayv2.HttpMethod.POST, '/workspaces/current/invitations', 'api/workspaces/invite.ts');
+    workspaceInviteFn.addToRolePolicy(
+      new cdk.aws_iam.PolicyStatement({
+        actions: ['ses:SendEmail', 'ses:SendRawEmail'],
+        resources: ['*'],
+      })
+    );
     addRoute('InvitationAccept', apigatewayv2.HttpMethod.POST, '/invitations/{token}/accept', 'api/workspaces/accept-invitation.ts');
 
     // ─── Workspace governance (Phase 4b) ───
@@ -197,6 +206,13 @@ export class ApiStack extends cdk.Stack {
       new cdk.aws_iam.PolicyStatement({
         actions: ['cognito-idp:AdminDeleteUser'],
         resources: [userPool.userPoolArn],
+      })
+    );
+    // Emails the GDPR deletion certificate inline (best-effort try/catch).
+    userDeleteFn.addToRolePolicy(
+      new cdk.aws_iam.PolicyStatement({
+        actions: ['ses:SendEmail', 'ses:SendRawEmail'],
+        resources: ['*'],
       })
     );
 
@@ -399,7 +415,15 @@ export class ApiStack extends cdk.Stack {
     addRoute('SubPortal', apigatewayv2.HttpMethod.POST, '/subscriptions/portal', 'api/subscriptions/portal.ts');
 
     // ─── Webhook Routes (public, verified by signature) ───
-    addRoute('PaddleWebhook', apigatewayv2.HttpMethod.POST, '/webhooks/paddle', 'api/webhooks/paddle.ts', false);
+    // Sends payment-lifecycle emails (dunning, cancellation survey) inline —
+    // same SES send permission requirement as the invite/delete handlers.
+    const paddleWebhookFn = addRoute('PaddleWebhook', apigatewayv2.HttpMethod.POST, '/webhooks/paddle', 'api/webhooks/paddle.ts', false);
+    paddleWebhookFn.addToRolePolicy(
+      new cdk.aws_iam.PolicyStatement({
+        actions: ['ses:SendEmail', 'ses:SendRawEmail'],
+        resources: ['*'],
+      })
+    );
 
     // ─── Cancellation Feedback (Phase 8b — public, token-validated) ───
     addRoute(
