@@ -12,6 +12,18 @@ import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import { Construct } from 'constructs';
 import * as path from 'path';
+// Relative import on purpose: cdk synth runs under plain ts-node, which does
+// not resolve the @functions/* tsconfig alias. The manifest is a zero-import
+// leaf module (pure data), so this pulls no runtime code into synth.
+import {
+  FNS,
+  ROUTES,
+  FnId,
+  FnDef,
+  EnvMarker,
+  GrantMarker,
+  HttpMethodStr,
+} from '../../src/functions/route-manifest';
 
 interface ApiStackProps extends cdk.StackProps {
   table: dynamodb.Table;
@@ -23,6 +35,22 @@ interface ApiStackProps extends cdk.StackProps {
    *  research-run details endpoint. */
   deepResearchFn: lambda.Function;
 }
+
+// pdfkit ships AFM font metrics as .afm files — esbuild treats them as binary
+// assets and won't bundle them automatically; copying preserves the relative
+// path PDFKit expects. Applied to any FnDef with `pdfFonts: true` (the Pdf
+// function). Missing this hook fails LAZILY: the function cold-starts fine
+// and only throws "Cannot find module ... data/Helvetica.afm" when a PDF is
+// actually rendered — which is why Phase 8 verification generates one.
+const pdfFontCommandHooks = {
+  beforeBundling: () => [],
+  beforeInstall: () => [],
+  afterBundling(inputDir: string, outputDir: string) {
+    return [
+      `node -e "const fs=require('fs'),path=require('path');const src=path.join('${inputDir.replace(/\\/g, '/')}','node_modules/pdfkit/js/data');const dst=path.join('${outputDir.replace(/\\/g, '/')}','data');if(fs.existsSync(src)){fs.mkdirSync(dst,{recursive:true});for(const f of fs.readdirSync(src))fs.copyFileSync(path.join(src,f),path.join(dst,f));}"`,
+    ];
+  },
+};
 
 export class ApiStack extends cdk.Stack {
   public readonly httpApi: apigatewayv2.HttpApi;
@@ -80,10 +108,10 @@ export class ApiStack extends cdk.Stack {
       timeout: cdk.Duration.seconds(30),
       memorySize: 256,
       environment: sharedEnv,
-      // 90-day retention across all ~60 route Lambdas. Deliberately the
-      // `logRetention` prop (one singleton custom resource) rather than ~60
-      // explicit LogGroups — this stack already flirts with the 500-resource
-      // CloudFormation ceiling (see the note at the route table below).
+      // 90-day retention. The `logRetention` prop (one custom resource per
+      // function + a singleton provider) beats explicit LogGroups here: it
+      // keeps resource count down and preserves continuity with any
+      // pre-existing log groups on redeploys.
       logRetention: logs.RetentionDays.THREE_MONTHS,
       bundling: {
         minify: true,
@@ -92,357 +120,129 @@ export class ApiStack extends cdk.Stack {
       },
     };
 
-    // Helper to create Lambda + route
-    const addRoute = (
-      routeId: string,
-      method: apigatewayv2.HttpMethod,
-      routePath: string,
-      entry: string,
-      auth: boolean = true,
-      extraEnv?: Record<string, string>
-    ) => {
-      const fn = new nodejs.NodejsFunction(this, routeId, {
+    // ─── Domain functions + routes (driven by src/functions/route-manifest.ts) ───
+    //
+    // 20 domain-grouped Lambdas instead of one per route: CloudFormation caps
+    // a stack at 500 resources (hard limit — the per-route layout synthesized
+    // 588 and could not deploy). Each function is a thin router dispatching on
+    // the exact `event.routeKey` (src/functions/routers/), and the manifest is
+    // the single source of truth for route → function → auth → grants.
+    // Adding a route costs ONE CloudFormation resource (the Route).
+    //
+    // Two tests keep this honest: routers/router-manifest.test.ts (dispatch
+    // tables match the manifest) and lib/stacks/api.stack.test.ts (the
+    // synthesized template matches the manifest — routes, auth, counts, and
+    // that special grants land only on their intended roles).
+
+    // EnvMarker → concrete environment variables. Lazy thunks so construct
+    // references (state machine ARN, fn name) resolve at call time.
+    const markerEnv: Record<EnvMarker, () => Record<string, string>> = {
+      // Defaults to off (pre-launch). The handler 403s with SIGNUP_DISABLED
+      // unless the env var is exactly 'true'. Cognito's selfSignUpEnabled:
+      // false (Auth stack) is the hard backstop.
+      signupFlag: () => ({ SIGNUP_ENABLED: process.env.SIGNUP_ENABLED ?? 'false' }),
+      paddlePrices: () => ({
+        PADDLE_PRICE_SCOUT: process.env.PADDLE_PRICE_SCOUT ?? '',
+        PADDLE_PRICE_STRATEGIST: process.env.PADDLE_PRICE_STRATEGIST ?? '',
+        PADDLE_PRICE_COMMAND: process.env.PADDLE_PRICE_COMMAND ?? '',
+      }),
+      adminEmails: () => ({ ADMIN_EMAILS: process.env.ADMIN_EMAILS ?? '' }),
+      researchPipelineArn: () => ({ RESEARCH_PIPELINE_ARN: researchStateMachine.stateMachineArn }),
+      deepResearchLambdaName: () => ({ DEEP_RESEARCH_LAMBDA_NAME: deepResearchFn.functionName }),
+    };
+
+    // GrantMarker → concrete IAM. Every function separately gets the baseline
+    // (table RW + bucket RW + secrets read) below; these are the deliberate
+    // exceptions, kept on dedicated functions by the manifest's grouping.
+    const applyGrant: Record<GrantMarker, (fn: nodejs.NodejsFunction) => void> = {
+      startResearchExecution: (fn) => researchStateMachine.grantStartExecution(fn),
+      // GDPR Art. 17 / CCPA §1798.105 — account deletion needs to invalidate
+      // the Cognito identity.
+      adminDeleteUser: (fn) =>
+        fn.addToRolePolicy(
+          new cdk.aws_iam.PolicyStatement({
+            actions: ['cognito-idp:AdminDeleteUser'],
+            resources: [userPool.userPoolArn],
+          })
+        ),
+      // Phase 22 lazy "Technical details" — SFN execution history + a
+      // CloudWatch tail of the DeepResearch Lambda's log group.
+      sfnReadExecution: (fn) => {
+        fn.addToRolePolicy(
+          new cdk.aws_iam.PolicyStatement({
+            actions: ['states:GetExecutionHistory', 'states:DescribeExecution'],
+            resources: [
+              researchStateMachine.stateMachineArn,
+              `${researchStateMachine.stateMachineArn}:*`,
+              `arn:aws:states:${this.region}:${this.account}:execution:${researchStateMachine.stateMachineName}:*`,
+            ],
+          })
+        );
+        fn.addToRolePolicy(
+          new cdk.aws_iam.PolicyStatement({
+            actions: ['logs:FilterLogEvents'],
+            resources: [
+              `arn:aws:logs:${this.region}:${this.account}:log-group:/aws/lambda/${deepResearchFn.functionName}:*`,
+            ],
+          })
+        );
+      },
+      // Inline email sends (invites, deletion certificate, Paddle lifecycle)
+      // — mirrors the pipeline email Lambdas' grant.
+      sesSend: (fn) =>
+        fn.addToRolePolicy(
+          new cdk.aws_iam.PolicyStatement({
+            actions: ['ses:SendEmail', 'ses:SendRawEmail'],
+            resources: ['*'],
+          })
+        ),
+    };
+
+    const integrations = {} as Record<FnId, apigatewayv2Int.HttpLambdaIntegration>;
+
+    for (const [fnId, def] of Object.entries(FNS) as [FnId, FnDef][]) {
+      const environment = { ...sharedEnv };
+      for (const marker of def.env ?? []) Object.assign(environment, markerEnv[marker]());
+
+      const fn = new nodejs.NodejsFunction(this, fnId, {
         ...lambdaDefaults,
-        entry: path.join(__dirname, '..', '..', 'src', 'functions', entry),
-        functionName: `${this.stackName}-${routeId}`,
-        environment: { ...sharedEnv, ...extraEnv },
+        entry: path.join(__dirname, '..', '..', 'src', 'functions', def.entry),
+        functionName: `${this.stackName}-${fnId}`,
+        memorySize: def.memoryMb ?? lambdaDefaults.memorySize,
+        timeout: def.timeoutSec ? cdk.Duration.seconds(def.timeoutSec) : lambdaDefaults.timeout,
+        environment,
+        bundling: def.pdfFonts
+          ? { ...lambdaDefaults.bundling, commandHooks: pdfFontCommandHooks }
+          : lambdaDefaults.bundling,
       });
 
       table.grantReadWriteData(fn);
       snapshotBucket.grantReadWrite(fn);
       apiSecrets.grantRead(fn);
+      for (const marker of def.grants ?? []) applyGrant[marker](fn);
 
+      // ONE integration instance per function, reused by every route below.
+      // scopePermissionToRoute: false gives one api-scoped Lambda::Permission
+      // per function instead of one per route — together these keep the
+      // resource cost of a new route at exactly 1 (the Route itself).
+      // CDK parents the Integration under the FIRST route that binds it, so
+      // reordering a function's manifest rows replaces the integration on the
+      // next deploy (stateless, harmless, but noisy — append new routes at
+      // the end of their group).
+      integrations[fnId] = new apigatewayv2Int.HttpLambdaIntegration(`${fnId}-Int`, fn, {
+        scopePermissionToRoute: false,
+      });
+    }
+
+    for (const route of ROUTES) {
+      const [method, routePath] = route.routeKey.split(' ') as [HttpMethodStr, string];
       this.httpApi.addRoutes({
         path: routePath,
-        methods: [method],
-        integration: new apigatewayv2Int.HttpLambdaIntegration(`${routeId}-Int`, fn),
-        authorizer: auth ? authorizer : undefined,
+        methods: [apigatewayv2.HttpMethod[method]],
+        integration: integrations[route.fn],
+        authorizer: route.auth === 'jwt' ? authorizer : undefined,
       });
-
-      return fn;
-    };
-
-    // ─── Auth Routes (public) ───
-    // SIGNUP_ENABLED defaults to off (pre-launch). The handler 403s with
-    // SIGNUP_DISABLED unless the env var is exactly 'true'. Cognito's
-    // selfSignUpEnabled: false (Auth stack) is the hard backstop.
-    addRoute('AuthSignup', apigatewayv2.HttpMethod.POST, '/auth/signup', 'api/auth/signup.ts', false, {
-      SIGNUP_ENABLED: process.env.SIGNUP_ENABLED ?? 'false',
-    });
-    addRoute('AuthSignin', apigatewayv2.HttpMethod.POST, '/auth/signin', 'api/auth/signin.ts', false);
-    // Public by necessity: the caller's id token is expired when they hit this.
-    addRoute('AuthRefresh', apigatewayv2.HttpMethod.POST, '/auth/refresh', 'api/auth/refresh.ts', false);
-    addRoute('AuthResendVerification', apigatewayv2.HttpMethod.POST, '/auth/resend-verification', 'api/auth/resend-verification.ts', false);
-
-    const pipelineEnv = {
-      RESEARCH_PIPELINE_ARN: researchStateMachine.stateMachineArn,
-    };
-
-    // ─── User Routes ───
-    addRoute('UserProfile', apigatewayv2.HttpMethod.GET, '/users/me', 'api/users/profile.ts');
-    addRoute('UserUpdate', apigatewayv2.HttpMethod.PUT, '/users/me', 'api/users/profile.ts');
-    // Phase 8a — once-per-session login ping for the retention-nudge cron
-    addRoute('UserPing', apigatewayv2.HttpMethod.POST, '/users/me/ping', 'api/users/ping.ts');
-    // Phase 9a — GDPR Art. 18 self-suspend + re-consent
-    addRoute('UserSuspend', apigatewayv2.HttpMethod.POST, '/users/me/suspend', 'api/users/suspend.ts');
-    addRoute('UserResume', apigatewayv2.HttpMethod.POST, '/users/me/resume', 'api/users/suspend.ts');
-    addRoute('UserAcceptTos', apigatewayv2.HttpMethod.POST, '/users/me/accept-tos', 'api/users/accept-tos.ts');
-    const onboardFn = addRoute('UserOnboard', apigatewayv2.HttpMethod.POST, '/users/onboard', 'api/users/onboard.ts', true, pipelineEnv);
-    researchStateMachine.grantStartExecution(onboardFn);
-
-    // ─── Workspaces (Phase 4a) ───
-    addRoute('WorkspacesList', apigatewayv2.HttpMethod.GET, '/workspaces', 'api/workspaces/list.ts');
-    addRoute('WorkspaceMembersList', apigatewayv2.HttpMethod.GET, '/workspaces/current/members', 'api/workspaces/members.ts');
-    addRoute('WorkspaceMemberRemove', apigatewayv2.HttpMethod.DELETE, '/workspaces/current/members/{userId}', 'api/workspaces/members.ts');
-    // Phase 14 — role change (member ↔ admin), owner-only
-    addRoute('WorkspaceMemberRoleChange', apigatewayv2.HttpMethod.PATCH, '/workspaces/current/members/{userId}', 'api/workspaces/members.ts');
-    // Sends the invitation email inline (best-effort try/catch) — needs SES
-    // send permission like the pipeline email Lambdas, or the send fails with
-    // AccessDenied that the catch block silently swallows.
-    const workspaceInviteFn = addRoute('WorkspaceInvite', apigatewayv2.HttpMethod.POST, '/workspaces/current/invitations', 'api/workspaces/invite.ts');
-    workspaceInviteFn.addToRolePolicy(
-      new cdk.aws_iam.PolicyStatement({
-        actions: ['ses:SendEmail', 'ses:SendRawEmail'],
-        resources: ['*'],
-      })
-    );
-    addRoute('InvitationAccept', apigatewayv2.HttpMethod.POST, '/invitations/{token}/accept', 'api/workspaces/accept-invitation.ts');
-
-    // ─── Workspace governance (Phase 4b) ───
-    addRoute('WorkspaceUpdate', apigatewayv2.HttpMethod.PATCH, '/workspaces/current', 'api/workspaces/update.ts');
-    addRoute('WorkspaceDelete', apigatewayv2.HttpMethod.DELETE, '/workspaces/current', 'api/workspaces/delete.ts');
-    addRoute('WorkspaceAudit', apigatewayv2.HttpMethod.GET, '/workspaces/current/audit', 'api/workspaces/audit.ts');
-
-    // ─── Ownership transfer (Phase 4c) ───
-    addRoute('WorkspaceTransfer', apigatewayv2.HttpMethod.POST, '/workspaces/current/transfer-ownership', 'api/workspaces/transfer-ownership.ts');
-
-    // ─── API Keys management (Phase 11) ───
-    addRoute('ApiKeysCreate', apigatewayv2.HttpMethod.POST, '/workspaces/current/api-keys', 'api/api-keys/create.ts');
-    addRoute('ApiKeysList', apigatewayv2.HttpMethod.GET, '/workspaces/current/api-keys', 'api/api-keys/list.ts');
-    addRoute('ApiKeysDelete', apigatewayv2.HttpMethod.DELETE, '/workspaces/current/api-keys/{id}', 'api/api-keys/delete.ts');
-
-    // ─── Public read API (Phase 11) — auth via X-API-Key, NOT Cognito ───
-    addRoute('ApiV1CompetitorsList', apigatewayv2.HttpMethod.GET, '/v1/competitors', 'api/v1/competitors.ts', false);
-    addRoute('ApiV1ChangesList', apigatewayv2.HttpMethod.GET, '/v1/changes', 'api/v1/changes.ts', false);
-    addRoute('ApiV1RecommendationsList', apigatewayv2.HttpMethod.GET, '/v1/recommendations', 'api/v1/recommendations.ts', false);
-
-    // ─── Public write API (Phase 13) — write-scope keys only ───
-    addRoute('ApiV1CompetitorsCreate', apigatewayv2.HttpMethod.POST, '/v1/competitors', 'api/v1/competitors-create.ts', false);
-    addRoute('ApiV1CompetitorsSnooze', apigatewayv2.HttpMethod.PATCH, '/v1/competitors/{id}/snooze', 'api/v1/competitors-snooze.ts', false);
-    addRoute('ApiV1RecommendationsUpdate', apigatewayv2.HttpMethod.PATCH, '/v1/recommendations/{id}', 'api/v1/recommendations-update.ts', false);
-
-    // GDPR Art. 15+20 / CCPA §1798.110 — data export
-    addRoute('UserExport', apigatewayv2.HttpMethod.GET, '/users/me/export', 'api/users/export.ts');
-
-    // GDPR Art. 17 / CCPA §1798.105 — account deletion (right to erasure).
-    // Lambda needs cognito:AdminDeleteUser to invalidate the auth identity.
-    const userDeleteFn = addRoute(
-      'UserDelete',
-      apigatewayv2.HttpMethod.DELETE,
-      '/users/me',
-      'api/users/delete.ts'
-    );
-    userDeleteFn.addToRolePolicy(
-      new cdk.aws_iam.PolicyStatement({
-        actions: ['cognito-idp:AdminDeleteUser'],
-        resources: [userPool.userPoolArn],
-      })
-    );
-    // Emails the GDPR deletion certificate inline (best-effort try/catch).
-    userDeleteFn.addToRolePolicy(
-      new cdk.aws_iam.PolicyStatement({
-        actions: ['ses:SendEmail', 'ses:SendRawEmail'],
-        resources: ['*'],
-      })
-    );
-
-    // ─── Competitor Routes ───
-    addRoute('CompetitorList', apigatewayv2.HttpMethod.GET, '/competitors', 'api/competitors/list.ts');
-    addRoute('CompetitorCreate', apigatewayv2.HttpMethod.POST, '/competitors', 'api/competitors/create.ts');
-    // Phase 12 — CSV bulk import
-    addRoute('CompetitorBulkImport', apigatewayv2.HttpMethod.POST, '/competitors/bulk-import', 'api/competitors/bulk-import.ts');
-    // Phase 19 — cross-competitor comparison matrix (Strategist+)
-    addRoute('CompetitorMatrix', apigatewayv2.HttpMethod.GET, '/competitors/matrix', 'api/competitors/matrix.ts');
-    // Phase 20 — per-competitor battlecard generation (auth list + delete)
-    addRoute('BattlecardsList',   apigatewayv2.HttpMethod.GET,    '/battlecards',         'api/battlecards/list.ts');
-    addRoute('BattlecardsDelete', apigatewayv2.HttpMethod.DELETE, '/battlecards/{id}',    'api/battlecards/delete.ts');
-    addRoute('PublicBattlecard',  apigatewayv2.HttpMethod.GET,    '/public/battlecards/{token}', 'api/public/battlecard.ts', false);
-    addRoute('CompetitorGet', apigatewayv2.HttpMethod.GET, '/competitors/{id}', 'api/competitors/get.ts');
-    addRoute('CompetitorDelete', apigatewayv2.HttpMethod.DELETE, '/competitors/{id}', 'api/competitors/delete.ts');
-    const researchFn = addRoute('CompetitorResearch', apigatewayv2.HttpMethod.POST, '/competitors/{id}/research', 'api/competitors/research.ts', true, pipelineEnv);
-    researchStateMachine.grantStartExecution(researchFn);
-    // Phase 7a — snooze toggle
-    addRoute('CompetitorSnooze', apigatewayv2.HttpMethod.PATCH, '/competitors/{id}/snooze', 'api/competitors/snooze.ts');
-
-    // ─── Brand Pulse (Phase 23) — self-brand monitoring ───
-    addRoute('BrandGet',       apigatewayv2.HttpMethod.GET,  '/brand',           'api/brand/get.ts');
-    addRoute('BrandCoverage',  apigatewayv2.HttpMethod.GET,  '/brand/coverage',  'api/brand/coverage.ts');
-    addRoute('BrandSentiment', apigatewayv2.HttpMethod.GET,  '/brand/sentiment', 'api/brand/sentiment.ts');
-    // Phase 24 — Brand Health Score composite KPI.
-    addRoute('BrandHealth',    apigatewayv2.HttpMethod.GET,  '/brand/health',    'api/brand/health.ts');
-    // Phase 24 — Share of Voice comparative analytics.
-    addRoute('AnalyticsShareOfVoice', apigatewayv2.HttpMethod.GET, '/analytics/share-of-voice', 'api/analytics/share-of-voice.ts');
-    // NOTE: POST /brand/setup is temporarily omitted to keep the API stack
-    // under CloudFormation's 500-resource hard limit. The endpoint is only
-    // needed for legacy users (onboarded pre-Phase 23) to seed their
-    // companyWebsite + self-brand row; new onboards do this in
-    // api/users/onboard.ts. Re-add when the stack is split into nested
-    // stacks or routes are migrated to a sibling stack.
-    const brandResearchFn = addRoute(
-      'BrandResearch',
-      apigatewayv2.HttpMethod.POST,
-      '/brand/research',
-      'api/brand/research.ts',
-      true,
-      pipelineEnv
-    );
-    researchStateMachine.grantStartExecution(brandResearchFn);
-
-    // ─── Research-run observability (Phase 22) ───
-    addRoute('ResearchRunsList', apigatewayv2.HttpMethod.GET, '/research-runs', 'api/research-runs/list.ts');
-    addRoute('ResearchRunsGet',  apigatewayv2.HttpMethod.GET, '/research-runs/{id}', 'api/research-runs/get.ts');
-    // Lazy "Technical details" — pulls SFN execution history + CloudWatch tail.
-    // Needs explicit grants the default `addRoute()` doesn't provide.
-    const researchRunDetailsFn = addRoute(
-      'ResearchRunsDetails',
-      apigatewayv2.HttpMethod.GET,
-      '/research-runs/{id}/details',
-      'api/research-runs/details.ts',
-      true,
-      { DEEP_RESEARCH_LAMBDA_NAME: deepResearchFn.functionName }
-    );
-    researchRunDetailsFn.addToRolePolicy(
-      new cdk.aws_iam.PolicyStatement({
-        actions: ['states:GetExecutionHistory', 'states:DescribeExecution'],
-        resources: [
-          researchStateMachine.stateMachineArn,
-          `${researchStateMachine.stateMachineArn}:*`,
-          `arn:aws:states:${this.region}:${this.account}:execution:${researchStateMachine.stateMachineName}:*`,
-        ],
-      })
-    );
-    researchRunDetailsFn.addToRolePolicy(
-      new cdk.aws_iam.PolicyStatement({
-        actions: ['logs:FilterLogEvents'],
-        resources: [
-          `arn:aws:logs:${this.region}:${this.account}:log-group:/aws/lambda/${deepResearchFn.functionName}:*`,
-        ],
-      })
-    );
-
-    // ─── Changes Routes ───
-    addRoute('ChangesList', apigatewayv2.HttpMethod.GET, '/changes', 'api/changes/list.ts');
-    addRoute('ChangesGet', apigatewayv2.HttpMethod.GET, '/changes/{id}', 'api/changes/get.ts');
-    addRoute('ChangesFeedback', apigatewayv2.HttpMethod.POST, '/changes/{id}/feedback', 'api/changes/feedback.ts');
-    // Phase 7a — change notes (single handler dispatches GET vs POST internally)
-    addRoute('ChangesNotesList', apigatewayv2.HttpMethod.GET, '/changes/{id}/notes', 'api/changes/notes.ts');
-    addRoute('ChangesNotesCreate', apigatewayv2.HttpMethod.POST, '/changes/{id}/notes', 'api/changes/notes.ts');
-
-    // ─── Recommendations Routes (Phase 2) ───
-    addRoute('RecommendationsList', apigatewayv2.HttpMethod.GET, '/recommendations', 'api/recommendations/list.ts');
-    addRoute('RecommendationsUpdate', apigatewayv2.HttpMethod.PATCH, '/recommendations/{id}', 'api/recommendations/update-status.ts');
-
-    // ─── Notifications (Phase 18) — caller-scoped in-app inbox ───
-    addRoute('NotificationsList', apigatewayv2.HttpMethod.GET, '/notifications', 'api/notifications/list.ts');
-    addRoute('NotificationsMarkRead', apigatewayv2.HttpMethod.PATCH, '/notifications/{id}/read', 'api/notifications/mark-read.ts');
-    addRoute('NotificationsMarkAllRead', apigatewayv2.HttpMethod.POST, '/notifications/mark-all-read', 'api/notifications/mark-all-read.ts');
-
-    // ─── Saved Views (Phase 7b) ───
-    addRoute('SavedViewsList', apigatewayv2.HttpMethod.GET, '/saved-views', 'api/saved-views/list.ts');
-    addRoute('SavedViewsCreate', apigatewayv2.HttpMethod.POST, '/saved-views', 'api/saved-views/create.ts');
-    addRoute('SavedViewsUpdate', apigatewayv2.HttpMethod.PATCH, '/saved-views/{id}', 'api/saved-views/update.ts');
-    addRoute('SavedViewsDelete', apigatewayv2.HttpMethod.DELETE, '/saved-views/{id}', 'api/saved-views/delete.ts');
-    // Phase 15 — saved-view email subscriptions (per-caller, weekly cadence)
-    addRoute('SavedViewsSubscribe', apigatewayv2.HttpMethod.POST, '/saved-views/{id}/subscribe', 'api/saved-views/subscribe.ts');
-    addRoute('SavedViewsUnsubscribe', apigatewayv2.HttpMethod.DELETE, '/saved-views/{id}/subscribe', 'api/saved-views/unsubscribe.ts');
-
-    // ─── Search (Phase 7b) ───
-    addRoute('Search', apigatewayv2.HttpMethod.GET, '/search', 'api/search/search.ts');
-
-    // ─── Onboarding Routes (Phase 5) ───
-    addRoute('OnboardingSuggestCompetitors', apigatewayv2.HttpMethod.POST, '/onboarding/suggest-competitors', 'api/onboarding/suggest-competitors.ts');
-
-    // ─── Exports Routes (Phase 6a + 6b) ───
-    addRoute('ExportsCsv', apigatewayv2.HttpMethod.POST, '/exports/csv', 'api/exports/csv.ts');
-
-    // PDF export needs more memory + a longer timeout than the default 256 MB / 30s
-    // because PDFKit + S3 upload can take 1–3s and the bundled PDFKit binary
-    // benefits from more RAM during cold start. Created outside `addRoute()` so
-    // we can override the lambdaDefaults; otherwise mirrors the same grants
-    // (table RW, bucket RW, secrets read) and route registration.
-    const exportsPdfFn = new nodejs.NodejsFunction(this, 'ExportsPdf', {
-      ...lambdaDefaults,
-      entry: path.join(__dirname, '..', '..', 'src', 'functions', 'api/exports/pdf.ts'),
-      functionName: `${this.stackName}-ExportsPdf`,
-      timeout: cdk.Duration.seconds(60),
-      memorySize: 1024,
-      // pdfkit ships AFM font metrics as .afm files — keep them in the bundle.
-      bundling: {
-        ...lambdaDefaults.bundling,
-        commandHooks: {
-          beforeBundling: () => [],
-          beforeInstall: () => [],
-          afterBundling(inputDir: string, outputDir: string) {
-            // Copy the bundled .afm font files PDFKit reads at runtime.
-            // esbuild treats these as binary assets and won't bundle them
-            // automatically; copying preserves the relative path PDFKit expects.
-            return [
-              `node -e "const fs=require('fs'),path=require('path');const src=path.join('${inputDir.replace(/\\/g, '/')}','node_modules/pdfkit/js/data');const dst=path.join('${outputDir.replace(/\\/g, '/')}','data');if(fs.existsSync(src)){fs.mkdirSync(dst,{recursive:true});for(const f of fs.readdirSync(src))fs.copyFileSync(path.join(src,f),path.join(dst,f));}"`,
-            ];
-          },
-        },
-      },
-    });
-    table.grantReadWriteData(exportsPdfFn);
-    snapshotBucket.grantReadWrite(exportsPdfFn);
-    apiSecrets.grantRead(exportsPdfFn);
-    this.httpApi.addRoutes({
-      path: '/exports/pdf',
-      methods: [apigatewayv2.HttpMethod.POST],
-      integration: new apigatewayv2Int.HttpLambdaIntegration('ExportsPdf-Int', exportsPdfFn),
-      authorizer,
-    });
-
-    // ─── Phase 20 — battlecard PDF generator ───
-    // PDFKit cold start + S3 PUT — same memory/timeout override as ExportsPdf,
-    // and the same .afm font-asset copy hook so PDFKit's internal font lookup
-    // resolves at runtime.
-    const competitorBattlecardFn = new nodejs.NodejsFunction(this, 'CompetitorBattlecard', {
-      ...lambdaDefaults,
-      entry: path.join(__dirname, '..', '..', 'src', 'functions', 'api/competitors/battlecard.ts'),
-      functionName: `${this.stackName}-CompetitorBattlecard`,
-      timeout: cdk.Duration.seconds(60),
-      memorySize: 1024,
-      bundling: {
-        ...lambdaDefaults.bundling,
-        commandHooks: {
-          beforeBundling: () => [],
-          beforeInstall: () => [],
-          afterBundling(inputDir: string, outputDir: string) {
-            return [
-              `node -e "const fs=require('fs'),path=require('path');const src=path.join('${inputDir.replace(/\\/g, '/')}','node_modules/pdfkit/js/data');const dst=path.join('${outputDir.replace(/\\/g, '/')}','data');if(fs.existsSync(src)){fs.mkdirSync(dst,{recursive:true});for(const f of fs.readdirSync(src))fs.copyFileSync(path.join(src,f),path.join(dst,f));}"`,
-            ];
-          },
-        },
-      },
-    });
-    table.grantReadWriteData(competitorBattlecardFn);
-    snapshotBucket.grantReadWrite(competitorBattlecardFn);
-    apiSecrets.grantRead(competitorBattlecardFn);
-    this.httpApi.addRoutes({
-      path: '/competitors/{id}/battlecard',
-      methods: [apigatewayv2.HttpMethod.POST],
-      integration: new apigatewayv2Int.HttpLambdaIntegration(
-        'CompetitorBattlecard-Int',
-        competitorBattlecardFn
-      ),
-      authorizer,
-    });
-
-    // ─── Integrations Routes (Phase 3) ───
-    addRoute('IntegrationsList', apigatewayv2.HttpMethod.GET, '/integrations', 'api/integrations/list.ts');
-    addRoute('IntegrationsSet', apigatewayv2.HttpMethod.POST, '/integrations', 'api/integrations/set.ts');
-    addRoute('IntegrationsTest', apigatewayv2.HttpMethod.POST, '/integrations/{provider}/test', 'api/integrations/test.ts');
-    addRoute('IntegrationsDelete', apigatewayv2.HttpMethod.DELETE, '/integrations/{provider}', 'api/integrations/delete.ts');
-
-    // ─── Subscription Routes ───
-    addRoute('SubCurrent', apigatewayv2.HttpMethod.GET, '/subscriptions/me', 'api/subscriptions/current.ts');
-    addRoute('SubCheckout', apigatewayv2.HttpMethod.POST, '/subscriptions/checkout', 'api/subscriptions/checkout.ts', true, {
-      PADDLE_PRICE_SCOUT: process.env.PADDLE_PRICE_SCOUT ?? '',
-      PADDLE_PRICE_STRATEGIST: process.env.PADDLE_PRICE_STRATEGIST ?? '',
-      PADDLE_PRICE_COMMAND: process.env.PADDLE_PRICE_COMMAND ?? '',
-    });
-    addRoute('SubPortal', apigatewayv2.HttpMethod.POST, '/subscriptions/portal', 'api/subscriptions/portal.ts');
-
-    // ─── Webhook Routes (public, verified by signature) ───
-    // Sends payment-lifecycle emails (dunning, cancellation survey) inline —
-    // same SES send permission requirement as the invite/delete handlers.
-    const paddleWebhookFn = addRoute('PaddleWebhook', apigatewayv2.HttpMethod.POST, '/webhooks/paddle', 'api/webhooks/paddle.ts', false);
-    paddleWebhookFn.addToRolePolicy(
-      new cdk.aws_iam.PolicyStatement({
-        actions: ['ses:SendEmail', 'ses:SendRawEmail'],
-        resources: ['*'],
-      })
-    );
-
-    // ─── Cancellation Feedback (Phase 8b — public, token-validated) ───
-    addRoute(
-      'CancellationFeedbackSubmit',
-      apigatewayv2.HttpMethod.POST,
-      '/cancellation-feedback/{token}',
-      'api/cancellation/submit.ts',
-      false
-    );
-
-    // ─── Admin Business Snapshot (Phase 8b — owner-only via ADMIN_EMAILS allowlist) ───
-    addRoute(
-      'AdminBusiness',
-      apigatewayv2.HttpMethod.GET,
-      '/admin/business',
-      'api/admin/business.ts',
-      true,
-      { ADMIN_EMAILS: process.env.ADMIN_EMAILS ?? '' }
-    );
+    }
 
     // ─── Phase 9: API Gateway Throttling ───
     // Pre-launch limit (20 req/s, 40 burst) — deliberately tight while the
@@ -458,7 +258,11 @@ export class ApiStack extends cdk.Stack {
     // v1, or (b) WAFv2 rate-based rules with URI-path scope statements,
     // which need the API fronted by CloudFront. Both are deferred to the
     // Go Live phase. Cognito provides default lockout on the signin path
-    // as a partial mitigation today.
+    // as a partial mitigation today. The per-FUNCTION emergency lever is
+    // reserved concurrency = 0 (see INCIDENT_RUNBOOK) — with domain-grouped
+    // functions it throttles every route of that function, which is why the
+    // kill-switch-critical routes (AuthSignup, AuthRefresh, PaddleWebhook,
+    // UserDelete, ResearchRunsDetails) live in solo functions.
     const defaultStage = this.httpApi.defaultStage!.node.defaultChild as apigatewayv2.CfnStage;
     defaultStage.defaultRouteSettings = {
       throttlingBurstLimit: 40,

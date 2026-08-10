@@ -18,7 +18,6 @@
   "context": {
     "@aws-cdk/aws-lambda:recognizeVersionProps": true,
     "@aws-cdk/core:stackRelativeExports": true,
-    "@aws-cdk/aws-apigateway:disableCloudWatchRole": true,
-    "@aws-cdk/core:stackResourceLimit": "1000"
+    "@aws-cdk/aws-apigateway:disableCloudWatchRole": true
   }
 }
