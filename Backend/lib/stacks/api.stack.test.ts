@@ -199,7 +199,7 @@ describe('per-function configuration', () => {
   it('every function carries the shared env', () => {
     for (const fnId of FN_IDS) {
       const vars = functionByName(fnId).Properties?.Environment?.Variables ?? {};
-      for (const key of ['TABLE_NAME', 'BUCKET_NAME', 'USER_POOL_ID', 'SECRETS_ARN', 'FRONTEND_URL']) {
+      for (const key of ['TABLE_NAME', 'BUCKET_NAME', 'USER_POOL_ID', 'SECRETS_ARN', 'FRONTEND_URL', 'ALLOWED_ORIGINS']) {
         expect(vars, `${fnId} missing ${key}`).toHaveProperty(key);
       }
     }

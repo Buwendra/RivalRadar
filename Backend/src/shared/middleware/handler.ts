@@ -17,19 +17,48 @@ type HandlerFn<E = AuthenticatedEvent | PublicEvent> = (
   context: Context
 ) => Promise<{ statusCode: number; body: ApiResponse<unknown> }>;
 
-const ALLOWED_ORIGIN = process.env.FRONTEND_URL!;
+/** Origins allowed to call this API. `ALLOWED_ORIGINS` is comma-separated
+ *  (kironyx.com, www, the amplifyapp URL); `FRONTEND_URL` is the single-origin
+ *  fallback and stays the canonical origin for email links. Parsed per call —
+ *  trivially cheap, and it keeps the function testable under env changes. */
+function allowedOrigins(): string[] {
+  const raw = process.env.ALLOWED_ORIGINS ?? process.env.FRONTEND_URL ?? '';
+  return raw
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
+}
 
-// Keep in sync with the gateway-level corsPreflight in lib/stacks/api.stack.ts
-// — API Gateway answers preflights first, but this list must not silently
-// drift behind it (it bites anyone testing the Lambda directly or changing
-// the gateway config).
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
-  'Access-Control-Allow-Headers':
-    'Content-Type,Authorization,X-Idempotency-Key,X-Workspace-Id,X-Api-Key',
-  'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
-  'Access-Control-Allow-Credentials': 'true',
-};
+/**
+ * Per-request CORS headers. `allowCredentials: true` forbids `*`, and a
+ * static header can only name ONE origin — so with multiple allowed origins
+ * (kironyx.com + www + amplifyapp) we must echo the caller's origin when it
+ * is allow-listed, falling back to the primary origin otherwise.
+ *
+ * Keep in sync with the gateway-level corsPreflight in lib/stacks/api.stack.ts
+ * — API Gateway answers preflights first, but this list must not silently
+ * drift behind it (it bites anyone testing the Lambda directly or changing
+ * the gateway config).
+ */
+export function corsHeaders(event: {
+  headers?: Record<string, string | undefined>;
+}): Record<string, string> {
+  const origins = allowedOrigins();
+  // API Gateway v2 lowercases header keys; the title-case fallback covers
+  // mocked/local-test events.
+  const requestOrigin = event.headers?.origin ?? event.headers?.Origin;
+  const origin =
+    requestOrigin && origins.includes(requestOrigin) ? requestOrigin : origins[0] ?? '';
+  return {
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Headers':
+      'Content-Type,Authorization,X-Idempotency-Key,X-Workspace-Id,X-Api-Key',
+    'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
+    'Access-Control-Allow-Credentials': 'true',
+    // The response now varies by request origin — caches must key on it.
+    Vary: 'Origin',
+  };
+}
 
 /**
  * Lambda handler wrapper that provides:
@@ -49,16 +78,18 @@ export function apiHandler<E extends AuthenticatedEvent | PublicEvent = Authenti
       requestId: context.awsRequestId,
     });
 
+    const cors = corsHeaders(event);
+
     // Handle preflight
     if (event.requestContext.http.method === 'OPTIONS') {
-      return { statusCode: 204, headers: CORS_HEADERS, body: '' };
+      return { statusCode: 204, headers: cors, body: '' };
     }
 
     try {
       const result = await fn(event, context);
       return {
         statusCode: result.statusCode,
-        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+        headers: { ...cors, 'Content-Type': 'application/json' },
         body: JSON.stringify(result.body),
       };
     } catch (err) {
@@ -67,7 +98,7 @@ export function apiHandler<E extends AuthenticatedEvent | PublicEvent = Authenti
 
       return {
         statusCode: error.statusCode,
-        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+        headers: { ...cors, 'Content-Type': 'application/json' },
         body: JSON.stringify({ error: { code: error.code, message: error.message } }),
       };
     }

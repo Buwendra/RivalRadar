@@ -66,11 +66,26 @@ export class ApiStack extends cdk.Stack {
       this, 'ApiSecrets', 'kironyx/api-keys'
     );
 
+    // Origins allowed to call the API. ALLOWED_ORIGINS is comma-separated
+    // (kironyx.com + www + the amplifyapp URL); FRONTEND_URL stays the
+    // single-origin fallback and the canonical origin for email links.
+    // allowCredentials: true forbids '*', so this must be a concrete list.
+    // CORS twins: this gateway list and corsHeaders() in
+    // src/shared/middleware/handler.ts must not drift apart.
+    const allowedOrigins = (
+      process.env.ALLOWED_ORIGINS ??
+      process.env.FRONTEND_URL ??
+      'http://localhost:3000'
+    )
+      .split(',')
+      .map((o) => o.trim())
+      .filter(Boolean);
+
     // ─── HTTP API ───
     this.httpApi = new apigatewayv2.HttpApi(this, 'HttpApi', {
       apiName: `${this.stackName}-Api`,
       corsPreflight: {
-        allowOrigins: [process.env.FRONTEND_URL ?? 'http://localhost:3000'],
+        allowOrigins: allowedOrigins,
         allowMethods: [
           apigatewayv2.CorsHttpMethod.GET,
           apigatewayv2.CorsHttpMethod.POST,
@@ -100,6 +115,7 @@ export class ApiStack extends cdk.Stack {
       USER_POOL_CLIENT_ID: userPoolClient.userPoolClientId,
       SECRETS_ARN: apiSecrets.secretArn,
       FRONTEND_URL: process.env.FRONTEND_URL ?? 'http://localhost:3000',
+      ALLOWED_ORIGINS: allowedOrigins.join(','),
     };
 
     const lambdaDefaults: nodejs.NodejsFunctionProps = {
