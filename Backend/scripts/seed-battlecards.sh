@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Generate battlecards for ChatGPT + Claude by invoking the
-# CompetitorBattlecard Lambda directly with a synthetic API Gateway v2 event
+# Pdf domain Lambda (battlecard route) directly with a synthetic API Gateway v2 event
 # carrying the user's Cognito email claim.
 #
 # Run AFTER the research pipeline has refreshed both competitors so the
@@ -9,7 +9,9 @@
 set -e
 
 REGION=us-east-1
-FN_NAME=Kironyx-dev-Api-CompetitorBattlecard
+# The battlecard route lives in the Pdf domain function (see
+# src/functions/route-manifest.ts); the event's routeKey drives dispatch.
+FN_NAME=Kironyx-dev-Api-Pdf
 EMAIL=buwendra.s@gmail.com
 
 # ChatGPT + Claude competitor IDs for buwendra.s@gmail.com

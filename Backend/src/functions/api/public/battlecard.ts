@@ -22,26 +22,22 @@ import type {
   Context,
 } from 'aws-lambda';
 import { getItem, queryGSI } from '../../../shared/db/queries';
+import { corsHeaders } from '../../../shared/middleware/handler';
 import { logger } from '../../../shared/utils/logger';
 import type { Battlecard } from '../../../shared/types';
 
 const s3 = new S3Client({});
 const PRESIGNED_TTL_SEC = 60 * 60; // 1 hour
 
-const ALLOWED_ORIGIN = process.env.FRONTEND_URL ?? '*';
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
-  'Access-Control-Allow-Methods': 'GET,OPTIONS',
-};
-
 function jsonError(
+  cors: Record<string, string>,
   statusCode: number,
   code: string,
   message: string
 ): APIGatewayProxyResultV2 {
   return {
     statusCode,
-    headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+    headers: { ...cors, 'Content-Type': 'application/json' },
     body: JSON.stringify({ error: { code, message } }),
   };
 }
@@ -55,13 +51,15 @@ export async function handler(
     path: event.requestContext.http.path,
   });
 
+  const cors = corsHeaders(event);
+
   if (event.requestContext.http.method === 'OPTIONS') {
-    return { statusCode: 204, headers: CORS_HEADERS, body: '' };
+    return { statusCode: 204, headers: cors, body: '' };
   }
 
   const token = event.pathParameters?.token;
   if (!token) {
-    return jsonError(400, 'MISSING_TOKEN', 'Token is required');
+    return jsonError(cors, 400, 'MISSING_TOKEN', 'Token is required');
   }
 
   try {
@@ -74,28 +72,28 @@ export async function handler(
       `BATTLECARD_TOKEN#${token}`
     );
     if (items.length === 0) {
-      return jsonError(404, 'NOT_FOUND', 'Battlecard not found.');
+      return jsonError(cors, 404, 'NOT_FOUND', 'Battlecard not found.');
     }
     const stub = items[0] as { PK?: string; SK?: string };
     if (!stub.PK || !stub.SK) {
-      return jsonError(404, 'NOT_FOUND', 'Battlecard not found.');
+      return jsonError(cors, 404, 'NOT_FOUND', 'Battlecard not found.');
     }
     const row = await getItem<Battlecard>(stub.PK, stub.SK);
     if (!row) {
-      return jsonError(404, 'NOT_FOUND', 'Battlecard not found.');
+      return jsonError(cors, 404, 'NOT_FOUND', 'Battlecard not found.');
     }
 
     if (row.revokedAt) {
-      return jsonError(410, 'REVOKED', 'This battlecard has been revoked.');
+      return jsonError(cors, 410, 'REVOKED', 'This battlecard has been revoked.');
     }
     const nowSec = Math.floor(Date.now() / 1000);
     if (typeof row.expiresAt === 'number' && row.expiresAt < nowSec) {
-      return jsonError(410, 'EXPIRED', 'This battlecard has expired.');
+      return jsonError(cors, 410, 'EXPIRED', 'This battlecard has expired.');
     }
 
     const bucket = process.env.BUCKET_NAME;
     if (!bucket) {
-      return jsonError(500, 'CONFIG_ERROR', 'Storage bucket not configured');
+      return jsonError(cors, 500, 'CONFIG_ERROR', 'Storage bucket not configured');
     }
 
     const downloadUrl = await getSignedUrl(
@@ -116,13 +114,13 @@ export async function handler(
 
     return {
       statusCode: 302,
-      headers: { ...CORS_HEADERS, Location: downloadUrl },
+      headers: { ...cors, Location: downloadUrl },
       body: '',
     };
   } catch (err) {
     logger.error('public_battlecard_failed', {
       err: err instanceof Error ? err.message : String(err),
     });
-    return jsonError(500, 'INTERNAL_ERROR', 'An unexpected error occurred');
+    return jsonError(cors, 500, 'INTERNAL_ERROR', 'An unexpected error occurred');
   }
 }

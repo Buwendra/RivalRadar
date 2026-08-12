@@ -74,7 +74,7 @@
 | # | Question | Answer | Evidence |
 |---|---|---|---|
 | F.1 | Is multi-factor authentication enforced on admin accounts? | **Yes** | AWS root account uses hardware MFA. IAM users with console access require MFA. **Evidence:** `aws iam get-account-summary` from `Backend/scripts/soc2-evidence-snapshot.sh`. |
-| F.2 | Is least-privilege enforced for IAM? | **Yes** | Per-Lambda IAM roles via CDK with explicit grants (`table.grantReadWriteData(fn)` etc.). No wildcard `*:*` policies. |
+| F.2 | Is least-privilege enforced for IAM? | **Yes** | Per-Lambda IAM roles via CDK with explicit grants (`table.grantReadWriteData(fn)` etc.). No wildcard `*:*` policies. API Lambdas are domain-grouped; elevated permissions (Cognito admin-delete, Step Functions execution, research-log reads) are isolated to dedicated single-purpose functions rather than shared domain roles. |
 | F.3 | Are customer-facing accounts protected with MFA? | **Optional** | Cognito user pool supports SMS / TOTP MFA. Customers self-enroll via account settings. Enforcement is roadmap. |
 | F.4 | Is there role-based access control (RBAC) within the application? | **Yes** | Workspace-level owner / admin / member roles (Phase 4a/b/c + Phase 14). Owner-only gates on persistent power: billing, API keys, workspace delete, ownership transfer, member role assignment. Admin-or-owner gates on day-to-day delegation: invite/kick members, manage integrations, delete competitors, rename workspace, view audit log. Members get baseline read + create access (competitors, notes, saved views). |
 | F.5 | Are access reviews performed? | **Yes — quarterly** | `ACCESS_REVIEW_RUNBOOK.md` at repo root. Per-system table; same cadence as secret rotation. |
@@ -110,7 +110,7 @@
 | # | Question | Answer | Evidence |
 |---|---|---|---|
 | I.1 | Is a Web Application Firewall (WAF) deployed? | **Yes** | AWS WAF v2 with managed rule groups (AWSManagedRulesCommonRuleSet, AWSManagedRulesKnownBadInputsRuleSet, AWSManagedRulesAmazonIpReputationList) plus a rate-based rule capping 2000 req / 5min per IP. Phase 9a. |
-| I.2 | Are network segmentation controls in place? | **N/A** | Fully serverless — no VPCs, subnets, or security groups to segment. Lambda execution roles enforce per-function least-privilege at the IAM layer. |
+| I.2 | Are network segmentation controls in place? | **N/A** | Fully serverless — no VPCs, subnets, or security groups to segment. Lambda execution roles enforce least-privilege at the IAM layer: every function's role carries explicit grants only; destructive permissions (Cognito admin-delete, Step Functions execution, research-log reads) are confined to dedicated single-purpose functions, and SES send is granted to exactly the three email-sending functions. |
 | I.3 | Is DDoS protection in place? | **Yes** | AWS Shield Standard (automatic for all AWS customers). API Gateway + CloudFront absorb basic L3/L4 attacks; WAF rate rules cap L7 abuse. |
 | I.4 | Is DNS configured securely? | **Partial** | DNSSEC supported by Route 53 (not yet enabled — roadmap). DMARC / SPF / DKIM configured for SES sending domain. |
 | I.5 | Are TLS configurations regularly tested? | **Roadmap** | Plan: monthly check via Mozilla Observatory or `testssl.sh`. AWS-managed certificates via ACM auto-renew. |

@@ -47,7 +47,7 @@ npx cdk synth --quiet
 
 Use `npx cdk`, never a global `cdk` — a CLI older than `aws-cdk-lib` fails with a cloud-assembly schema mismatch. A populated `Backend/cdk.out/` may be stale; synth fresh rather than deploying an old assembly.
 
-Synth is the only gate for: esbuild bundling failures, bad `entry:` paths in `addRoute` (string literals joined by `path.join` — typos aren't type errors), cross-stack dependency cycles, and the Api stack's CloudFormation resource ceiling. CI skips it deliberately.
+Synth is the only gate for: esbuild bundling failures and cross-stack dependency cycles. (Router `entry` typos and the Api stack's resource ceiling are now ALSO caught in CI by `lib/stacks/api.stack.test.ts`, which synths the stack with bundling disabled — but synth remains the only check that actually runs esbuild.)
 
 ## 5. Check synth output for silent degradations
 
@@ -67,7 +67,7 @@ The stacks use `Secret.fromSecretNameV2`, which resolves at runtime, not synth. 
 npx cdk diff
 ```
 
-Read it. Specifically look for `DeletionPolicy: Delete` on stateful resources, and resource-count growth on the Api stack — it carries ~588 of CloudFormation's 1000-resource limit and `api.stack.ts` comments note it flirts with the ceiling.
+Read it. Specifically look for `DeletionPolicy: Delete` on stateful resources, and resource-count growth on the Api stack — post-consolidation it carries ~211 of CloudFormation's hard **500**-resource limit (20 domain functions, 84 routes; a new route costs exactly 1 resource). The template test asserts the count stays under 350; if `cdk diff` shows unexpected Integration/Permission growth, someone broke the one-integration-per-function reuse.
 
 ## 8. Deploy
 

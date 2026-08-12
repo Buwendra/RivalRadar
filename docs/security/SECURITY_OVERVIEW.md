@@ -39,7 +39,7 @@ What's *not* stored:
 
 - **Customer authentication:** Cognito user pool with email-verification, configurable MFA (SMS/TOTP).
 - **Application RBAC:** workspace owner / member roles (Phase 4a/b/c). Owner-only on destructive actions: delete competitor, manage integrations, change billing, rename/delete workspace, transfer ownership, manage API keys.
-- **Operator access:** AWS root locked behind hardware MFA. IAM users with console access require MFA. Per-Lambda IAM roles with explicit grants — no wildcard policies.
+- **Operator access:** AWS root locked behind hardware MFA. IAM users with console access require MFA. Per-Lambda IAM roles with explicit CDK grants and no wildcard action policies; API Lambdas are domain-grouped, with elevated permissions (Cognito admin-delete, Step Functions execution, research-log reads) isolated to dedicated single-purpose functions.
 - **API key access:** scoped per-workspace, owner-only minting. Read-only endpoints under `/v1/*`. Strategist+ plans only.
 - **Quarterly access reviews:** documented in [ACCESS_REVIEW_RUNBOOK.md](ACCESS_REVIEW_RUNBOOK.md).
 
