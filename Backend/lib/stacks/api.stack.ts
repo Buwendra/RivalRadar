@@ -70,16 +70,18 @@ export class ApiStack extends cdk.Stack {
     // (kironyx.com + www + the amplifyapp URL); FRONTEND_URL stays the
     // single-origin fallback and the canonical origin for email links.
     // allowCredentials: true forbids '*', so this must be a concrete list.
+    // Empty-after-parse falls back too (a `??` chain alone would let a blank
+    // `ALLOWED_ORIGINS=` line in .env deploy an EMPTY allow-list and brick
+    // CORS for every origin — synth would not warn).
     // CORS twins: this gateway list and corsHeaders() in
     // src/shared/middleware/handler.ts must not drift apart.
-    const allowedOrigins = (
-      process.env.ALLOWED_ORIGINS ??
-      process.env.FRONTEND_URL ??
-      'http://localhost:3000'
-    )
+    const parsedOrigins = (process.env.ALLOWED_ORIGINS ?? '')
       .split(',')
       .map((o) => o.trim())
       .filter(Boolean);
+    const allowedOrigins = parsedOrigins.length
+      ? parsedOrigins
+      : [process.env.FRONTEND_URL ?? 'http://localhost:3000'];
 
     // ─── HTTP API ───
     this.httpApi = new apigatewayv2.HttpApi(this, 'HttpApi', {

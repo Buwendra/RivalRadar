@@ -110,7 +110,7 @@
 | # | Question | Answer | Evidence |
 |---|---|---|---|
 | I.1 | Is a Web Application Firewall (WAF) deployed? | **Yes** | AWS WAF v2 with managed rule groups (AWSManagedRulesCommonRuleSet, AWSManagedRulesKnownBadInputsRuleSet, AWSManagedRulesAmazonIpReputationList) plus a rate-based rule capping 2000 req / 5min per IP. Phase 9a. |
-| I.2 | Are network segmentation controls in place? | **N/A** | Fully serverless — no VPCs, subnets, or security groups to segment. Lambda execution roles enforce least-privilege at the IAM layer: every function's role carries explicit grants only, and destructive/elevated permissions are confined to dedicated single-purpose functions. |
+| I.2 | Are network segmentation controls in place? | **N/A** | Fully serverless — no VPCs, subnets, or security groups to segment. Lambda execution roles enforce least-privilege at the IAM layer: every function's role carries explicit grants only; destructive permissions (Cognito admin-delete, Step Functions execution, research-log reads) are confined to dedicated single-purpose functions, and SES send is granted to exactly the three email-sending functions. |
 | I.3 | Is DDoS protection in place? | **Yes** | AWS Shield Standard (automatic for all AWS customers). API Gateway + CloudFront absorb basic L3/L4 attacks; WAF rate rules cap L7 abuse. |
 | I.4 | Is DNS configured securely? | **Partial** | DNSSEC supported by Route 53 (not yet enabled — roadmap). DMARC / SPF / DKIM configured for SES sending domain. |
 | I.5 | Are TLS configurations regularly tested? | **Roadmap** | Plan: monthly check via Mozilla Observatory or `testssl.sh`. AWS-managed certificates via ACM auto-renew. |

@@ -158,7 +158,11 @@ describe('resource budget (CloudFormation hard limit is 500)', () => {
   });
 });
 
-describe('privileged IAM stays on its dedicated functions', () => {
+// Destructive grants (AdminDeleteUser, StartExecution, SFN/log reads) are
+// isolated on dedicated functions; sesSend is lower-tier and deliberately
+// shared by the three email-sending functions (one of which, Workspaces,
+// serves 13 routes).
+describe('special IAM grants land only where the manifest intends', () => {
   it('cognito-idp:AdminDeleteUser → UserDelete only', () => {
     expect(fnsWithAction('cognito-idp:AdminDeleteUser')).toEqual(['UserDelete']);
   });

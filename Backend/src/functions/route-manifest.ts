@@ -16,9 +16,11 @@
  *
  * Adding a route = one row here + one entry in the owning router's table.
  * Adding a function = one FNS entry + a router file; pick the owning function
- * by PRIVILEGE and PACKAGING, not URL path: routes with elevated IAM or
- * special bundling stay in dedicated functions, and public (non-Cognito)
- * routes never share a function with elevated grants.
+ * by PRIVILEGE and PACKAGING, not URL path: routes with destructive IAM
+ * (adminDeleteUser, startResearchExecution, sfnReadExecution) or special
+ * bundling stay in dedicated functions, and public (non-Cognito) routes
+ * never share a function with those grants. sesSend is deliberately
+ * lower-tier: it may sit on a shared domain function.
  */
 
 export type FnId =

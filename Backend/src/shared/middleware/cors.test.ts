@@ -60,6 +60,16 @@ describe('corsHeaders', () => {
     expect(corsHeaders(eventWithOrigin(PRIMARY))['Access-Control-Allow-Origin']).toBe(PRIMARY);
   });
 
+  it('falls back to FRONTEND_URL when ALLOWED_ORIGINS is set but EMPTY', () => {
+    // A blank `ALLOWED_ORIGINS=` line in .env exports an empty string, which
+    // `??` treats as set — the fallback must engage on empty-after-parse or
+    // the whole API deploys with a dead CORS allow-list.
+    process.env.ALLOWED_ORIGINS = '';
+    expect(corsHeaders(eventWithOrigin(PRIMARY))['Access-Control-Allow-Origin']).toBe(PRIMARY);
+    process.env.ALLOWED_ORIGINS = ' , ,';
+    expect(corsHeaders(eventWithOrigin(PRIMARY))['Access-Control-Allow-Origin']).toBe(PRIMARY);
+  });
+
   it('varies on Origin and keeps credentials + header allow-list', () => {
     const headers = corsHeaders(eventWithOrigin(WWW));
     expect(headers.Vary).toBe('Origin');

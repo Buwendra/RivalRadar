@@ -10,9 +10,12 @@
  *    because API Gateway resolves specificity before we ever run.
  *  - Pass (event, context) through UNTOUCHED and return the result VERBATIM.
  *    No body parsing, no CORS injection, no response re-wrapping — handlers
- *    own their envelopes (apiHandler), and two of them deliberately don't use
- *    it at all (public/battlecard.ts emits a raw 302 + Location; paddle.ts
- *    verifies a signature against the raw body bytes).
+ *    own their envelopes. public/battlecard.ts is the one RAW handler (no
+ *    apiHandler — it emits a 302 + Location the wrapper's JSON envelope would
+ *    destroy). paddle.ts IS apiHandler-wrapped but verifies its signature
+ *    against the untouched event.body — which works only because neither the
+ *    router NOR apiHandler ever parses or re-serializes the raw body. Keep
+ *    both invariants.
  *  - Unknown routeKey → 404 ROUTE_NOT_FOUND. The gateway answers OPTIONS
  *    preflights itself (corsPreflight), so routers never see OPTIONS; an
  *    unknown key here means manifest/router drift (test-guarded) or a direct

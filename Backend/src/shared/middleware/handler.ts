@@ -19,14 +19,19 @@ type HandlerFn<E = AuthenticatedEvent | PublicEvent> = (
 
 /** Origins allowed to call this API. `ALLOWED_ORIGINS` is comma-separated
  *  (kironyx.com, www, the amplifyapp URL); `FRONTEND_URL` is the single-origin
- *  fallback and stays the canonical origin for email links. Parsed per call —
- *  trivially cheap, and it keeps the function testable under env changes. */
+ *  fallback and stays the canonical origin for email links. The fallback
+ *  engages when the parsed list is EMPTY, not just when the var is unset —
+ *  a blank `ALLOWED_ORIGINS=` env line must not disable CORS (`??` alone
+ *  treats an empty string as set). Parsed per call — trivially cheap, and it
+ *  keeps the function testable under env changes. */
 function allowedOrigins(): string[] {
-  const raw = process.env.ALLOWED_ORIGINS ?? process.env.FRONTEND_URL ?? '';
-  return raw
+  const parsed = (process.env.ALLOWED_ORIGINS ?? '')
     .split(',')
     .map((o) => o.trim())
     .filter(Boolean);
+  if (parsed.length > 0) return parsed;
+  const fallback = (process.env.FRONTEND_URL ?? '').trim();
+  return fallback ? [fallback] : [];
 }
 
 /**
@@ -53,7 +58,7 @@ export function corsHeaders(event: {
     'Access-Control-Allow-Origin': origin,
     'Access-Control-Allow-Headers':
       'Content-Type,Authorization,X-Idempotency-Key,X-Workspace-Id,X-Api-Key',
-    'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
+    'Access-Control-Allow-Methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS',
     'Access-Control-Allow-Credentials': 'true',
     // The response now varies by request origin — caches must key on it.
     Vary: 'Origin',
